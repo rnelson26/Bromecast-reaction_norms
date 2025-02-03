@@ -6,12 +6,50 @@
 ############ last modified: 1/28/25 ########################
 
 ### outstanding questions ##########
-# 1. Is there a way to account for if plants emerged but were not alive at harvest to make these columns more equivalent to each other? (for merging live harvest and emerged together)
-# 2. Does biomass for the satellite sites include vegetative and inflorensce biomass combined? 
-# 3. Is there a way to convert the phenology statuses of the common garden plants into a simple yes vs no on whether they reproduced?
-# 4. Was fecundity in the satellite sites measured differently than seed count in the common garden?
-# 5. Is there a way to add lat/long & climate variables for the common garden sites that match those used for the satellite sites? 
-##6. Is it better to code NAs as character "not applicable" as I've currently done or simply have them as NAs?
+
+# 1. Is there a way to account for if plants emerged but were not alive at
+# harvest to make these columns more equivalent to each other? (for merging live
+# harvest and emerged together)
+
+# MLV: Yes! I can add emergence data. I'll put it on my to-do list for this
+# week. The reason for the "alive at last phenology check" is a holdover from a
+# QA/QC data check.
+
+# 2. Does biomass for the satellite sites include vegetative and inflorensce
+# biomass combined?
+
+# MLV: Yes (?). I'm pretty sure that's correct, but let's double-check with
+# Peter.
+
+# 3. Is there a way to convert the phenology statuses of the common garden
+# plants into a simple yes vs no on whether they reproduced?
+
+# MLV: Yes. The column "first_flower" has the first date a flower was recorded.
+# If it is NA, then it didn't flower. So you could just make a binary column
+# based on that info.
+
+# 4. Was fecundity in the satellite sites measured differently than seed count
+# in the common garden?
+
+# MLV: Yes and no. Fecundity in the satellite sites was always counted by exact
+# number of seeds (because plants didn't get that big), where for most of the
+# common garden plants, seeds were subsampled, counted, and then total seed
+# count was estimated given the known inflorescence weights of the whole sample
+# and subsample.
+
+# 5. Is there a way to add lat/long & climate variables for the common garden
+# sites that match those used for the satellite sites?
+
+# MLV: We can add the lat/long, but I would hesitate to include those climate
+# variables. I don't think we will need them for the reaction norm analysis. The
+# lat/lon for the gardens are in the Bromecast-data Github >
+# rawdata/garden_info.csv
+
+# 6. Is it better to code NAs as character "not applicable" as I've currently
+# done or simply have them as NAs?
+
+# MLV: I would do "NA" preferably to be consistent. R treats "NA"s as different
+# than a character string that says "not applicable".
 
 ### load required packages ########
 library(tidyverse)
