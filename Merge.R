@@ -84,7 +84,7 @@ colnames(cg)[colnames(cg) == "seed_count_total"] <- "Fecundity"
 ## Biomass
 cg <- cg %>%
   mutate(Biomass = veg_mass + inflor_mass)
-## check with Peter on this 
+
 
 ## add columns unique to common garden as blanks
 sat$albedo <- NA
