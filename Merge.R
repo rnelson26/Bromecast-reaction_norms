@@ -20,7 +20,7 @@
 
 # MLV: Yes (?). I'm pretty sure that's correct, but let's double-check with
 # Peter.
-
+#after removing the seeds, dry each plant at 60C for 48 hours then weight to nearest 0.01 g. Record mass on the Demography data sheet." So the biomass column is everything except the seeds. To get true total biomass of the whole plant, we would want to add the seed mass to the (non-seed) biomass. I wish I had made the protocol clearer, I have had to look up the answer to this question many times!
 
 ### load required packages ########
 rm(list = ls())
