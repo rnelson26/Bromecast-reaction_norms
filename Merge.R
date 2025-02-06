@@ -3,7 +3,7 @@
 ######## for bromecast reaction norm paper ########
 ######## R. Nelson, M. Vahsen, & P. Adler ######
 ########### code created on 1/28/25 #######
-############ last modified: 2/3/25 ########################
+############ last modified: 2/6/25 ########################
 
 ### outstanding questions ##########
 
@@ -15,12 +15,6 @@
 # week. The reason for the "alive at last phenology check" is a holdover from a
 # QA/QC data check.
 
-# 2. Does biomass for the satellite sites include vegetative and inflorensce
-# biomass combined?
-
-# MLV: Yes (?). I'm pretty sure that's correct, but let's double-check with
-# Peter.
-#after removing the seeds, dry each plant at 60C for 48 hours then weight to nearest 0.01 g. Record mass on the Demography data sheet." So the biomass column is everything except the seeds. To get true total biomass of the whole plant, we would want to add the seed mass to the (non-seed) biomass. I wish I had made the protocol clearer, I have had to look up the answer to this question many times!
 
 ### load required packages ########
 rm(list = ls())
@@ -51,16 +45,17 @@ colnames(sat)[colnames(sat) == "Year"] <- "year"
 sat$plantID <- 1:nrow(sat) ## assigns a unique number to each row (ind plant)
 
 #density
-colnames(sat)[colnames(sat) == "BRTE.neighbors"] <- "density" #combine BRTE neighbors and density 
+colnames(sat)[colnames(sat) == "BRTE.neighbors"] <- "density"
+## to do: add neighbor selection for cg
 
 # transect
 cg$merged_block_plot <- paste(cg$block, cg$plot)
 colnames(cg)[colnames(cg) == "merged_block_plot"] <- "Transect" 
-## then paste year and site into this as well 
+ 
 
 ## Emerged
 colnames(cg)[colnames(cg) == "live_harvest"] <- "Emerged"
-## is there a way to account for if plants emerged but were not alive at harvest to make these columns more equivalent to each other 
+
 
 ## Reproduced
 
@@ -69,10 +64,6 @@ cg <- cg %>%
     is.na(first_flower) ~ "No",
     TRUE ~ "Yes"
   ))
-
-# MLV: Yes. The column "first_flower" has the first date a flower was recorded.
-# If it is NA, then it didn't flower. So you could just make a binary column
-# based on that info.
 
 ## Fecundity
 colnames(cg)[colnames(cg) == "seed_count_total"] <- "Fecundity"
@@ -178,4 +169,11 @@ colnames(combined)
 
 #### Remove columns not relevant to this project #######
 
-combined_clean <- combined %>% dplyr::select(site, year, Treatment, Transect, Distance, Emerged, Reproduced, density, Fecundity, Biomass, fec)
+#select columns to retain from merged dataset
+combined_clean <- combined %>% dplyr::select(site, year, Treatment, Transect, Distance, Emerged, Reproduced, density, Fecundity, Biomass, fecundityflag, notesFlag, Lat, Lon, annual, unknown, perennial, shrub, Type, plantID, albedo, x, y, genotype, block, plot, note_standard_harvest, note_standard_phen)
+
+## make merged column for site, plot, and year
+combined_clean$Transect_Site_Year <- paste(combined_clean$Transect, combined_clean$site, combined_clean$year, sep = " - ")
+
+
+
