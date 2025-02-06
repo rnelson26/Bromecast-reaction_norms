@@ -26,7 +26,8 @@
 rm(list = ls())
 
 
-library(tidyverse)
+#library(tidyverse) 
+library(dplyr)
 
 ##### load data #########
 sat <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/sat_sites/all_plants_ftypes1.csv", header = TRUE)
@@ -54,7 +55,8 @@ colnames(sat)[colnames(sat) == "BRTE.neighbors"] <- "density" #combine BRTE neig
 
 # transect
 cg$merged_block_plot <- paste(cg$block, cg$plot)
-colnames(cg)[colnames(cg) == "merged_block_plot"] <- "Transect" #combine trt and density 
+colnames(cg)[colnames(cg) == "merged_block_plot"] <- "Transect" 
+## then paste year and site into this as well 
 
 ## Emerged
 colnames(cg)[colnames(cg) == "live_harvest"] <- "Emerged"
@@ -84,7 +86,7 @@ colnames(cg)[colnames(cg) == "seed_count_total"] <- "Fecundity"
 ## Biomass
 cg <- cg %>%
   mutate(Biomass = veg_mass + inflor_mass)
-
+#need to add seed mass to sat site Biomass
 
 ## add columns unique to common garden as blanks
 sat$albedo <- NA
@@ -107,7 +109,7 @@ sat$note_standard_harvest <- NA
 cg$Distance <- NA
 cg$Lat <- NA
 cg$Lon <- NA
-cg$prcp.Spr <- NA
+cg$prcp.Spr <- NA #can cut climate columns 
 cg$tmean.Spr <- NA
 cg$swe_mean.Spr <- NA
 cg$prcp.Sum <- NA
@@ -119,10 +121,10 @@ cg$swe_mean.Win <- NA
 cg$prcp.Fall <- NA
 cg$tmean.Fall <- NA
 cg$swe_mean.Fall <- NA
-cg$annual <- NA
-cg$unknown <- NA
-cg$perennial <- NA
-cg$shrub <- NA
+cg$annual <- 0
+cg$unknown <- 0
+cg$perennial <- 0
+cg$shrub <- 0
 cg$groundcover <- NA
 cg$biocrust <- NA
 cg$fecundityflag <- NA
@@ -171,3 +173,9 @@ print(diff2) # In colnames2 but not in colnames1
 combined <- rbind(sat, cg)
 
 str(combined) #inspect our merged data frame
+
+colnames(combined)
+
+#### Remove columns not relevant to this project #######
+
+combined_clean <- combined %>% dplyr::select(site, year, Treatment, Transect, Distance, Emerged, Reproduced, density, Fecundity, Biomass, fec)
