@@ -3,7 +3,7 @@
 ######## for bromecast reaction norm paper ########
 ######## R. Nelson, M. Vahsen, & P. Adler ######
 ########### code created on 1/28/25 #######
-############ last modified: 2/6/25 ########################
+############ last modified: 2/17/25 ########################
 
 ### outstanding questions ##########
 
@@ -35,6 +35,83 @@ cg$Type <- "Common_Garden"
 
 ## allows us to filter by type of experiment once the dataframes are stacked together 
 
+## Reproduced
+
+cg <- cg %>%
+  mutate(Reproduced = case_when(
+    is.na(first_flower) ~ "No",
+    TRUE ~ "Yes"
+  ))
+
+
+##### neighbor density calculations for common garden data ######
+# Set possible number of neighbors for each location in high density
+cg %>%
+  mutate(plot_unique = paste(site, block, plot, sep = "_")) -> cg
+
+cg$possible_neighbors <- NULL
+cg$neighbors <- NULL
+cg$prop_neighbors <- NULL
+
+for(i in 1:nrow(cg)){
+  
+  if(cg$density[i] == "lo"){
+    cg[i,] %>% 
+      dplyr::select(x, y) %>% 
+      mutate(x_new = x + 1,
+             x_new2 = x - 1,
+             y_new = y + 1,
+             y_new2 = y - 1) -> search_coords
+    
+    cg %>% 
+      filter(plot_unique == cg$plot_unique[i]) %>% 
+      filter(x == search_coords$x_new & y == search_coords$y |
+               x == search_coords$x_new2 & y == search_coords$y |
+               x == search_coords$x & y == search_coords$y_new  |
+               x == search_coords$x & y == search_coords$y_new2 ) -> possible_neighbors
+  }else{
+    expand.grid(x = cg[i,]$x + -5:5, y = cg[i,]$y + -5:5) -> search_coords
+    
+    # Filter out search coords that are not within circle using distance matrix
+    distances <- as.matrix(dist(cbind(search_coords$x, search_coords$y)))
+    focal_coords <- which(search_coords$x == cg$x[i] & search_coords$y == cg$y[i])
+    search_coords <- search_coords %>% 
+      mutate(dist = distances[focal_coords,]) %>% 
+      filter(dist <= 5)
+    
+    cg %>% 
+      filter(plot_unique == cg$plot_unique[i]) %>% 
+      filter(x %in% search_coords$x & y %in% search_coords$y) %>% 
+      filter(x != cg$x[i] | y != cg$y[i]) -> possible_neighbors
+  }
+  
+  cg[i, "possible_neighbors"] <- nrow(possible_neighbors)
+  cg[i, "neighbors"] <- nrow(possible_neighbors %>% filter(Reproduced == "Yes"))
+  
+}
+
+## Adjust for edge effects ####
+
+# Get proportion that survived for each plot
+cg %>% 
+  mutate(w = ifelse(Reproduced == "Yes", 1, 0)) %>% 
+  group_by(plot_unique) %>% 
+  summarize(prop_survived = sum(w)/n()) %>% 
+  ungroup() -> plot_survival
+
+merge(cg, plot_survival) -> cg
+
+cg %>% 
+  mutate(new_neighbors = case_when(density == "lo" & possible_neighbors == 3 ~ prop_survived + neighbors,
+                                   density == "lo" & possible_neighbors == 2 ~ prop_survived * 2 + neighbors,
+                                   density == "lo" & possible_neighbors == 1 ~ prop_survived * 3 + neighbors,
+                                   # for 2023 there were less possible neighbors because there were less plants (WI had up to 90, all other sites up to 80)
+                                   density == "hi" & site != "WI" & possible_neighbors < 80 ~ prop_survived * (80-possible_neighbors) + neighbors,
+                                   density == "hi" & site == "WI" & possible_neighbors < 90 ~ prop_survived * (90-possible_neighbors) + neighbors,
+                                   density == "lo" & possible_neighbors > 3 ~ neighbors)) -> cg
+
+
+
 ###### standardize similar columns #######
 ## site 
 colnames(sat)[colnames(sat) == "SiteCode"] <- "site"
@@ -45,8 +122,8 @@ colnames(sat)[colnames(sat) == "Year"] <- "year"
 sat$plantID <- 1:nrow(sat) ## assigns a unique number to each row (ind plant)
 
 #density
-colnames(sat)[colnames(sat) == "BRTE.neighbors"] <- "density"
-## to do: add neighbor selection for cg
+colnames(sat)[colnames(sat) == "BRTE.neighbors"] <- "neighbors"
+## should I include new_neighbors as well? 
 
 # transect
 cg$merged_block_plot <- paste(cg$block, cg$plot)
@@ -56,14 +133,6 @@ colnames(cg)[colnames(cg) == "merged_block_plot"] <- "Transect"
 ## Emerged
 colnames(cg)[colnames(cg) == "live_harvest"] <- "Emerged"
 
-
-## Reproduced
-
-cg <- cg %>%
-  mutate(Reproduced = case_when(
-    is.na(first_flower) ~ "No",
-    TRUE ~ "Yes"
-  ))
 
 ## Fecundity
 colnames(cg)[colnames(cg) == "seed_count_total"] <- "Fecundity"
@@ -96,6 +165,12 @@ sat$last_phen_status <- NA
 sat$note_standard_phen <- NA
 sat$v_harvest <- NA
 sat$note_standard_harvest <- NA
+sat$density <- NA
+sat$plot_unique <- NA
+sat$prop_survived <- NA
+sat$new_neighbors <- NA
+sat$density <- NA
+sat$possible_neighbors <- NA
 
 cg$Distance <- NA
 cg$Lat <- NA
@@ -126,39 +201,6 @@ cg$Treatment <- NA
 colnames(cg)
 colnames(sat)
 
-# Assuming colnames1 and colnames2 represent your two lists
-cg_list <- c("plantID", "site", "year", "density", "albedo", "block", "plot", 
-               "x", "y", "genotype", "first_flower", "v_phen", "last_phen_status", 
-               "note_standard_phen", "Emerged", "v_harvest", "tillers", "veg_mass", 
-               "inflor_mass", "Fecundity", "note_standard_harvest", "Type", "Transect", 
-               "Reproduced", "Biomass", "Distance", "Lat", "Lon", "prcp.Spr", 
-               "tmean.Spr", "swe_mean.Spr", "prcp.Sum", "tmean.Sum", "swe_mean.Sum", 
-               "prcp.Win", "tmean.Win", "swe_mean.Win", "prcp.Fall", "tmean.Fall", 
-               "swe_mean.Fall", "annual", "unknown", "perennial", "shrub", 
-               "groundcover", "biocrust", "fecundityflag", "notesFlag", "Treatment")
-
-sat_list <- c("site", "year", "Treatment", "Transect", "Distance", "Emerged", 
-               "Reproduced", "density", "Fecundity", "Biomass", "fecundityflag", 
-               "notesFlag", "Lat", "Lon", "prcp.Spr", "tmean.Spr", "swe_mean.Spr", 
-               "prcp.Sum", "tmean.Sum", "swe_mean.Sum", "prcp.Win", "tmean.Win", 
-               "swe_mean.Win", "prcp.Fall", "tmean.Fall", "swe_mean.Fall", "annual", 
-               "unknown", "perennial", "shrub", "groundcover", "biocrust", "Type", 
-               "plantID", "albedo", "x", "y", "genotype", "block", "plot", 
-               "tillers", "note_standard_harvest", "inflor_mass", "veg_mass", 
-               "first_flower", "v_phen", "last_phen_status", "note_standard_phen", "v_harvest")
-
-# Check if they contain the same elements
-identical <- setequal(cg_list, sat_list)
-print(identical) 
-
-# Find differences
-diff1 <- setdiff(cg_list, sat_list)
-diff2 <- setdiff(cg_list, sat_list)
-
-print(diff1) # In colnames1 but not in colnames2
-print(diff2) # In colnames2 but not in colnames1
-
-
 #### merge the two dfs############
 
 combined <- rbind(sat, cg)
@@ -170,10 +212,11 @@ colnames(combined)
 #### Remove columns not relevant to this project #######
 
 #select columns to retain from merged dataset
-combined_clean <- combined %>% dplyr::select(site, year, Treatment, Transect, Distance, Emerged, Reproduced, density, Fecundity, Biomass, fecundityflag, notesFlag, Lat, Lon, annual, unknown, perennial, shrub, Type, plantID, albedo, x, y, genotype, block, plot, note_standard_harvest, note_standard_phen)
+combined_clean <- combined %>% dplyr::select(site, year, Treatment, Transect, Distance, Emerged, Reproduced, neighbors, Fecundity, Biomass, fecundityflag, notesFlag, Lat, Lon, annual, unknown, perennial, shrub, Type, plantID, albedo, x, y, genotype, block, plot, note_standard_harvest, note_standard_phen)
 
 ## make merged column for site, plot, and year
 combined_clean$Transect_Site_Year <- paste(combined_clean$Transect, combined_clean$site, combined_clean$year, sep = " - ")
 
-
+#inspect results
+str(combined_clean)
 
