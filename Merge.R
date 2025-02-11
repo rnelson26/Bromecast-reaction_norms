@@ -6,14 +6,7 @@
 ############ last modified: 2/17/25 ########################
 
 ### outstanding questions ##########
-
-# 1. Is there a way to account for if plants emerged but were not alive at
-# harvest to make these columns more equivalent to each other? (for merging live
-# harvest and emerged together)
-
-# MLV: Yes! I can add emergence data. I'll put it on my to-do list for this
-# week. The reason for the "alive at last phenology check" is a holdover from a
-# QA/QC data check.
+## how to interpret -5 to 5 range on neighbor code?
 
 
 ### load required packages ########
@@ -131,7 +124,7 @@ colnames(cg)[colnames(cg) == "merged_block_plot"] <- "Transect"
  
 
 ## Emerged
-colnames(cg)[colnames(cg) == "live_harvest"] <- "Emerged"
+colnames(cg)[colnames(cg) == "emergence"] <- "Emerged"
 
 
 ## Fecundity
@@ -171,6 +164,7 @@ sat$prop_survived <- NA
 sat$new_neighbors <- NA
 sat$density <- NA
 sat$possible_neighbors <- NA
+sat$live_harvest <- NA
 
 cg$Distance <- NA
 cg$Lat <- NA
