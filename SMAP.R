@@ -3,23 +3,23 @@
 ######## for bromecast reaction norm paper ########
 ######## R. Nelson, M. Vahsen, & P. Adler ######
 ########### code created on 2/6/25 #######
-############ last modified: 2/11/25 ########################
+############ last modified: 2/18/25 ########################
 #https://github.com/ropensci/smapr/issues/81
 
 #### load packages #####
-library(terra)
-library(httr)
-library(jsonlite)
-library(rvest)
-library(smapr)
+#library(terra)
+#library(httr)
+#library(jsonlite)
+#library(rvest)
+#library(smapr)
 
 # Install rvest 0.3.2
-devtools::install_version("rvest", version = "0.3.2")
+#devtools::install_version("rvest", version = "0.3.2")
 #https://github.com/ropensci/smapr/issues/33
 # doesn't fix issue
 
-packageVersion("rvest")
-available_data <- find_smap(id = "SPL3SMP", date = "2017-01-01", version = 4)
+#packageVersion("rvest")
+#available_data <- find_smap(id = "SPL3SMP", date = "2017-01-01", version = 4)
 #learn more here:
 #https://docs.ropensci.org/smapr/
   
@@ -31,14 +31,28 @@ available_data <- find_smap(id = "SPL3SMP", date = "2017-01-01", version = 4)
 ## still waiting for NASA to approve the account for data access...
 
 ##### get the relevant SMAP dataset ####
+
+page <- rvest::read_html("https:/https://nsidc.org/data/spl2smap_s/versions/3")  # Replace with the actual URL
+print(page)
+
+start_date <- as.Date("2015-03-31")
+end_date <- as.Date("2015-04-02")
+date_sequence <- seq(start_date, end_date, by = 1)
+find_smap(id = "SPL4SMGP", dates = date_sequence, version = 4)
+
+
+
+
   # Define timeframe of interest 
-  start_date <- as.Date("2021-01-01")
-  end_date <- as.Date("2024-12-31")
+start_date <- as.Date("2015-03-31")
+end_date <- as.Date("2015-04-02")
   # Generate a sequence of dates
   date_sequence <- seq(start_date, end_date, by = "day")
   # Query SMAP data
   available_data <- find_smap(id = "SPL3SMA", dates = date_sequence, version = 3)
   
+
+  print(available_data)
 
 str(available_data)
 
