@@ -3,10 +3,10 @@
 ######## for bromecast reaction norm paper ########
 ######## R. Nelson, M. Vahsen, & P. Adler ######
 ########### code created on 1/28/25 #######
-############ last modified: 2/17/25 ########################
+############ last modified: 2/20/25 ########################
 
 ### outstanding questions ##########
-## how to interpret -5 to 5 range on neighbor code?
+## whether approach to zero neighbors makes sense 
 
 
 ### load required packages ########
@@ -32,8 +32,8 @@ cg$Type <- "Common_Garden"
 
 cg <- cg %>%
   mutate(Reproduced = case_when(
-    is.na(first_flower) ~ "No",
-    TRUE ~ "Yes"
+    is.na(first_flower) ~ "N",
+    TRUE ~ "Y"
   ))
 
 
@@ -51,7 +51,7 @@ for(i in 1:nrow(cg)){
   if(cg$density[i] == "lo"){
     cg[i,] %>% 
       dplyr::select(x, y) %>% 
-      mutate(x_new = x + 1,
+      mutate(x_new = x + 1,       #change to zero for low (see below)
              x_new2 = x - 1,
              y_new = y + 1,
              y_new2 = y - 1) -> search_coords
@@ -70,7 +70,7 @@ for(i in 1:nrow(cg)){
     focal_coords <- which(search_coords$x == cg$x[i] & search_coords$y == cg$y[i])
     search_coords <- search_coords %>% 
       mutate(dist = distances[focal_coords,]) %>% 
-      filter(dist <= 5)
+      filter(dist <= 2.5)
     
     cg %>% 
       filter(plot_unique == cg$plot_unique[i]) %>% 
@@ -102,6 +102,11 @@ cg %>%
                                    density == "hi" & site != "WI" & possible_neighbors < 80 ~ prop_survived * (80-possible_neighbors) + neighbors,
                                    density == "hi" & site == "WI" & possible_neighbors < 90 ~ prop_survived * (90-possible_neighbors) + neighbors,
                                    density == "lo" & possible_neighbors > 3 ~ neighbors)) -> cg
+
+
+## change low to zero have zero neighbors 
+cg <- cg %>%
+  mutate(neighbors = ifelse(density == "lo", 0, neighbors))
 
 
 
@@ -206,11 +211,14 @@ colnames(combined)
 #### Remove columns not relevant to this project #######
 
 #select columns to retain from merged dataset
-combined_clean <- combined %>% dplyr::select(site, year, Treatment, Transect, Distance, Emerged, Reproduced, neighbors, Fecundity, Biomass, fecundityflag, notesFlag, Lat, Lon, annual, unknown, perennial, shrub, Type, plantID, albedo, x, y, genotype, block, plot, note_standard_harvest, note_standard_phen)
+combined_clean <- combined %>% dplyr::select(site, year, Treatment, Transect, Distance, Emerged, Reproduced, neighbors, Fecundity, Biomass, fecundityflag, notesFlag, Lat, Lon, annual, unknown, perennial, shrub, Type, plantID, albedo, x, y, genotype, block, plot, note_standard_harvest, note_standard_phen, prcp.Win, tmean.Win)
 
 ## make merged column for site, plot, and year
 combined_clean$Transect_Site_Year <- paste(combined_clean$Transect, combined_clean$site, combined_clean$year, sep = " - ")
 
 #inspect results
 str(combined_clean)
+
+## save as .csv 
+write.csv(combined_clean, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean.csv", row.names = FALSE)
 
