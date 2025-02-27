@@ -8,9 +8,15 @@
 
 ### outstanding questions ##########
 
-## which variables should be rescaled?
-## poisson models appear not to converge. What to do? 
+## which variables should be rescaled? good to do with all, easier with priors and initial conditions -- helps with fitting and inference b/c all on same scale...makes out of sample prediction trickier
+## do scaling before you break apart test and training dataset....might need to backtransform for figures, save scaled version and also mean and std dev for later reference with attr (scaled:center), scaled:scale
 
+## poisson models appear not to converge. What to do? 
+#glmer very conservative and through flags but output often is reasonable 
+## can use different packages like mgvcv slow but works or bayesian 
+## initial selection and development in glmer then refit with brms 
+
+### to do: overdipserion 
 
 ### read in merged dataset
 allD <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean.csv", header = TRUE)
