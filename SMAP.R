@@ -6,7 +6,7 @@
 ############ last modified: 3/3/25 ########################
 
 ### read in file 
-SMAP <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/SMAP/Bromecast-Soil-Moisture-SPL3SMP-E-006-results.csv", header = TRUE)
+SMAP <- read.csv("/Users/Becca/Desktop/Adler Lab/SMAP/Bromecast-Soil-Moisture-SPL3SMP-E-006-results.csv", header = TRUE)
 
 ### organize data #####
 library(dplyr)
