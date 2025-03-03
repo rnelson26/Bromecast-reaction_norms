@@ -3,82 +3,205 @@
 ######## for bromecast reaction norm paper ########
 ######## R. Nelson, M. Vahsen, & P. Adler ######
 ########### code created on 2/6/25 #######
-############ last modified: 2/19/25 ########################
+############ last modified: 3/3/25 ########################
+
+### read in file 
+SMAP <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/SMAP/Bromecast-Soil-Moisture-SPL3SMP-E-006-results.csv", header = TRUE)
+
+### organize data #####
+library(dplyr)
+library(ggplot2)
+
+## create columns to filter by month, day, and year
+library(lubridate)
+
+# Add new columns for year, month, and Julian day
+SMAP <- SMAP %>%
+  mutate(Year = year(Date), 
+         Month = month(Date), 
+         Julian_day = yday(Date))
+
+### Replace -9999 with NAS so that they don't get counted as actual  numbers
+# Replace -9999 with NA in the entire dataframe
+SMAP[SMAP == -9999] <- NA
 
 
-#### load packages #####
-library(terra)  # For raster processing
-library(rhdf5)  # For reading HDF5 files
-  
+MonthlySummary = SMAP %>%
+  group_by(Category, ID, Latitude, Longitude, Year, Month) %>%
+  summarize(
+    soil_moisture_AM = sum(SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_AM_soil_moisture, na.rm = TRUE),
+    soil_moisture_PM = sum(SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_PM_soil_moisture_pm, na.rm = TRUE),
+    soil_moisture_total = sum(SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_AM_soil_moisture, na.rm = TRUE) + 
+      sum(SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_PM_soil_moisture_pm, na.rm = TRUE),
+    soil_moisture_AM_dca = sum(SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_AM_soil_moisture_dca, na.rm = TRUE),
+    soil_moisture_PM_dca = sum(SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_PM_soil_moisture_dca_pm, na.rm = TRUE),
+    soil_moisture_total_dca = sum(SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_AM_soil_moisture_dca, na.rm = TRUE) + 
+      sum(SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_PM_soil_moisture_dca_pm, na.rm = TRUE)
+  )
 
-##### Processing SMAP data ####
 
-# Inspect a specific file to list datasets
-h5_file <- "/Users/Becca/SMAP_data/SMAP_L2_SM_SP_1AIWDV_20200323T142815_20200324T015116_118W37N_R17000_001.h5"
-h5_contents <- h5ls(h5_file)
+DailySummary = SMAP %>%
+  group_by(Category, ID, Latitude, Longitude, Year, Month, Julian_day) %>%
+  summarize(
+    soil_moisture_AM = sum(SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_AM_soil_moisture, na.rm = TRUE),
+    soil_moisture_PM = sum(SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_PM_soil_moisture_pm, na.rm = TRUE),
+    soil_moisture_total = sum(SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_AM_soil_moisture, na.rm = TRUE) + 
+      sum(SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_PM_soil_moisture_pm, na.rm = TRUE),
+    soil_moisture_AM_dca = sum(SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_AM_soil_moisture_dca, na.rm = TRUE),
+    soil_moisture_PM_dca = sum(SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_PM_soil_moisture_dca_pm, na.rm = TRUE),
+    soil_moisture_total_dca = sum(SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_AM_soil_moisture_dca, na.rm = TRUE) + 
+      sum(SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_PM_soil_moisture_dca_pm, na.rm = TRUE)
+  )
 
-# Print the names of all datasets in the HDF5 file
-print(h5_contents)
+
+# Make individual plots for each site
+DailySummary %>% 
+  filter(Year == 2022) %>% 
+  ggplot(aes(x = Julian_day, y = soil_moisture_PM_dca, color = ID)) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(~ID*Category) +
+  theme_bw(base_size = 16) +
+  theme(legend.position = "none")
+
+MonthlySummary %>% 
+  ggplot(aes(x = Month, y = soil_moisture_PM_dca, color = ID)) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(~ID*Category) +
+  theme_bw(base_size = 16) +
+  theme(legend.position = "none")
 
 
-# Set working directory where the SMAP data is stored
-smap_dir <- "/Users/Becca/SMAP_data/"  
+MonthlySummary %>% 
+  filter(Year == 2021) %>% 
+  ggplot(aes(x = Month, y = soil_moisture_PM_dca, color = ID)) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(~ID*Category) +
+  theme_bw(base_size = 16) +
+  theme(legend.position = "none")
 
-# List all HDF5 files in the directory
-h5_files <- list.files(smap_dir, pattern = "\\.h5$", full.names = TRUE)
+MonthlySummary %>% 
+  filter(Year == 2021) %>% 
+  ggplot(aes(x = Month, y = soil_moisture_AM_dca, color = ID)) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(~ID*Category) +
+  theme_bw(base_size = 16) +
+  theme(legend.position = "none")
 
-# Function to process a single SMAP HDF5 file
-process_smap_h5 <- function(h5_file) {
-  # Open the HDF5 file and check available datasets
-  h5_contents <- h5ls(h5_file)
-  
-  # Define the dataset path for soil moisture
-  dataset_path <- "/Soil_Moisture_Retrieval_Data_3km/soil_moisture"
-  
-  # Check if the dataset exists in this file
-  if (!dataset_path %in% h5_contents$name) {
-    message("Dataset not found in file: ", h5_file)
-    return(NULL)
-  }
-  
-  # Read soil moisture data
-  soil_moisture <- h5read(h5_file, dataset_path)
-  
-  # Read latitude and longitude (ensure paths exist)
-  lat_path <- "/Soil_Moisture_Retrieval_Data_AM/latitude"
-  lon_path <- "/Soil_Moisture_Retrieval_Data_AM/longitude"
-  
-  if (!(lat_path %in% h5_contents$name) || !(lon_path %in% h5_contents$name)) {
-    message("Latitude or longitude missing in file: ", h5_file)
-    return(NULL)
-  }
-  
-  lat <- h5read(h5_file, lat_path)
-  lon <- h5read(h5_file, lon_path)
-  
-  # Ensure the data dimensions match (SMAP data is usually in a grid)
-  if (!all(dim(soil_moisture) == dim(lat), dim(soil_moisture) == dim(lon))) {
-    message("Dimension mismatch in file: ", h5_file)
-    return(NULL)
-  }
-  
-  # Create raster
-  r <- rast(soil_moisture)
-  
-  # Set spatial extent (bounding box)
-  ext(r) <- ext(min(lon), max(lon), min(lat), max(lat))  
-  crs(r) <- "EPSG:4326"  # WGS84 projection
-  
-  # Save as GeoTIFF
-  output_tif <- file.path(smap_dir, paste0(tools::file_path_sans_ext(basename(h5_file)), ".tif"))
-  writeRaster(r, output_tif, format = "GTiff", overwrite = TRUE)
-  
-  message("Processed and saved: ", output_tif)
-  return(output_tif)
-}
+MonthlySummary %>% 
+  filter(Year == 2021) %>% 
+  ggplot(aes(x = Month, y = soil_moisture_PM, color = ID)) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(~ID*Category) +
+  theme_bw(base_size = 16) +
+  theme(legend.position = "none")
 
-# Loop through all files and process them
-tif_files <- lapply(h5_files, process_smap_h5)
+MonthlySummary %>% 
+  filter(Year == 2021) %>% 
+  ggplot(aes(x = Month, y = soil_moisture_AM, color = ID)) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(~ID*Category) +
+  theme_bw(base_size = 16) +
+  theme(legend.position = "none")
 
-# Print summary
-message("Finished processing ", length(na.omit(tif_files)), " files.")
+
+### make a map
+library(maps)
+
+#map of sat sites
+par(mar=c(4,4,4,4))
+map("state",xlim=c(-128,-95),ylim=c(30,52))
+points(x=MonthlySummary$Longitude,y=MonthlySummary$Latitude, pch=1, cex=1.5,col="purple")
+
+#with color ramp
+library("fields")
+
+color_palette <- colorRampPalette(c("blue", "yellow", "red"))
+colors <- color_palette(100)  
+
+MonthlySummary$color <- colors[cut(MonthlySummary$soil_moisture_PM, breaks = 100)]  
+par(mar=c(4,4,4,4))
+map("state",xlim=c(-128,-95),ylim=c(30,52))
+title("Soil Moisture PM")
+points(MonthlySummary$Longitude, MonthlySummary$Latitude, col = MonthlySummary$color, pch = 19, cex = 1.5)
+image.plot(legend.only = TRUE, zlim = range(MonthlySummary$soil_moisture_PM), col = colors, legend.lab = "Soil Moisture PM")
+
+MonthlySummary$color <- colors[cut(MonthlySummary$soil_moisture_AM, breaks = 100)]  
+par(mar=c(4,4,4,4))
+map("state",xlim=c(-128,-95),ylim=c(30,52))
+title("Soil Moisture AM")
+points(MonthlySummary$Longitude, MonthlySummary$Latitude, col = MonthlySummary$color, pch = 19, cex = 1.5)
+image.plot(legend.only = TRUE, zlim = range(MonthlySummary$soil_moisture_AM), col = colors, legend.lab = "Soil Moisture AM")
+
+
+MonthlySummary$color <- colors[cut(MonthlySummary$soil_moisture_PM_dca, breaks = 100)]  
+par(mar=c(4,4,4,4))
+map("state",xlim=c(-128,-95),ylim=c(30,52))
+title("Soil Moisture PM")
+points(MonthlySummary$Longitude, MonthlySummary$Latitude, col = MonthlySummary$color, pch = 19, cex = 1.5)
+image.plot(legend.only = TRUE, zlim = range(MonthlySummary$soil_moisture_PM_dca), col = colors, legend.lab = "Soil Moisture PM DCA")
+
+MonthlySummary$color <- colors[cut(MonthlySummary$soil_moisture_AM_dca, breaks = 100)]  
+par(mar=c(4,4,4,4))
+map("state",xlim=c(-128,-95),ylim=c(30,52))
+title("Soil Moisture AM DCA")
+points(MonthlySummary$Longitude, MonthlySummary$Latitude, col = MonthlySummary$color, pch = 19, cex = 1.5)
+image.plot(legend.only = TRUE, zlim = range(MonthlySummary$soil_moisture_AM_dca), col = colors, legend.lab = "Soil Moisture AM DCA")
+
+
+######## Use a Van Genuchten Model to calculate water potential ######
+# Define soil parameters (example for sandy loam)
+theta_s <- 8.1 #estimate based on being slightly bigger than max observed value
+alpha <- 0.075   # Air entry parameter (1/cm)
+n <- 1.89        # Shape parameter
+m <- 1 - 1/n     # Derived parameter
+## can modify these more based on soil type, but started with middle of the road values 
+## would need more detailed info about soil types to do this in a way that gets realistic water potential values...
+
+MonthlySummary <- MonthlySummary %>% mutate(water_potential =  ((1/alpha) * (((soil_moisture_AM/theta_s)^(-1/m)) - 1)^(1/n)) * -0.00981 )
+
+MonthlySummary %>% 
+  filter(Year == 2021) %>% 
+  ggplot(aes(x = Month, y = water_potential, color = ID)) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(~ID*Category) +
+  theme_bw(base_size = 16) +
+  theme(legend.position = "none")
+
+MonthlySummary <- MonthlySummary %>%
+  filter(!is.na(water_potential) & is.finite(water_potential))
+
+
+color_palette <- colorRampPalette(c("blue", "yellow", "red"))
+colors <- color_palette(100)  
+
+MonthlySummary$color <- colors[cut(MonthlySummary$water_potential, breaks = 100)]  
+par(mar=c(4,4,4,4))
+map("state",xlim=c(-128,-95),ylim=c(30,52))
+title("Water Potential")
+points(MonthlySummary$Longitude, MonthlySummary$Latitude, col = MonthlySummary$color, pch = 19, cex = 1.5)
+image.plot(legend.only = TRUE, zlim = range(MonthlySummary$water_potential), col = colors, legend.lab = "Water Potential")
+
+###### Merge with combined dataframe #####
+
+combined_clean <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean.csv")
+
+## rename columns accordingly
+MonthlySummary$year <- MonthlySummary$Year 
+MonthlySummary$site <- MonthlySummary$ID
+MonthlySummary$Type <- MonthlySummary$Category
+MonthlySummary$Lat <- MonthlySummary$Latitude
+MonthlySummary$Lon <- MonthlySummary$Longitude
+
+MonthlySummary <- MonthlySummary%>%
+  mutate(Type = recode(Type, "CommonGarden" = "Common_Garden"))
+
+MonthlySummary_clean <- MonthlySummary %>% select(year, site, Type, Lat, Lon, soil_moisture_PM)
+
+
