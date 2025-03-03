@@ -6,11 +6,44 @@
 ############ last modified: 3/3/25 ########################
 
 ### read in file 
-SMAP <- read.csv("/Users/Becca/Desktop/Adler Lab/SMAP/Bromecast-Soil-Moisture-SPL3SMP-E-006-results.csv", header = TRUE)
+SMAP <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/SMAP.csv", header = TRUE)
+
 
 ### organize data #####
 library(dplyr)
 library(ggplot2)
+
+### shrink file down 
+## Code to generate SMAP.csv
+
+# Select only the specified columns
+#SMAP <- SMAP %>%
+ # select(
+  #  Category,
+   # ID,
+  #  Latitude,
+   # Longitude,
+    #Date,
+    #SMAP_Tile,
+    #SPL3SMP_E_006_Line_Y_9km,
+    #SPL3SMP_E_006_Sample_X_9km,
+    #SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_AM_soil_moisture,
+    #SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_AM_soil_moisture_dca,
+    #SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_AM_soil_moisture_scah,
+    #SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_AM_soil_moisture_scav,
+    #SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_AM_surface_temperature,
+    #SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_PM_clay_fraction_pm,
+    #SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_PM_soil_moisture_dca_pm,
+    #SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_PM_soil_moisture_error_pm,
+    #SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_PM_soil_moisture_pm,
+    #SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_PM_soil_moisture_scah_pm,
+    #SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_PM_soil_moisture_scav_pm,
+    #SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_PM_surface_temperature_pm,
+  #  SPL3SMP_E_006_Soil_Moisture_Retrieval_Data_PM_vegetation_water_content_pm
+ # )
+
+#write.csv(SMAP, "/Users/Becca/Desktop/Adler Lab/SMAP/SMAP.csv", row.names = FALSE)
+
 
 ## create columns to filter by month, day, and year
 library(lubridate)
