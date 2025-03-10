@@ -3,7 +3,7 @@
 ######## for bromecast reaction norm paper ########
 ######## R. Nelson, M. Vahsen, & P. Adler ######
 ########### code created on 2/6/25 #######
-############ last modified: 3/3/25 ########################
+############ last modified: 3/10/25 ########################
 rm(list = ls())
 
 ### read in file 
@@ -259,32 +259,32 @@ library(sf)
 
 
 # Ensure site_list has correct column names
-x <- site_list %>% 
-  rename(id = ID, lat = Latitude, lon = Longitude) %>% 
-  select(id, lat, lon)
+#x <- site_list %>% 
+ # rename(id = ID, lat = Latitude, lon = Longitude) %>% 
+#  select(id, lat, lon)
 
 # Fetch SoilGrids data
-soil_data <- fetchSoilGrids(
-  x = x,
-  loc.names = c("id", "lat", "lon"),
-  depth_intervals = c("0-5", "5-15", "15-30", "30-60", "60-100", "100-200"),
-  variables = c("bdod", "cec", "cfvo", "clay", "nitrogen", "phh2o", "sand", "silt",
+#soil_data <- fetchSoilGrids(
+ # x = x,
+  #loc.names = c("id", "lat", "lon"),
+  #depth_intervals = c("0-5", "5-15", "15-30", "30-60", "60-100", "100-200"),
+  #variables = c("bdod", "cec", "cfvo", "clay", "nitrogen", "phh2o", "sand", "silt",
                 "soc", "ocd", "wv0010", "wv0033", "wv1500"),
-  grid = FALSE,  # Ensures point data retrieval instead of grid-based data
-  target_resolution = c(250, 250),  # Resolution in meters
-  summary_type = c("Q0.05", "Q0.5", "Q0.95", "mean"),  # Include multiple statistics
-  verbose = TRUE,  # Show progress messages
-  progress = TRUE  # Show download progress
-)
+  #grid = FALSE,  # Ensures point data retrieval instead of grid-based data
+  #target_resolution = c(250, 250),  # Resolution in meters
+  #summary_type = c("Q0.05", "Q0.5", "Q0.95", "mean"),  # Include multiple statistics
+  #verbose = TRUE,  # Show progress messages
+  #progress = TRUE  # Show download progress
+#)
 
 # Check structure of the returned data
-str(soil_data)
+#str(soil_data)
 
 # Print a preview of the soil data
-head(soil_data)
+#head(soil_data)
 
 ## extract info
-horizon_data <- horizons(soil_data)
+#horizon_data <- horizons(soil_data)
 
 ## explore info
 library(ggplot2)
@@ -351,6 +351,26 @@ r_summary <- r %>%
   group_by(ID) %>% 
   summarise(across(everything(), \(x) mean(x, na.rm = TRUE)))
 
+### fix slight differences in site names between the two datasets before merging
+     
+# Create a mapping for inconsistent names
+name_mapping <- data.frame(
+  old_name = c("CG_BoiseHigh", "CG_BoiseLow", "Boise_High", "Boise_Low", "CPER-NEAR HQ\xca", "CG_Cheyenne", "CG_SheepStation", "Rush_Valley", "MPG_TH", "MPG_SR", "MPG_IR", "L1_vanDiepen", "K1_vanDiepen" , "FtK_Lone_Pine", "FtK_Cottonwood_Coulee", "EnsingS1_SuRDC", "EnsingS2_SumPrinceRd" , "EnsingS3_BearCreek", "EnsingS4_LDBM" ), 
+  new_name = c("CGBoiseHigh", "CGBoiseLow", "BoiseHigh", "BoiseLow", "CPER-NEAR HQ", "CGCheyenne", "CGSheepStation", "RushValley", "MPGTH", "MPGSR", "MPGIR", "L1vanDiepen", "K1vanDiepen", "FtKLonePine" , "FtKCottonwoodCoulee", "EnsingS1SuRDC", "EnsingS2SumPrinceRd", "EnsingS3BearCreek", "EnsingS4LDBM" )
+)
+
+# Replace values in the r_summary and YearlySummary dataframes
+r_summary$ID <- sapply(r_summary$ID, function(x) {
+  match <- name_mapping$new_name[name_mapping$old_name == x]
+  if (length(match) > 0) match else x
+})
+
+YearlySummary$ID <- sapply(YearlySummary$ID, function(x) {
+  match <- name_mapping$new_name[name_mapping$old_name == x]
+  if (length(match) > 0) match else x
+})
+
+
 
 MonthlySummary_r <- left_join(MonthlySummary, r_summary, by= "ID")
 YearlySummary_r <- left_join(YearlySummary, r_summary, by= "ID")
@@ -358,11 +378,17 @@ YearlySummary_r <- left_join(YearlySummary, r_summary, by= "ID")
 # Define a function to calculate water potential using Rosetta model
 # Define the function for calculating water potential
 calculate_water_potential <- function(claymean, siltmean, sandmean, theta_s, theta_r, alpha, soil_moisture, npar) {
-  # Use Rosetta API to calculate the water potential
-  water_potential <- (1 / alpha) * (((soil_moisture / theta_s) ^ (-1 / (1 - 1 / log10(npar)))) - 1) ^ (1 / log10(npar))
-  # Convert to pressure head in kPa (assuming SI units)
-  return(water_potential * -0.00981)
+ # # Convert log-transformed parameters to linear scale -- check is this needs to happen
+  alpha <- 10^alpha  # Converts log10(1/cm) to 1/cm
+  npar <- 10^npar    # Converts log10(n) to n
+  
+  # Compute water potential in cm using Van Genuchten equation
+  water_potential_cm <- (1 / alpha) * (((soil_moisture / theta_s) ^ (-1 / (1 - 1 / npar))) - 1) ^ (1 / npar)
+  
+  # Convert to kPa
+  return(water_potential_cm * -0.0981)
 }
+
 
 
 YearlySummary_r <- YearlySummary_r %>%
@@ -409,16 +435,22 @@ YearlySummary_r %>%
   theme_bw(base_size = 16) +
   theme(legend.position = "none")
 
-MonthlySummary_r %>% 
-  ggplot(aes(x = Month, y = water_potential, color = ID)) +
+
+p1 <- MonthlySummary_r %>% 
+  ggplot(aes(x = Month, y = water_potential, color = Year)) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(~ID*Category, scales = "free") +
+  theme_bw(base_size = 16) 
+ggsave(p1, filename = "wp1.png",height = 15, width = 15)
+
+p2 <- MonthlySummary_r %>% 
+  ggplot(aes(x = Month, y = water_potential, color = Year)) +
   geom_point() +
   geom_line() +
   facet_wrap(~ID*Category) +
-  theme_bw(base_size = 16) +
-  theme(legend.position = "none")
-
-MonthlySummary <- MonthlySummary %>%
-  filter(!is.na(water_potential) & is.finite(water_potential))
+  theme_bw(base_size = 16) 
+ggsave(p2, filename = "wp2.png",height = 15, width = 15)
 
 
 color_palette <- colorRampPalette(c("blue", "yellow", "red"))
@@ -446,6 +478,37 @@ ggplot() +
   facet_wrap(~Year) +
   labs(title="Water Potential by Year", color="Water Potential") +
   theme_classic()
+
+
+# Create a custom color palette with warm and cool colors for different ranges
+custom_colors <- c("blue", "cyan", "green", "yellow", "orange", "red")
+
+map_wp <- ggplot() +
+  geom_polygon(data=state_map_filtered, aes(x=long, y=lat, group=group), fill="gray100", color="black") +
+  geom_point(data=YearlySummary_r, aes(x=Longitude, y=Latitude, color=water_potential)) +
+  scale_color_gradientn(
+    colors = c("blue", "cyan", "green", "yellow", "orange", "red"),  # Define your color scale from blue (for extreme negative) to red (for positive)
+    values = scales::rescale(c(-7217, -2000, -500, -100, 0)),  # Customize where the breaks happen for more color variation
+    limits = c(-7217, 0),  # Use the full range from -7217 to 0
+    breaks = c(-7217, -2000, -1000, 0),  # Choose specific breaks for better contrast
+    labels = c("-7217", "-2000", "-1000", "0")  # Label breaks
+  ) +
+  coord_cartesian(xlim=c(-128, -95), ylim=c(30, 52)) +
+  facet_wrap(~Year) +
+  labs(title="Water Potential by Year", color="Water Potential") +
+  theme_classic()
+ggsave(map_wp, filename = "wp.map.png",height = 15, width = 15)
+
+## summary
+site_wp_info <- YearlySummary_r %>% 
+  group_by(ID) %>% 
+  summarise(
+    mean_wp = mean(water_potential, na.rm = TRUE),
+    min_wp = min(water_potential, na.rm = TRUE),
+    max_wp = max(water_potential, na.rm = TRUE),
+    sd_wp = sd(water_potential, na.rm = TRUE),
+    n = n()
+  )
 
 
 ###### Merge with combined dataframe #####
