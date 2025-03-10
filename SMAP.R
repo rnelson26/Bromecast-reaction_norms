@@ -435,6 +435,15 @@ YearlySummary_r %>%
     axis.text.x = element_text(angle = 90, hjust = 1)  # Rotate text 90 degrees (vertical)
   ) 
 
+## explore extreme values
+YearlySummary_r %>% 
+  ggplot(aes(x = reorder(ID, siltmean), y = siltmean, color = Category)) + 
+  geom_boxplot() +
+  theme_bw(base_size = 16) + theme(
+    axis.text.x = element_text(angle = 90, hjust = 1)  # Rotate text 90 degrees (vertical)
+  ) 
+
+
 
 
 p1 <- MonthlySummary_r %>% 
