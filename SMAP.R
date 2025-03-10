@@ -429,11 +429,12 @@ MonthlySummary_r <- MonthlySummary_r %>%
 #log10(ksat) : saturated hydraulic conductivity ⁠[log10(cm/d)]⁠
 
 YearlySummary_r %>% 
-  ggplot(aes(x = ID, y = water_potential, color = ID)) +
+  ggplot(aes(x = reorder(ID, water_potential), y = water_potential, color = Category)) + 
   geom_boxplot() +
-  facet_wrap(~Category) +
-  theme_bw(base_size = 16) +
-  theme(legend.position = "none")
+  theme_bw(base_size = 16) + theme(
+    axis.text.x = element_text(angle = 90, hjust = 1)  # Rotate text 90 degrees (vertical)
+  ) 
+
 
 
 p1 <- MonthlySummary_r %>% 
