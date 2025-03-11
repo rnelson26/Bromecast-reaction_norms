@@ -342,7 +342,7 @@ geom_boxplot() +
 
   # call ROSETTA API 
   vars <- c('claymean', 'siltmean', 'sandmean')
-  r <- ROSETTA(horizon_data, vars)  
+  r <- ROSETTA(horizon_data, vars, v = "3")  
 
 r$ID <- r$id  
 
@@ -390,8 +390,8 @@ calculate_water_potential <- function(claymean, siltmean, sandmean, theta_s, the
   # Compute water potential in cm using Van Genuchten equation
   water_potential_cm <- (1 / alpha) * (((soil_moisture / theta_s) ^ (-1 / (1 - 1 / npar))) - 1) ^ (1 / npar)
   
-  # Convert to kPa
-  return(water_potential_cm * -0.0981)
+  # Convert to MPa
+  return(water_potential_cm * -0.0000981)
 }
 
 
@@ -436,6 +436,7 @@ MonthlySummary_r <- MonthlySummary_r %>%
 YearlySummary_r %>% 
   ggplot(aes(x = reorder(ID, water_potential), y = water_potential, color = Category)) + 
   geom_boxplot() +
+  geom_hline(yintercept = -1.5, linetype = "solid", color = "black", size = 1) +
   theme_bw(base_size = 16) + theme(
     axis.text.x = element_text(angle = 90, hjust = 1)  # Rotate text 90 degrees (vertical)
   ) 
@@ -455,6 +456,7 @@ p1 <- MonthlySummary_r %>%
   ggplot(aes(x = Month, y = water_potential, color = Year)) +
   geom_point() +
   geom_line() +
+  geom_hline(yintercept = -1.5, linetype = "solid", color = "black", size = 1) +
   facet_wrap(~ID*Category, scales = "free") +
   theme_bw(base_size = 16) 
 ggsave(p1, filename = "wp1.png",height = 15, width = 15)
@@ -462,6 +464,7 @@ ggsave(p1, filename = "wp1.png",height = 15, width = 15)
 p2 <- MonthlySummary_r %>% 
   ggplot(aes(x = Month, y = water_potential, color = Year)) +
   geom_point() +
+  geom_hline(yintercept = -1.5, linetype = "solid", color = "black", size = 1) +
   geom_line() +
   facet_wrap(~ID*Category) +
   theme_bw(base_size = 16) 
