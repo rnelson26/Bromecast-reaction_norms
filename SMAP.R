@@ -256,7 +256,8 @@ library(soiltexture)
 library(aqp)
 library(sf)
 
-
+## how the ML mapping of soil works: https://www.isric.org/explore/soilgrids/faq-soilgrids#What_is_SoilGrids
+### the soil database: https://www.isric.org/explore/wosis
 
 # Ensure site_list has correct column names
 #x <- site_list %>% 
@@ -269,7 +270,7 @@ library(sf)
   #loc.names = c("id", "lat", "lon"),
   #depth_intervals = c("0-5", "5-15", "15-30", "30-60", "60-100", "100-200"),
   #variables = c("bdod", "cec", "cfvo", "clay", "nitrogen", "phh2o", "sand", "silt",
-                "soc", "ocd", "wv0010", "wv0033", "wv1500"),
+              #  "soc", "ocd", "wv0010", "wv0033", "wv1500"),
   #grid = FALSE,  # Ensures point data retrieval instead of grid-based data
   #target_resolution = c(250, 250),  # Resolution in meters
   #summary_type = c("Q0.05", "Q0.5", "Q0.95", "mean"),  # Include multiple statistics
@@ -345,11 +346,12 @@ geom_boxplot() +
 
 r$ID <- r$id  
 
+## filter to only get 0-5 cm (the relevant depth)
+r <- r %>% filter(label == "0-5")
  
 r_summary <- r %>%
-  select(ID, theta_r, claymean, siltmean, sandmean, alpha, npar, ksat, theta_s) %>% 
-  group_by(ID) %>% 
-  summarise(across(everything(), \(x) mean(x, na.rm = TRUE)))
+  select(ID, theta_r, claymean, siltmean, sandmean, alpha, npar, ksat, theta_s) 
+
 
 ### fix slight differences in site names between the two datasets before merging
      
@@ -370,7 +372,10 @@ YearlySummary$ID <- sapply(YearlySummary$ID, function(x) {
   if (length(match) > 0) match else x
 })
 
-
+MonthlySummary$ID <- sapply(MonthlySummary$ID, function(x) {
+  match <- name_mapping$new_name[name_mapping$old_name == x]
+  if (length(match) > 0) match else x
+})
 
 MonthlySummary_r <- left_join(MonthlySummary, r_summary, by= "ID")
 YearlySummary_r <- left_join(YearlySummary, r_summary, by= "ID")
@@ -437,7 +442,7 @@ YearlySummary_r %>%
 
 ## explore extreme values
 YearlySummary_r %>% 
-  ggplot(aes(x = reorder(ID, siltmean), y = siltmean, color = Category)) + 
+  ggplot(aes(x = reorder(ID, sandmean), y = sandmean, color = Category)) + 
   geom_boxplot() +
   theme_bw(base_size = 16) + theme(
     axis.text.x = element_text(angle = 90, hjust = 1)  # Rotate text 90 degrees (vertical)
