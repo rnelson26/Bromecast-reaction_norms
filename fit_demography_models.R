@@ -46,7 +46,7 @@ table(allD$Emerged)
 sum(is.na(allD$Emerged))
 
 ### scale and center covariates (modified Peter's code to only do this for numeric columns)
-## question: are there only specific columns we want to rescale? 
+
 
 # Filter numeric columns
 numeric_columns <- sapply(allD[, rescale_columns], is.numeric)

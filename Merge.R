@@ -407,4 +407,19 @@ recent <- summary %>%  filter(climYr > 2020 & climYr < 2024)
    labs(title="Seasonality", color="Seasonality")
  
  
+## combine climate summary variables with with merged data ######
+recent <- summary %>%  filter(climYr > 2020 & climYr < 2024)
 
+ recent <- recent %>%
+   filter(!is.na(seasonality)) %>%
+   group_by(climYr, SiteCode, Lat, Lon) %>%
+   summarise(mean_seasonality = mean(seasonality),
+             year = first(year),  # would pick first year
+             .groups = "drop")
+ 
+
+colnames(recent)[colnames(recent) == "SiteCode"] <- "site"
+
+combined_clean_climate <- left_join(combined_clean, recent, by = c("site", "year"))
+
+write.csv(combined_clean_climate, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate.csv", row.names = FALSE)
