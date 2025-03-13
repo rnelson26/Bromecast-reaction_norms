@@ -119,7 +119,7 @@ YearlySummary %>%
   theme(legend.position = "none")
 
 DailySummary %>% 
-  filter(Year == 2022) %>% 
+  filter(Year == 2024) %>% 
   ggplot(aes(x = Julian_day, y = soil_moisture_PM_dca, color = ID)) +
   geom_point() +
   geom_line() +
@@ -377,8 +377,14 @@ MonthlySummary$ID <- sapply(MonthlySummary$ID, function(x) {
   if (length(match) > 0) match else x
 })
 
+DailySummary$ID <- sapply(DailySummary$ID, function(x) {
+  match <- name_mapping$new_name[name_mapping$old_name == x]
+  if (length(match) > 0) match else x
+})
+
 MonthlySummary_r <- left_join(MonthlySummary, r_summary, by= "ID")
 YearlySummary_r <- left_join(YearlySummary, r_summary, by= "ID")
+DailySummary_r <- left_join(DailySummary, r_summary, by= "ID")
 
 # Define a function to calculate water potential using Rosetta model
 # Define the function for calculating water potential
@@ -426,6 +432,22 @@ MonthlySummary_r <- MonthlySummary_r %>%
     )
   )
 
+DailySummary_r <- DailySummary_r %>%
+  mutate(
+    water_potential = mapply(
+      calculate_water_potential,
+      clay = claymean,
+      silt = siltmean,
+      sand = sandmean,
+      theta_s = theta_s,
+      theta_r = theta_r,
+      alpha = alpha,
+      npar = npar,
+      soil_moisture = soil_moisture_AM
+    )
+  )
+
+
 
 #theta_r : residual volumetric water content
 #theta_s : saturated volumetric water content
@@ -469,6 +491,59 @@ p2 <- MonthlySummary_r %>%
   facet_wrap(~ID*Category) +
   theme_bw(base_size = 16) 
 ggsave(p2, filename = "wp2.png",height = 15, width = 15)
+
+D2020 <- DailySummary_r %>% 
+  filter(Year == 2020) %>% 
+  ggplot(aes(x = Julian_day, y = water_potential, color = Year)) +
+  geom_point() +
+  geom_line() +
+  geom_hline(yintercept = -1.5, linetype = "solid", color = "black", size = 1) +
+  facet_wrap(~ID*Category, scales = "free") +
+  theme_bw(base_size = 16) 
+ggsave(D2020, filename = "D2020.png",height = 15, width = 15)
+
+D2021 <- DailySummary_r %>% 
+  filter(Year == 2021) %>% 
+  ggplot(aes(x = Julian_day, y = water_potential, color = Year)) +
+  geom_point() +
+  geom_line() +
+  geom_hline(yintercept = -1.5, linetype = "solid", color = "black", size = 1) +
+  facet_wrap(~ID*Category, scales = "free") +
+  theme_bw(base_size = 16) 
+ggsave(D2021, filename = "D2021.png",height = 15, width = 15)
+
+D2022 <- DailySummary_r %>% 
+  filter(Year == 2022) %>% 
+  ggplot(aes(x = Julian_day, y = water_potential, color = Year)) +
+  geom_point() +
+  geom_line() +
+  geom_hline(yintercept = -1.5, linetype = "solid", color = "black", size = 1) +
+  facet_wrap(~ID*Category, scales = "free") +
+  theme_bw(base_size = 16) 
+ggsave(D2022, filename = "D2022.png",height = 15, width = 15)
+
+D2023 <- DailySummary_r %>% 
+  filter(Year == 2023) %>% 
+  ggplot(aes(x = Julian_day, y = water_potential, color = Year)) +
+  geom_point() +
+  geom_line() +
+  geom_hline(yintercept = -1.5, linetype = "solid", color = "black", size = 1) +
+  facet_wrap(~ID*Category, scales = "free") +
+  theme_bw(base_size = 16) 
+ggsave(D2023, filename = "D2023.png",height = 15, width = 15)
+
+D2024 <- DailySummary_r %>% 
+  filter(Year == 2024) %>% 
+  ggplot(aes(x = Julian_day, y = water_potential, color = Year)) +
+  geom_point() +
+  geom_line() +
+  geom_hline(yintercept = -1.5, linetype = "solid", color = "black", size = 1) +
+  facet_wrap(~ID*Category, scales = "free") +
+  theme_bw(base_size = 16) 
+ggsave(D2024, filename = "D2024.png",height = 15, width = 15)
+
+
+
 
 
 color_palette <- colorRampPalette(c("blue", "yellow", "red"))

@@ -282,7 +282,7 @@ state_map_filtered <- state_map[state_map$long >= -128 & state_map$long <= -95 &
  
   
 ##### MAT/MAP/seasonal variability with daynet ########
- climD <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/sat_sites/Satellites_daymet_daily.csv", header = TRUE)
+ climD <- read.csv("/Users/Becca/Desktop/Satellites_daymet_daily.csv", header = TRUE)
  
  # set up climate seasons
  climD$season <- "Win"
