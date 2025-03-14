@@ -1,6 +1,6 @@
 ######### Fitting models for reaction norms ##########
 ######## created 3-13-25 ###########
-####### last modified 3-13-25 ##############
+####### last modified 3-14-25 ##############
 ######## for bromecast reaction norm paper ########
 ######## R. Nelson, M. Vahsen, & P. Adler ######
 rm(list = ls())
@@ -10,6 +10,10 @@ library(dplyr)
 library(ggplot2)
 library(lme4)
 library(cmdstanr)
+library(posterior)
+library(bayesplot)
+library(rjags); library(janitor); library(patchwork); library(lubridate); 
+library(loo)
 
 ## read
 data <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate.csv", header = TRUE)
@@ -104,12 +108,56 @@ E_null_bayes <- brm(Emerged ~ 1 + (1|site_year),
                    data = training_data, 
                    family = bernoulli(),   
                    chains = 4,             
-                   iter = 2000,            
-                   warmup = 1000,          
+                   iter = 4000,            
+                   warmup = 2000,          
                    control = list(adapt_delta = 0.95))  
 summary(E_null_bayes)
 plot(E_null_bayes)
 diagnostics <- posterior_summary(E_null_bayes)
+
+
+
+### same model in cmdrstan syntax
+#tutorial: https://mc-stan.org/cmdstanr/articles/cmdstanr.html
+
+# Define a Stan model (must be written separately)
+model_code <- "
+data {
+  int<lower=0> N;
+ array[N] int<lower=0, upper=1> y;
+}
+parameters {
+  real theta;
+}
+model {
+  theta ~ beta(1,1);
+  y ~ bernoulli(theta);
+}
+"
+# Save model and compile
+writeLines(model_code, "bernoulli_model.stan")
+mod <- cmdstan_model("bernoulli_model.stan")
+
+# Prepare data
+data_list <- list(N = length(training_data$Emerged), y = training_data$Emerged)
+
+# Run MCMC sampling
+fit <- mod$sample(data = data_list, chains = 4, iter_warmup = 2000, iter_sampling = 4000)
+#runs and doesn't seem to generate error messages of brms 
+# Get summary of all parameters
+summary = fit$summary()
+
+# Get all posterior draws for parameters
+posterior <- fit$draws()
+
+mcmc_hist(fit$draws("theta"))
+str(fit$sampler_diagnostics())
+str(fit$sampler_diagnostics(format = "df"))
+fit$diagnostic_summary()
+
+mcmc_hist(fit$draws("theta"), binwidth = 0.025) +
+  ggplot2::labs(subtitle = "Posterior from MCMC") +
+  ggplot2::xlim(0, 1)
 
 E_map_bayes <- brm(Emerged ~ MAP.scaled + (1|site_year), 
                    data = training_data, 
@@ -147,6 +195,11 @@ summary(E_seasonality_bayes)
 plot(E_seasonality_bayes)
 diagnostics <- posterior_summary(E_seasonality_bayes)
 
+E_null_loo <- loo(E_null_bayes)
+E_mat_loo <- loo(E_mat_bayes)
+E_map_loo <- loo(E_map_bayes)
+E_seasonality_loo <- loo(E_seasonality_bayes)
+loo_compare(E_null_loo, E_mat_loo, E_map_loo, E_seasonality_loo) #issues with diff number of data
 
 ###### Reproduced #######
 ### Reproduced Frequentist: ##############
