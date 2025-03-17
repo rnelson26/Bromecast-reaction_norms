@@ -1,0 +1,19 @@
+data {
+  int<lower=0> N;                  // Number of observations
+  array[N] int<lower=0, upper=1> y; // Response variable (binary)
+  array[N] real MAP.scaled;         // Predictor (scaled MAP)
+}
+parameters {
+  real alpha;  // Intercept
+  real beta_map; // Coefficient for Map.scaled
+}
+model {
+  // Priors
+  alpha ~ normal(0, 5);
+  beta_map ~ normal(0, 5);
+  
+  // Likelihood
+  for (i in 1:N) {
+    y[i] ~ bernoulli_logit(alpha + beta_map * MAP.scaled[i]);
+  }
+}

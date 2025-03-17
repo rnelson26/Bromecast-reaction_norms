@@ -223,7 +223,10 @@ str(combined_clean)
 write.csv(combined_clean, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean.csv", row.names = FALSE)
 
 ###### MAP and MAT ######
+combined_clean <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean.csv")
 #### MAP/MAT with summary data ##########
+
+
 
 #You can sum those seasons to get the annual totals (precip) and means (temperature). 
 
@@ -307,7 +310,7 @@ state_map_filtered <- state_map[state_map$long >= -128 & state_map$long <= -95 &
    ) %>%
    select(SiteCode, year, climYr, climDay, seasonality, MAT, MAP, cumulative_prcp)  
  
-site_list <- summary %>% select(site, Lat, Lon) %>% distinct()
+site_list <- combined_clean %>% select(site, Lat, Lon) %>% distinct()
 site_list$SiteCode <- site_list$site
 
 name_mapping <- data.frame(
@@ -415,11 +418,11 @@ recent <- summary %>%  filter(climYr > 2020 & climYr < 2024)
    group_by(climYr, SiteCode, Lat, Lon) %>%
    summarise(mean_seasonality = mean(seasonality),
              year = first(year),  # would pick first year
-             .groups = "drop")
+           .groups = "drop")
  
 
 colnames(recent)[colnames(recent) == "SiteCode"] <- "site"
 
 combined_clean_climate <- left_join(combined_clean, recent, by = c("site", "year"))
 
-write.csv(combined_clean_climate, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate.csv", row.names = FALSE)
+#write.csv(combined_clean_climate, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate.csv", row.names = FALSE)

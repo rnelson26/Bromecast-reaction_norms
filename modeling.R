@@ -1,6 +1,6 @@
 ######### Fitting models for reaction norms ##########
 ######## created 3-13-25 ###########
-####### last modified 3-14-25 ##############
+####### last modified 3-17-25 ##############
 ######## for bromecast reaction norm paper ########
 ######## R. Nelson, M. Vahsen, & P. Adler ######
 rm(list = ls())
@@ -120,7 +120,7 @@ diagnostics <- posterior_summary(E_null_bayes)
 ### same model in cmdrstan syntax
 #tutorial: https://mc-stan.org/cmdstanr/articles/cmdstanr.html
 
-# Define a Stan model (must be written separately)
+# Stan model
 model_code <- "
 data {
   int<lower=0> N;
@@ -159,6 +159,8 @@ mcmc_hist(fit$draws("theta"), binwidth = 0.025) +
   ggplot2::labs(subtitle = "Posterior from MCMC") +
   ggplot2::xlim(0, 1)
 
+#### Map
+
 E_map_bayes <- brm(Emerged ~ MAP.scaled + (1|site_year), 
                    data = training_data, 
                    family = bernoulli(),   
@@ -170,7 +172,89 @@ summary(E_map_bayes)
 plot(E_map_bayes)
 diagnostics <- posterior_summary(E_map_bayes)
 
+model_map_code <- "data {
+  int<lower=0> N;                  
+  array[N] int<lower=0, upper=1> y; 
+  array[N] real MAPscaled;         
+}
+parameters {
+  real alpha;  
+  real beta_map; 
+}
+model {
+  alpha ~ normal(0, 5);
+  beta_map ~ normal(0, 5);
+  for (i in 1:N) {
+    y[i] ~ bernoulli_logit(alpha + beta_map * MAPscaled[i]);
+  }
+}"
 
+# Save model and compile
+writeLines(model_map_code, "bernoulli_model.Emap.stan")
+mod_map <- cmdstan_model("bernoulli_model.Emap.stan")
+
+# Prepare data
+#training_data$MAPscaled <- training_data$MAP.scaled
+training_data <- training_data[!is.na(training_data$MAP.scaled), ]
+data_list <- list(
+  N = length(training_data$Emerged), 
+  y = training_data$Emerged, 
+  MAPscaled = as.vector(training_data$MAP.scaled)
+)
+
+
+
+# Run MCMC sampling
+fit <- mod_map$sample(data = data_list, chains = 4, iter_warmup = 2000, iter_sampling = 4000)
+
+# Get summary of all parameters
+summary = fit$summary()
+
+# Get all posterior draws for parameters
+posterior <- fit$draws()
+
+mcmc_trace(posterior, pars = c("alpha", "beta_map"))
+mcmc_dens_overlay(posterior, pars = c("alpha", "beta_map"))
+
+
+posterior_df <- as_draws_df(fit$draws())
+alpha_samples <- posterior_df$alpha
+beta_map_samples <- posterior_df$beta_map
+
+
+# Sample a subset of posterior draws (to reduce memory usage)
+n_samples <- 1000  
+posterior_sample <- posterior_df[sample(nrow(posterior_df), n_samples), ]
+
+# Generate MAPscaled sequence for prediction
+map_seq <- seq(min(training_data$MAP.scaled, na.rm = TRUE), 
+               max(training_data$MAP.scaled, na.rm = TRUE), length.out = 100)
+
+# Compute predicted probabilities using matrix multiplication
+pred_probs <- posterior_sample$alpha + outer(posterior_sample$beta_map, map_seq, "*")
+pred_probs <- plogis(pred_probs) 
+# Compute mean and 95% credible intervals
+pred_mean <- colMeans(pred_probs)   # Mean across samples
+pred_lower <- apply(pred_probs, 2, quantile, probs = 0.025)  # 2.5% quantile
+pred_upper <- apply(pred_probs, 2, quantile, probs = 0.975)
+
+plot_data <- data.frame(
+  MAPscaled = map_seq,
+  mean_prob = pred_mean,
+  lower_prob = pred_lower,
+  upper_prob = pred_upper
+)
+
+# Plot
+ggplot(plot_data, aes(x = MAPscaled, y = mean_prob)) +
+  geom_ribbon(aes(ymin = lower_prob, ymax = upper_prob), alpha = 0.2, fill = "blue") +
+  geom_line(color = "blue", size = 1) +
+  geom_point(data = training_data, aes(x = MAP.scaled, y = Emerged), alpha = 0.5) +
+  labs(x = "MAPscaled", y = "Probability of Emergence") +
+  theme_minimal()
+
+
+## MAT
  
 E_mat_bayes <- brm(Emerged ~ MAT.scaled + (1|site_year), 
                       data = training_data, 
@@ -214,6 +298,12 @@ R_seasonality <- glmer(Reproduced ~ mean_seasonality.scaled + (1|site_year),data
 summary(R_null)
 ## only seasonality marginally significant (it is significant if you don't condition on emergence)
 AIC(R_null, R_map, R_mat, R_seasonality) ## seasonality has lowest AIC but models aren't fitted to same number of observations 
+
+nobs(R_null)
+nobs(R_map)
+nobs(R_mat)
+nobs(R_seasonality) #less obs
+
 
 r2_Null <- r.squaredGLMM(R_null)
 print(r2_Null) #R2 marginal = 0
