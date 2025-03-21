@@ -15,6 +15,8 @@ library(bayesplot)
 library(rjags); library(janitor); library(patchwork); library(lubridate); 
 library(loo)
 
+data %>% filter(Type == "Common_Garden") %>% select(year) %>% distinct()
+
 ## read
 data <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate.csv", header = TRUE)
 ## note need to merge climat data so that it doesn't have redudnant latitude 
