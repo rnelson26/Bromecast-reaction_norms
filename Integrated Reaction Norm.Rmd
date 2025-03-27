@@ -2,6 +2,7 @@
 title: "Integrated Reaction Norm"
 output: pdf_document
 date: "2025-03-25"
+#last modified 3/27/25
 ---
 
 # Set up 
@@ -26,14 +27,22 @@ library(cmdstanr)
 ###
 
 # Read in data that matches kinship matrix position and genotype ID
+
 dir="/Users/justinvanee/Library/Mobile Documents/com~apple~CloudDocs/Documents/bromecast/Cheatgrass"
 kinshipIDs <- read.csv(file=paste(dir, "93cg_genotypes.csv", sep="/"))
 
 ### This has all traits for all 4 common garden sites from 2022
-allsites_flower_harvest <-
-  read.csv(file=paste(dir, "cg_cleandata_VanEe_PPCA.csv", sep="/")) %>%
-# Subset trait data for only genotypes that we have kinship data for
+
+## with combined dataframe 
+allsites_flower_harvest <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate.csv", header = TRUE) %>%
+#Subset trait data for only genotypes that we have kinship data for
   filter(genotype %in% kinshipIDs$genotype) # Right now this only drops 329 plants total and 4 genotypes
+
+
+#allsites_flower_harvest <-
+  #read.csv(file=paste(dir, "cg_cleandata_VanEe_PPCA.csv", sep="/")) %>%
+# Subset trait data for only genotypes that we have kinship data for
+ # filter(genotype %in% kinshipIDs$genotype) # Right now this only drops 329 plants total and 4 genotypes
 
 ### Genotypes Common Gardens  
 genotypes_common_gardens <- 
@@ -44,7 +53,10 @@ genotypes_common_gardens <-
 
 # Read in data that matches kinship matrix position and genotype ID
 # Read in kinship matrix for 307 genotypes 
-kinship <- read.table(paste(dir, "BRTE307_IBSmatrix.txt", sep="/"), sep=",")
+#kinship <- read.table(paste(dir, "BRTE307_IBSmatrix.txt", sep="/"), sep=",")
+
+kinship <- read.table("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/BRTE307_IBSmatrix.txt", sep=",")
+
 # Filter for common garden genotypes 
 K_common_garden <- as.matrix(kinship[genotypes_common_gardens$kinshipID,genotypes_common_gardens$kinshipID])
 
@@ -92,7 +104,9 @@ Environments_classification <-
 
 ### Bring in bioclimate variables 
 # Bromecast repository
-bioclim <- read_csv("https://raw.githubusercontent.com/pbadler/bromecast-data/main/gardens/deriveddata/BioclimateOfOrigin_AllGenotypes.csv")
+#bioclim <- read_csv("https://raw.githubusercontent.com/pbadler/bromecast-data/main/gardens/deriveddata/BioclimateOfOrigin_AllGenotypes.csv")
+
+bioclim <- read_csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate.csv", header = TRUE) 
 
 # Get idx of sites 
 idx_sites=which(bioclim$site_code %in% c("BA", "CH", "SS", "WI"))

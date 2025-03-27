@@ -222,8 +222,27 @@ str(combined_clean)
 ## save as .csv 
 write.csv(combined_clean, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean.csv", row.names = FALSE)
 
-###### MAP and MAT ######
+###### Climate Variables ######
 combined_clean <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean.csv")
+
+garden_info <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/common_gardens/garden_info.csv")
+
+### add a lat and long for common gardens
+combined_clean <- combined_clean %>%
+  mutate(
+    Lat = ifelse(site == "BA" & Type == "Common_Garden", 43.208482, Lat),
+    Lon = ifelse(site == "BA" & Type == "Common_Garden", -116.995198, Lon),
+    Lat = ifelse(site == "CH" & Type == "Common_Garden", 41.212078, Lat),
+    Lon = ifelse(site == "CH" & Type == "Common_Garden", -104.852543, Lon),
+    Lat = ifelse(site == "SS" & Type == "Common_Garden", 44.245590, Lat),
+    Lon = ifelse(site == "SS" & Type == "Common_Garden", -112.214337, Lon),
+    Lat = ifelse(site == "WI" & Type == "Common_Garden", 43.474370, Lat),
+    Lon = ifelse(site == "WI" & Type == "Common_Garden", -116.901770, Lon)
+  )
+
+write.csv(combined_clean, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean.csv", row.names = FALSE)
+
+
 #### MAP/MAT with summary data ##########
 
 
@@ -295,20 +314,29 @@ state_map_filtered <- state_map[state_map$long >= -128 & state_map$long <= -95 &
  
  ## For seasonality, I suggest identifying the day of the climate year (Oct 1 - Sept 30) when 50% of the total annual precip has been received. Eventually I'd like to calculate the analogous metric for WDD.
  
- climD_clean <- climD %>% 
-   group_by(climYr, SiteCode) %>% 
+ 
+ climD_clean <- climD %>%
+   group_by(climYr, SiteCode) %>%
    mutate(
-     MAP = sum(prcp),
-     MAT = mean((tmax + tmin) / 2),
- seasonality = NA ) %>% 
-   mutate(
-     cumulative_prcp = cumsum(prcp),  
-     seasonality = ifelse(cumulative_prcp >= 0.5 * MAP & is.na(seasonality), climDay, NA)  # Set 
+     total_precip = sum(prcp),  # Total annual precipitation
+     MAT = mean((tmax + tmin) / 2)  # Mean annual temperature
    ) %>%
    mutate(
-     seasonality = ifelse(is.na(seasonality), lag(seasonality), seasonality)  
+     cumulative_prcp = cumsum(prcp)  # Cumulative precipitation over the year
    ) %>%
-   select(SiteCode, year, climYr, climDay, seasonality, MAT, MAP, cumulative_prcp)  
+   filter(cumulative_prcp >= 0.5 * total_precip) %>%  # Keep only rows where cumulative_prcp reaches 50% of total
+   slice_min(climDay, with_ties = FALSE) %>%  # Select the first occurrence 
+   summarise(
+     total_precip = first(total_precip),
+     MAT = first(MAT),
+     seasonality = first(climDay)  # The first day reaching 50% MAP
+   ) %>%
+   ungroup()  %>%  filter(climYr > 2020 & climYr < 2024)
+ 
+
+ 
+ 
+
  
 site_list <- combined_clean %>% select(site, Lat, Lon) %>% distinct()
 site_list$SiteCode <- site_list$site
@@ -331,10 +359,9 @@ climD_clean$SiteCode <- sapply(climD_clean$SiteCode, function(x) {
 
 climD_clean_full <- left_join(climD_clean, site_list, by= "SiteCode")
 
-summary <- climD_clean_full %>% select(SiteCode, year, climYr, seasonality, MAP, MAT, Lat, Lon) %>% distinct()
 
 ### MAP
-summary %>%  filter(year > 2020 & year < 2024) %>% ggplot(aes(x = year, y = MAP)) +
+climD_clean_full %>%  filter(year > 2020 & year < 2024) %>% ggplot(aes(x = year, y = MAP)) +
   geom_point() + 
   theme_classic() + facet_wrap(~SiteCode) + theme(
     axis.text.x = element_text(angle = 90, hjust = 1)  
@@ -345,11 +372,11 @@ custom_colors <- c("blue", "cyan", "green", "yellow", "orange", "red")
 state_map <- map_data("state")
 state_map_filtered <- state_map[state_map$long >= -128 & state_map$long <= -95 &
                                   state_map$lat >= 30 & state_map$lat <= 52, ]
-recent <- summary %>%  filter(climYr > 2020 & climYr < 2024)
+recent <- climD_clean_full
 
  ggplot() +
   geom_polygon(data=state_map_filtered, aes(x=long, y=lat, group=group), fill="gray100", color="black") +
-  geom_point(data=recent, aes(x=Lon, y=Lat, color=MAP)) +
+  geom_point(data=recent, aes(x=Lon, y=Lat, color=total_precip)) +
   scale_color_gradientn(
     colors = c("blue", "cyan", "green", "yellow", "orange", "red"))  +
   coord_cartesian(xlim=c(-128, -95), ylim=c(30, 52)) +
@@ -358,7 +385,7 @@ recent <- summary %>%  filter(climYr > 2020 & climYr < 2024)
   labs(title="MAP", color="MAP") 
 
 ### MAT
- summary %>%  filter(year > 2020 & year < 2024) %>% ggplot(aes(x = year, y = MAT)) +
+ recent %>%  filter(year > 2020 & year < 2024) %>% ggplot(aes(x = year, y = MAT)) +
    geom_point() + 
    theme_classic() + facet_wrap(~SiteCode) + theme(
      axis.text.x = element_text(angle = 90, hjust = 1)  
@@ -369,7 +396,7 @@ recent <- summary %>%  filter(climYr > 2020 & climYr < 2024)
  state_map <- map_data("state")
  state_map_filtered <- state_map[state_map$long >= -128 & state_map$long <= -95 &
                                    state_map$lat >= 30 & state_map$lat <= 52, ]
- recent <- summary %>%  filter(climYr > 2020 & climYr < 2024)
+
  
  ggplot() +
    geom_polygon(data=state_map_filtered, aes(x=long, y=lat, group=group), fill="gray100", color="black") +
@@ -383,7 +410,7 @@ recent <- summary %>%  filter(climYr > 2020 & climYr < 2024)
  
  
  ### Seasonality
- summary %>%  filter(year > 2020 & year < 2024) %>% ggplot(aes(x = year, y = seasonality)) +
+recent %>%  filter(year > 2020 & year < 2024) %>% ggplot(aes(x = year, y = seasonality)) +
    geom_point() + 
    theme_classic() + facet_wrap(~SiteCode) + theme(
      axis.text.x = element_text(angle = 90, hjust = 1)  
@@ -394,13 +421,12 @@ recent <- summary %>%  filter(climYr > 2020 & climYr < 2024)
  state_map <- map_data("state")
  state_map_filtered <- state_map[state_map$long >= -128 & state_map$long <= -95 &
                                    state_map$lat >= 30 & state_map$lat <= 52, ]
- recent <- summary %>%  filter(climYr > 2020 & climYr < 2024)
- recent <- recent %>% filter(!is.na(seasonality))  %>% group_by(climYr, SiteCode, Lat, Lon) %>% summarise(mean_seasonality = mean(seasonality))
+
 ## think more about why you would need to take the mean
  
- ggplot() +
+  ggplot() +
    geom_polygon(data=state_map_filtered, aes(x=long, y=lat, group=group), fill="gray100", color="black") +
-   geom_point(data=recent, aes(x=Lon, y=Lat, color=mean_seasonality)) +
+   geom_point(data=recent, aes(x=Lon, y=Lat, color=seasonality)) +
    scale_color_gradientn(
      colors = c("blue", "cyan", "green", "yellow", "orange", "red"),
    ) + 
@@ -411,18 +437,13 @@ recent <- summary %>%  filter(climYr > 2020 & climYr < 2024)
  
  
 ## combine climate summary variables with with merged data ######
-recent <- summary %>%  filter(climYr > 2020 & climYr < 2024)
 
- recent <- recent %>%
-   filter(!is.na(seasonality)) %>%
-   group_by(climYr, SiteCode, Lat, Lon) %>%
-   summarise(mean_seasonality = mean(seasonality),
-             year = first(year),  # would pick first year
-           .groups = "drop")
- 
+recent <- climD_clean_full %>% select(climYr, SiteCode, MAT, total_precip, seasonality)
 
 colnames(recent)[colnames(recent) == "SiteCode"] <- "site"
+colnames(recent)[colnames(recent) == "climYr"] <- "year" 
+
 
 combined_clean_climate <- left_join(combined_clean, recent, by = c("site", "year"))
 
-#write.csv(combined_clean_climate, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate.csv", row.names = FALSE)
+write.csv(combined_clean_climate, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate.csv", row.names = FALSE)
