@@ -30,7 +30,7 @@ climate_vars <- climate_vars <- c(
 
 # Subset and scale the data
 pca_data <- data %>% filter(Emerged == "Y") %>% filter(Reproduced == "Y") %>% 
-  select(site_year, all_of(climate_vars), Fecundity)  %>%
+  select(site_year, all_of(climate_vars))  %>%
   na.omit()  
 
 # Store site_year separately and remove from scaled PCA variables
