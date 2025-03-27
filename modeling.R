@@ -1,8 +1,25 @@
 ######### Fitting models for reaction norms ##########
 ######## created 3-13-25 ###########
-####### last modified 3-17-25 ##############
+####### last modified 3-27-25 ##############
 ######## for bromecast reaction norm paper ########
 ######## R. Nelson, M. Vahsen, & P. Adler ######
+
+#To get solar radiation:
+  
+  
+  
+  #For solar insolation (INS, kWh
+                #        
+                 #       m_2 d_1), we extracted average annual data (1983–2005)
+
+#from the NASA Surface meteorology and Solar Energy
+
+#database (http://eosweb.larc.nasa.gov/sse/).
+
+
+
+This is from Anderson et al. 2018, Herbivory and eutrophication mediate grassland plant nutrient responses across a global climatic gradient
+
 rm(list = ls())
 
 ## load required packages
@@ -15,10 +32,15 @@ library(bayesplot)
 library(rjags); library(janitor); library(patchwork); library(lubridate); 
 library(loo)
 
-data %>% filter(Type == "Common_Garden") %>% select(year) %>% distinct()
+#data %>% filter(Type == "Common_Garden") %>% select(year) %>% distinct()
 
 ## read
 data <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate.csv", header = TRUE)
+
+data_2 <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean.csv", header = TRUE)
+
+
+
 ## note need to merge climat data so that it doesn't have redudnant latitude 
 ##### Set training data ########
 data <- data %>%
@@ -27,6 +49,18 @@ data <- data %>%
 data$site <- as.factor(data$site)
 data$year <- as.factor(data$year)
 data$site_year <- as.factor(data$site_year)
+
+data_2 <- data_2 %>%
+  mutate(site_year = paste(site, year))
+
+data_2$site <- as.factor(data_2$site)
+data_2$year <- as.factor(data_2$year)
+data_2$site_year <- as.factor(data_2$site_year)
+
+##### site year list ########
+list <- data_2 %>% select(site_year, Lat, Lon, Type) %>% distinct() %>% filter(Type == "Satellite")
+write.csv(list, "list.csv", row.names = FALSE)
+
 
 data_sat <- data %>% filter(Type == "Satellite")
 

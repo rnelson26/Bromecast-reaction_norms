@@ -1,0 +1,233 @@
+---
+title: "Integrated Reaction Norm"
+output: pdf_document
+date: "2025-03-25"
+---
+
+# Set up 
+
+```{r, setup}
+
+###
+### Packages
+###
+
+library(tidyverse)
+library(bayesplot)
+library(cmdstanr)
+```
+
+# Real Data Preparation (Cheatgrass: Common Gardens)
+
+```{r, Real Data Preparation (Cheatgrass: Common Gardens)} 
+
+###
+### Data (Common Gardens)
+###
+
+# Read in data that matches kinship matrix position and genotype ID
+dir="/Users/justinvanee/Library/Mobile Documents/com~apple~CloudDocs/Documents/bromecast/Cheatgrass"
+kinshipIDs <- read.csv(file=paste(dir, "93cg_genotypes.csv", sep="/"))
+
+### This has all traits for all 4 common garden sites from 2022
+allsites_flower_harvest <-
+  read.csv(file=paste(dir, "cg_cleandata_VanEe_PPCA.csv", sep="/")) %>%
+# Subset trait data for only genotypes that we have kinship data for
+  filter(genotype %in% kinshipIDs$genotype) # Right now this only drops 329 plants total and 4 genotypes
+
+### Genotypes Common Gardens  
+genotypes_common_gardens <- 
+  kinshipIDs %>%
+  mutate(source = as.factor(source)) %>%
+  filter(genotype %in% unique(allsites_flower_harvest$genotype)) %>%
+  arrange(NewSiteCode)
+
+# Read in data that matches kinship matrix position and genotype ID
+# Read in kinship matrix for 307 genotypes 
+kinship <- read.table(paste(dir, "BRTE307_IBSmatrix.txt", sep="/"), sep=",")
+# Filter for common garden genotypes 
+K_common_garden <- as.matrix(kinship[genotypes_common_gardens$kinshipID,genotypes_common_gardens$kinshipID])
+
+# Put genotype numbers on rows and columns
+colnames(K_common_garden) <- rownames(K_common_garden) <- as.factor(genotypes_common_gardens$NewSiteCode)
+
+###
+### Back to Common gardens data manipulations 
+###
+
+### Calculate Seed(m) and Biomass and set all attributes to NA for plants that didn't survive to Reproduce
+df <- 
+  allsites_flower_harvest %>%
+  filter(year == 2022) %>%
+  mutate(Reproduce=if_else(seed_count_total>0, 1, 0),
+         "Seed(n)"=if_else(Reproduce==0, NA, seed_count_total), # Checked this is always either 0 or NA if live_harvest=="N"
+         "Biomass"=if_else(Reproduce==0, NA, veg_mass),
+         site_numeric=as.numeric(as.factor(site)),
+         density_numeric=as.numeric(as.factor(density))-1,
+         gravel_numeric=as.numeric(as.factor(albedo))-1,
+         year_numeric=as.numeric(as.factor(year))-1,
+         environment=as.factor(site_numeric+density_numeric*4+gravel_numeric*8),
+         site=as.factor(site)) %>% # Need switch from grams to miligrams to match growth_chamber data. 
+  dplyr::select(genotype,
+                environment,
+                site,
+                "Seed(n)",
+                "Biomass",
+                "Reproduce") %>%
+  left_join(kinshipIDs, by="genotype") %>%
+  filter(!is.na(NewSiteCode),
+         !is.na(`Seed(n)`))  
+
+### Covariate matrix 
+Environments_classification <-
+  allsites_flower_harvest %>%
+  mutate(site_numeric=as.numeric(as.factor(site)),
+         density_numeric=as.numeric(as.factor(density))-1,
+         gravel_numeric=as.numeric(as.factor(albedo))-1,
+         year_numeric=as.numeric(as.factor(year))-1,
+         environment=site_numeric+density_numeric*4+gravel_numeric*8) %>%
+  dplyr::select(site, density, albedo, environment) %>% 
+  distinct() %>%
+  arrange(environment)
+
+### Bring in bioclimate variables 
+# Bromecast repository
+bioclim <- read_csv("https://raw.githubusercontent.com/pbadler/bromecast-data/main/gardens/deriveddata/BioclimateOfOrigin_AllGenotypes.csv")
+
+# Get idx of sites 
+idx_sites=which(bioclim$site_code %in% c("BA", "CH", "SS", "WI"))
+
+# Run PCA
+pca_out <- prcomp(scale(bioclim[,5:ncol(bioclim)]))
+n_X <- nrow(bioclim)
+q_X <- 2
+Lambda <- as.matrix(pca_out$rotation[,1:q_X])
+
+### Create linkage matrix 
+Z <- model.matrix(~ environment - 1, data = df)
+
+### Create linkage matrix (for four sites)
+idx_plant <- as.numeric(df$site)
+
+### Extract genotype of each plant 
+genotype_plant <- as.numeric(as.factor(df$NewSiteCode))
+
+### Bioclimatic covariates 
+allcov <-
+  Environments_classification %>%
+  mutate(intercept=1,
+         density_n=as.numeric(density=="hi"), # These effects aren't estimated well in the data, huge variance 
+         gravel_n=as.numeric(albedo=="black"),
+         interaction=gravel_n*density_n) %>%
+  left_join(bioclim[idx_sites,c(1, 5:ncol(bioclim))], by=c("site"="site_code"))
+
+### Bioclimatic covariates 
+X <- scale(bioclim[,5:ncol(bioclim)]) 
+
+### Treatment covariates  
+V <- Z %*% as.matrix(allcov[,5:8])
+
+### Extract fecundity 
+y <-
+  df %>%
+  pluck("Seed(n)")
+
+```
+
+# Fit Stan Model 
+
+```{r, fit stan model}
+
+# Data list for Stan
+stan_data <- list(
+  # Dimension of objects
+  n_g = max(genotype_plant),
+  n = nrow(V),
+  p_V = ncol(V),
+  n_X = nrow(X),
+  q_X = ncol(Lambda),
+  p_X = nrow(Lambda),
+  # Response (fecundity)
+  y = y,
+  # Matrices 
+  Lambda = Lambda,
+  V = V,
+  X = X,
+  # Kinship
+  K = K_common_garden,
+  # For linking plants with genotypes and treatments 
+  idx_sites = idx_sites,
+  idx_plant = idx_plant,
+  genotype_plant = genotype_plant
+)
+
+# Warmup and iterations 
+iter_warmup = 100
+iter_sampling = 1000
+
+# Fit using cmdrstan 
+mod <- cmdstan_model("ztp_glm.stan")
+
+# Compile and fit the model
+fit <- mod$sample(
+  data = stan_data,
+  seed = 123,
+  chains = 4,
+  parallel_chains = 4,
+  iter_warmup = iter_warmup,
+  iter_sampling = iter_sampling
+)
+
+# Summary of results
+fit$summary()
+
+# Extract posterior samples
+posterior <- fit$draws(variables = c("beta", "gamma", "sigma", "W", "zeta"))
+
+#
+# Traceplots for diagnostics
+#
+
+# beta
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior,  pars = c("beta[1,1]","beta[2,1]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+# gamma
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior[51:200,,],  pars = paste0("gamma[", 1:ncol(V), "]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+# sigma
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior,  pars = paste0("sigma[", 1:ncol(X), "]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+# zeta
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior[51:200,,],  pars = paste0("zeta[", 1:q_X, "]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+# W
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior,  pars = c("W[1,1]","W[1,2]", "W[101,1]", "W[101,2]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+```
+
+# Simulation Study
+
+```{r, simulation study}
+
+
+# 
+p_X=20
+q_X=2
+n_X=100
+n=1000
+X=matrix(rnorm(p_X * n_X), n_X, p_X)
+pc_out=prcomp(X)
+Lambda=pc_out$rotation[,1:q_X]
+W=pc_out$x[,1:q_X]
+
+```
+
