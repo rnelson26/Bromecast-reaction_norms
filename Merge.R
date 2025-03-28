@@ -9,7 +9,6 @@
 ## whether approach to zero neighbors makes sense 
 
 
-### load required packages ########
 rm(list = ls())
 
 

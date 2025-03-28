@@ -2,7 +2,6 @@
 title: "Integrated Reaction Norm"
 output: pdf_document
 date: "2025-03-25"
-#last modified 3/27/25
 ---
 
 # Set up 
@@ -27,25 +26,17 @@ library(cmdstanr)
 ###
 
 # Read in data that matches kinship matrix position and genotype ID
-
 #dir="/Users/justinvanee/Library/Mobile Documents/com~apple~CloudDocs/Documents/bromecast/Cheatgrass"
 #kinshipIDs <- read.csv(file=paste(dir, "93cg_genotypes.csv", sep="/"))
 
 kinshipIDs <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/common_gardens/93cg_genotypes.csv")
 
 ### This has all traits for all 4 common garden sites from 2022
-
-## with combined dataframe 
-allsites_flower_harvest <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate.csv", header = TRUE) #%>%
-
-  #Subset trait data for only genotypes that we have kinship data for
- # filter(genotype %in% kinshipIDs$genotype) # Right now this only drops 329 plants total and 4 genotypes
-
-
 #allsites_flower_harvest <-
-  #read.csv(file=paste(dir, "cg_cleandata_VanEe_PPCA.csv", sep="/")) %>%
+ # read.csv(file=paste(dir, "cg_cleandata_VanEe_PPCA.csv", sep="/")) %>%
+allsites_flower_harvest <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/common_gardens/cg_cleandata_VanEe_PPCA.csv", header = TRUE) %>%
 # Subset trait data for only genotypes that we have kinship data for
- # filter(genotype %in% kinshipIDs$genotype) # Right now this only drops 329 plants total and 4 genotypes
+  filter(genotype %in% kinshipIDs$genotype) # Right now this only drops 329 plants total and 4 genotypes
 
 ### Genotypes Common Gardens  
 genotypes_common_gardens <- 
@@ -57,7 +48,6 @@ genotypes_common_gardens <-
 # Read in data that matches kinship matrix position and genotype ID
 # Read in kinship matrix for 307 genotypes 
 #kinship <- read.table(paste(dir, "BRTE307_IBSmatrix.txt", sep="/"), sep=",")
-
 kinship <- read.table("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/BRTE307_IBSmatrix.txt", sep=",")
 
 # Filter for common garden genotypes 
@@ -69,78 +59,51 @@ colnames(K_common_garden) <- rownames(K_common_garden) <- as.factor(genotypes_co
 ###
 ### Back to Common gardens data manipulations 
 ###
-allsites_flower_harvest <- allsites_flower_harvest %>% mutate(site_year = paste(site, year)) 
-
 
 ### Calculate Seed(m) and Biomass and set all attributes to NA for plants that didn't survive to Reproduce
 df <- 
   allsites_flower_harvest %>%
-  filter(Emerged == "Y") %>% 
-  filter (Reproduced == "Y") %>% 
-  #filter(year == 2022) %>%
- # mutate(Reproduce=if_else(seed_count_total>0, 1, 0),
-     #    "Seed(n)"=if_else(Reproduce==0, NA, seed_count_total), # Checked this is always either 0 or NA if live_harvest=="N"
-       #  "Biomass"=if_else(Reproduce==0, NA, veg_mass),
-  mutate(
+  filter(year == 2022) %>%
+  mutate(Reproduce=if_else(seed_count_total>0, 1, 0),
+         "Seed(n)"=if_else(Reproduce==0, NA, seed_count_total), # Checked this is always either 0 or NA if live_harvest=="N"
+         "Biomass"=if_else(Reproduce==0, NA, veg_mass),
          site_numeric=as.numeric(as.factor(site)),
-         site_year_numeric=as.numeric(as.factor(site_year)),
-         #density_numeric=as.numeric(as.factor(density))-1,
+         density_numeric=as.numeric(as.factor(density))-1,
          gravel_numeric=as.numeric(as.factor(albedo))-1,
          year_numeric=as.numeric(as.factor(year))-1,
-         #environment=as.factor(site_numeric+density_numeric*4+gravel_numeric*8),
-         environment=as.factor(site_numeric+neighbors*4+gravel_numeric*8),
+         environment=as.factor(site_numeric+density_numeric*4+gravel_numeric*8),
          site=as.factor(site)) %>% # Need switch from grams to miligrams to match growth_chamber data. 
   dplyr::select(genotype,
                 environment,
                 site,
-                "Fecundity",
+                "Seed(n)",
                 "Biomass",
-                "Reproduced") %>%
+                "Reproduce") %>%
   left_join(kinshipIDs, by="genotype") %>%
   filter(!is.na(NewSiteCode),
-         !is.na(`Fecundity`))  
+         !is.na(`Seed(n)`))  
 
 ### Covariate matrix 
 Environments_classification <-
   allsites_flower_harvest %>%
   mutate(site_numeric=as.numeric(as.factor(site)),
-         site_year_numeric=as.numeric(as.factor(site_year)),
-         #density_numeric=as.numeric(as.factor(density))-1,
+         density_numeric=as.numeric(as.factor(density))-1,
          gravel_numeric=as.numeric(as.factor(albedo))-1,
          year_numeric=as.numeric(as.factor(year))-1,
-         environment=site_numeric+neighbors*4+gravel_numeric*8) %>%
-  dplyr::select(site, site_year, albedo, environment) %>% 
+         environment=site_numeric+density_numeric*4+gravel_numeric*8) %>%
+  dplyr::select(site, density, albedo, environment) %>% 
   distinct() %>%
   arrange(environment)
 
 ### Bring in bioclimate variables 
 # Bromecast repository
-#bioclim <- read_csv("https://raw.githubusercontent.com/pbadler/bromecast-data/main/gardens/deriveddata/BioclimateOfOrigin_AllGenotypes.csv")
-
-bioclim <- read_csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate.csv") 
+bioclim <- read_csv("https://raw.githubusercontent.com/pbadler/bromecast-data/main/gardens/deriveddata/BioclimateOfOrigin_AllGenotypes.csv")
 
 # Get idx of sites 
-idx_sites=which(bioclim$site %in% c("BA", "CH", "SS", "WI"))
+idx_sites=which(bioclim$site_code %in% c("BA", "CH", "SS", "WI"))
 
 # Run PCA
-#pca_out <- prcomp(scale(bioclim[,5:ncol(bioclim)]))
-climate_vars <- c(
-  "prcp.Spr", "tmean.Spr", "swe_mean.Spr", "prcp.Sum", "tmean.Sum", 
-   "prcp.Win", "tmean.Win", "swe_mean.Win", "prcp.Fall", 
-  "tmean.Fall", "swe_mean.Fall", "MAT", 
-  "total_precip", "seasonality"
-)
-
-clean_bioclim <- bioclim[, climate_vars] %>%
-  filter(complete.cases(.))  # Removes rows with any NA values
-
-pca_out <- prcomp(scale(clean_bioclim))
-
-n_X <- nrow(bioclim)
-q_X <- 2
-Lambda <- as.matrix(pca_out$rotation[, 1:q_X])
-
-
+pca_out <- prcomp(scale(bioclim[,5:ncol(bioclim)]))
 n_X <- nrow(bioclim)
 q_X <- 2
 Lambda <- as.matrix(pca_out$rotation[,1:q_X])
@@ -155,32 +118,24 @@ idx_plant <- as.numeric(df$site)
 genotype_plant <- as.numeric(as.factor(df$NewSiteCode))
 
 ### Bioclimatic covariates 
-
-#allcov <- Environments_classification %>%
- # mutate(intercept = 1,
-         # density_n = as.numeric(density == "hi"), # These effects aren't estimated well in the data, huge variance 
-        # gravel_n = as.numeric(albedo == "black")) %>%  # 
-         # interaction = gravel_n * density) %>%  # 
- # left_join(bioclim[idx_sites, c(1, 5:ncol(bioclim))], by = c("site" = "site_code"))
-
-allcov <-  Environments_classification  %>%  mutate(intercept = 1,
-        gravel_n = as.numeric(albedo == "black")) %>% 
-  left_join(bioclim[, c("site", climate_vars)], by = c("site"))
-
+allcov <-
+  Environments_classification %>%
+  mutate(intercept=1,
+         density_n=as.numeric(density=="hi"), # These effects aren't estimated well in the data, huge variance 
+         gravel_n=as.numeric(albedo=="black"),
+         interaction=gravel_n*density_n) %>%
+  left_join(bioclim[idx_sites,c(1, 5:ncol(bioclim))], by=c("site"="site_code"))
 
 ### Bioclimatic covariates 
-#X <- scale(bioclim[,5:ncol(bioclim)]) 
-X <- scale(bioclim[, climate_vars])
+X <- scale(bioclim[,5:ncol(bioclim)]) 
 
 ### Treatment covariates  
-#V <- Z %*% as.matrix(allcov[,5:8])
-V <- Z %*% as.matrix(allcov[, climate_vars]) #alignment issue 
+V <- Z %*% as.matrix(allcov[,5:8])
 
 ### Extract fecundity 
 y <-
   df %>%
-  pluck("Fecundity")
-  #pluck("Seed(n)")
+  pluck("Seed(n)")
 
 ```
 
