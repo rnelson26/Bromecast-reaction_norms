@@ -34,7 +34,12 @@ kinshipIDs <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/
 ### This has all traits for all 4 common garden sites from 2022
 #allsites_flower_harvest <-
  # read.csv(file=paste(dir, "cg_cleandata_VanEe_PPCA.csv", sep="/")) %>%
-allsites_flower_harvest <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/common_gardens/cg_cleandata_VanEe_PPCA.csv", header = TRUE) %>%
+#allsites_flower_harvest <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/common_gardens/cg_cleandata_VanEe_PPCA.csv", #header = TRUE) %>%
+# Subset trait data for only genotypes that we have kinship data for
+  #filter(genotype %in% kinshipIDs$genotype) # Right now this only drops 329 plants total and 4 genotypes
+
+allsites_flower_harvest <-
+  read.csv(file="https://raw.githubusercontent.com/pbadler/bromecast-data/main/gardens/deriveddata/cg_cleandata_VanEe_PPCA.csv") %>%
 # Subset trait data for only genotypes that we have kinship data for
   filter(genotype %in% kinshipIDs$genotype) # Right now this only drops 329 plants total and 4 genotypes
 

@@ -122,6 +122,9 @@ bioclim <- read_csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/com
 # Get idx of sites 
 idx_sites=which(bioclim$site %in% c("BA", "CH", "SS", "WI"))
 
+## site year idx
+site_year_idx <- as.integer(factor(paste(df$site, df$year)))
+
 # Run PCA
 #pca_out <- prcomp(scale(bioclim[,5:ncol(bioclim)]))
 climate_vars <- c(
@@ -208,7 +211,9 @@ stan_data <- list(
   # For linking plants with genotypes and treatments 
   idx_sites = idx_sites,
   idx_plant = idx_plant,
-  genotype_plant = genotype_plant
+  genotype_plant = genotype_plant,
+   site_year_idx = site_year_idx,  
+  n_site_year = length(unique(site_year_idx))  
 )
 
 # Warmup and iterations 
