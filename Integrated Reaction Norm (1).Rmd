@@ -176,7 +176,7 @@ iter_warmup = 100
 iter_sampling = 1000
 
 # Fit using cmdrstan 
-mod <- cmdstan_model("ztp_glm.stan")
+mod <- cmdstan_model("ztp_glm_original.stan")
 
 # Compile and fit the model
 fit <- mod$sample(

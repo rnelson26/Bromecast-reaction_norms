@@ -5,7 +5,7 @@ data {
   int<lower=1> p_X;               // Number of bioclimatic variables 
   int<lower=1> q_X;               // Number of latent factors
   int<lower=1> p_V;               // Number of treatments + 1 for intercept
-  array[32] int<lower=1> idx_sites;// Vector that connects sites to position in bioclim, was originally set to 4
+  array[4] int<lower=1> idx_sites;// Vector that connects sites to position in bioclim 
   array[n] int<lower=1> idx_plant;// Vector that says what site each plant is from
   array[n] int<lower=1> genotype_plant;// Vector that says what genotype each plant is from
   array[n] int<lower=1> y;        // Zero-truncated Poisson data (y_i >= 1)
@@ -21,7 +21,6 @@ parameters {
   vector<lower=0>[p_X] sigma;     // Diagonal elements of covariance matrix Sigma
   vector<lower=0>[q_X] zeta;      // Genetic Variances 
   matrix[n_X, q_X] W;             // Probabilistic PCs 
-  vector[n_site_year] site_year_intercept;   //site_year random intercept
 }
 
 model {
@@ -32,27 +31,14 @@ model {
   }
   gamma ~ normal(0, 10);
   sigma ~ cauchy(0, 2.5);
-
-    // Priors for random intercept (site-year)
-  site_year_intercept ~ normal(0, 1);  // Prior for the random intercept of site year
   
   // Likelihood for zero-truncated Poisson
   for (i in 1:n) {
     int idx = idx_sites[idx_plant[i]];
     int idx_genotype = genotype_plant[i];
-
-    real random_intercept = site_year_intercept[site_year_idx[i]];  // Get random intercept for the site-year
-
-      real lambda = exp(
-      dot_product(W[idx, ], beta[idx_genotype, ]) + 
-      dot_product(V[i, ], gamma) + 
-      random_intercept  // Add the random intercept to the linear predictor
-    );
-    
-    // Zero-truncated Poisson likelihood
-    target += poisson_lpmf(y[i] | lambda) - log1m_exp(-lambda);  //  Zero-truncation adjustment (we should do mean correction)
+    real lambda = exp(dot_product(W[idx, ]', beta[idx_genotype,]) + dot_product(V[i, ]', gamma));
+    target += poisson_lpmf(y[i] | lambda) - log1m_exp(-lambda); // Zero-truncation adjustment (we should do mean correction)
   }
-
 
   // Likelihood for X
   for (i in 1:n_X) {

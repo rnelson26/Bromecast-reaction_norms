@@ -2,12 +2,14 @@
 title: "Integrated Reaction Norm"
 output: pdf_document
 date: "2025-03-25"
-#last modified 3/27/25
+#last modified 3/31/25
 ---
 
 # Set up 
 
 ```{r, setup}
+
+rm(list = ls())
 
 ###
 ### Packages
@@ -17,6 +19,68 @@ library(tidyverse)
 library(bayesplot)
 library(cmdstanr)
 ```
+
+#### Split the data
+```{r}
+## with combined dataframe 
+allsites_flower_harvest <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate.csv", header = TRUE) #%>%
+
+bioclim <- read_csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate.csv") 
+
+### split training and test data 
+allsites_flower_harvest <- allsites_flower_harvest %>%
+  mutate(site_year = paste(site, year))
+
+allsites_flower_harvest$site <- as.factor(allsites_flower_harvest$site)
+allsites_flower_harvest$year <- as.factor(allsites_flower_harvest$year)
+allsites_flower_harvest$site_year <- as.factor(allsites_flower_harvest$site_year)
+
+bioclim$site <- as.factor(bioclim$site)
+bioclim$year <- as.factor(bioclim$year)
+bioclim <- bioclim %>%
+  mutate(site_year = paste(site, year))
+bioclim$site_year <- as.factor(bioclim$site_year)
+
+
+
+data_sat <- allsites_flower_harvest%>% filter(Type == "Satellite")
+
+set.seed(123)  # For reproducibility
+
+selected_categories <- data_sat %>%
+  distinct(site_year) %>%  
+  slice_sample(n = 36) %>% 
+  pull(site_year)          
+
+training_data <- allsites_flower_harvest %>%
+  filter(site_year %in% selected_categories | Type == "Common_Garden")
+
+testing_data <- allsites_flower_harvest %>%
+  filter(!(site_year %in% selected_categories) & Type == "Satellite")
+
+### compare data to make sure we have decent coverage of climate 
+library(ggplot2)
+
+# Add a column to indicate the dataset source
+training_data$Dataset <- "Training"
+testing_data$Dataset <- "Testing"
+
+# Combine the datasets
+combined_data <- rbind(training_data, testing_data)
+
+# Plot overlapping histograms
+ggplot(combined_data, aes(x = tmean.Spr, fill = Dataset)) +
+  geom_histogram(alpha = 0.5, bins = 30, position = "identity") +
+  labs(title = "Temperature Distribution: Training vs Testing") +
+  theme_minimal() +
+  scale_fill_manual(values = c("Training" = "blue", "Testing" = "red"))
+
+## for use in model 
+bioclim <- bioclim %>%
+  filter(site_year %in% selected_categories | Type == "Common_Garden")
+
+```
+
 
 # Real Data Preparation (Cheatgrass: Common Gardens)
 
@@ -35,8 +99,7 @@ kinshipIDs <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/
 
 ### This has all traits for all 4 common garden sites from 2022
 
-## with combined dataframe 
-allsites_flower_harvest <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate.csv", header = TRUE) #%>%
+
 
   #Subset trait data for only genotypes that we have kinship data for
  # filter(genotype %in% kinshipIDs$genotype) # Right now this only drops 329 plants total and 4 genotypes
@@ -54,6 +117,7 @@ genotypes_common_gardens <-
   filter(genotype %in% unique(allsites_flower_harvest$genotype)) %>%
   arrange(NewSiteCode)
 
+
 # Read in data that matches kinship matrix position and genotype ID
 # Read in kinship matrix for 307 genotypes 
 #kinship <- read.table(paste(dir, "BRTE307_IBSmatrix.txt", sep="/"), sep=",")
@@ -69,61 +133,52 @@ colnames(K_common_garden) <- rownames(K_common_garden) <- as.factor(genotypes_co
 ###
 ### Back to Common gardens data manipulations 
 ###
-allsites_flower_harvest <- allsites_flower_harvest %>% mutate(site_year = paste(site, year)) 
+#allsites_flower_harvest <- allsites_flower_harvest %>% mutate(site_year = paste(site, year)) 
 
 
 ### Calculate Seed(m) and Biomass and set all attributes to NA for plants that didn't survive to Reproduce
-df <- 
-  allsites_flower_harvest %>%
-  filter(Emerged == "Y") %>% 
-  filter (Reproduced == "Y") %>% 
-  #filter(year == 2022) %>%
- # mutate(Reproduce=if_else(seed_count_total>0, 1, 0),
-     #    "Seed(n)"=if_else(Reproduce==0, NA, seed_count_total), # Checked this is always either 0 or NA if live_harvest=="N"
-       #  "Biomass"=if_else(Reproduce==0, NA, veg_mass),
+
+df <- training_data %>%
+  filter(Emerged == "Y", Reproduced == "Y") %>%
   mutate(
-         site_numeric=as.numeric(as.factor(site)),
-         site_year_numeric=as.numeric(as.factor(site_year)),
-         #density_numeric=as.numeric(as.factor(density))-1,
-         gravel_numeric=as.numeric(as.factor(albedo))-1,
-         year_numeric=as.numeric(as.factor(year))-1,
-         #environment=as.factor(site_numeric+density_numeric*4+gravel_numeric*8),
-         environment=as.factor(site_numeric+neighbors*4+gravel_numeric*8),
-         site=as.factor(site)) %>% # Need switch from grams to miligrams to match growth_chamber data. 
-  dplyr::select(genotype,
-                environment,
-                site,
-                "Fecundity",
-                "Biomass",
-                "Reproduced") %>%
-  left_join(kinshipIDs, by="genotype") %>%
-  filter(!is.na(NewSiteCode),
-         !is.na(`Fecundity`))  
+    site_numeric = as.numeric(as.factor(site)),
+    site_year_numeric = as.numeric(as.factor(site_year)),
+    year_numeric = as.numeric(as.factor(year)) - 1,
+    genotype = if_else(is.na(genotype), 33, genotype)  # Assign random genotype for now 
+  ) %>%
+  dplyr::select(genotype, site_year, site, "Fecundity", "Biomass", "Reproduced") %>%
+  left_join(kinshipIDs, by = "genotype") %>%
+  filter(!is.na(NewSiteCode), !is.na(Fecundity))  %>% filter(Fecundity > 0) #some that have zero seeds otherwise included bc coded as reproduced 
+
 
 ### Covariate matrix 
 Environments_classification <-
-  allsites_flower_harvest %>%
+  training_data %>%  filter(Emerged == "Y", Reproduced == "Y") %>%  
+  filter(!is.na(Fecundity)) %>% filter(Fecundity > 0) %>% 
   mutate(site_numeric=as.numeric(as.factor(site)),
          site_year_numeric=as.numeric(as.factor(site_year)),
-         #density_numeric=as.numeric(as.factor(density))-1,
-         gravel_numeric=as.numeric(as.factor(albedo))-1,
-         year_numeric=as.numeric(as.factor(year))-1,
-         environment=site_numeric+neighbors*4+gravel_numeric*8) %>%
-  dplyr::select(site, site_year, albedo, environment) %>% 
+    
+         year_numeric=as.numeric(as.factor(year))-1) %>%
+  dplyr::select(site, site_year) %>% 
   distinct() %>%
-  arrange(environment)
+  arrange(site_year)  
 
 ### Bring in bioclimate variables 
 # Bromecast repository
 #bioclim <- read_csv("https://raw.githubusercontent.com/pbadler/bromecast-data/main/gardens/deriveddata/BioclimateOfOrigin_AllGenotypes.csv")
 
-bioclim <- read_csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate.csv") 
 
-# Get idx of sites 
-idx_sites=which(bioclim$site %in% c("BA", "CH", "SS", "WI"))
+bioclim <- bioclim %>%  filter(Emerged == "Y", Reproduced == "Y") %>%  
+  filter(!is.na(Fecundity)) %>% filter(Fecundity > 0) #some that have zero seeds otherwise included bc coded as reproduced 
+
+idx_sites <- which(bioclim$site %in% unique_sites)
+idx_sites <- sapply(unique(bioclim$site), function(site) which(bioclim$site == site)[1])
+
+
 
 ## site year idx
-site_year_idx <- as.integer(factor(paste(df$site, df$year)))
+site_year_idx <- unique(as.integer(factor(bioclim$site_year)))
+## do we want this as an integer or categorical variable? 
 
 # Run PCA
 #pca_out <- prcomp(scale(bioclim[,5:ncol(bioclim)]))
@@ -149,10 +204,14 @@ q_X <- 2
 Lambda <- as.matrix(pca_out$rotation[,1:q_X])
 
 ### Create linkage matrix 
-Z <- model.matrix(~ environment - 1, data = df)
+df$site_year <- as.factor(df$site_year)
+df$site_year <- droplevels(df$site_year)
+Z <- model.matrix(~ site_year - 1, data = df)
 
 ### Create linkage matrix (for four sites)
-idx_plant <- as.numeric(df$site)
+
+idx_plant <- as.numeric(as.factor(df$site)) 
+
 
 ### Extract genotype of each plant 
 genotype_plant <- as.numeric(as.factor(df$NewSiteCode))
@@ -166,23 +225,29 @@ genotype_plant <- as.numeric(as.factor(df$NewSiteCode))
          # interaction = gravel_n * density) %>%  # 
  # left_join(bioclim[idx_sites, c(1, 5:ncol(bioclim))], by = c("site" = "site_code"))
 
-allcov <-  Environments_classification  %>%  mutate(intercept = 1,
-        gravel_n = as.numeric(albedo == "black")) %>% 
-  left_join(bioclim[, c("site", climate_vars)], by = c("site"))
+allcov <- bioclim %>% select("site", "site_year", "year", all_of(climate_vars)) %>% distinct() 
+
+#allcov <-  Environments_classification  %>%  mutate(intercept = 1,
+     #   gravel_n = as.numeric(albedo == "black")) %>% 
+#  left_join(bioclim[, c("site", climate_vars)], by = c("site"))
 
 
 ### Bioclimatic covariates 
 #X <- scale(bioclim[,5:ncol(bioclim)]) 
-X <- scale(bioclim[, climate_vars])
+bioclim_clean <- na.omit(bioclim[, climate_vars])
+X <- scale(bioclim_clean[, climate_vars])
+
 
 ### Treatment covariates  
-#V <- Z %*% as.matrix(allcov[,5:8])
-V <- Z %*% as.matrix(allcov[, climate_vars]) #alignment issue 
+#V <- Z %*% as.matrix(allcov[,5:8]) #5-8 was intercept, density-n, gravel-n and interaction
+  #n = nrow(V), #number of observations
+#  p_V = ncol(V), #Number of treatments + 1 for intercept
+V <- Z
 
 ### Extract fecundity 
 y <-
   df %>%
-  pluck("Fecundity")
+  pluck("Fecundity") 
   #pluck("Seed(n)")
 
 ```
@@ -191,15 +256,17 @@ y <-
 
 ```{r, fit stan model}
 
+## note manually change the number of sites in stan code to match length(stan_data$idx_sites) 
+ 
 # Data list for Stan
 stan_data <- list(
   # Dimension of objects
-  n_g = max(genotype_plant),
-  n = nrow(V),
-  p_V = ncol(V),
-  n_X = nrow(X),
-  q_X = ncol(Lambda),
-  p_X = nrow(Lambda),
+  n_g = max(genotype_plant), #number of genotypes
+  n = nrow(V), #number of observations
+  p_V = ncol(V), #Number of treatments + 1 for intercept
+  n_X = nrow(X), #number of obs of climate variables 
+  q_X = ncol(Lambda), #Number of latent factors
+  p_X = nrow(Lambda), #number of climate variables 
   # Response (fecundity)
   y = y,
   # Matrices 
@@ -212,8 +279,8 @@ stan_data <- list(
   idx_sites = idx_sites,
   idx_plant = idx_plant,
   genotype_plant = genotype_plant,
-   site_year_idx = site_year_idx,  
-  n_site_year = length(unique(site_year_idx))  
+   site_year_idx = site_year_idx #,  
+  #n_site_year = length(unique(site_year_idx))  
 )
 
 # Warmup and iterations 
@@ -222,6 +289,7 @@ iter_sampling = 1000
 
 # Fit using cmdrstan 
 mod <- cmdstan_model("ztp_glm.stan")
+#mod <- cmdstan_model("ztp_glm.stan_with_intercept") #for site_year random intercept 
 
 # Compile and fit the model
 fit <- mod$sample(

@@ -5,7 +5,7 @@ data {
   int<lower=1> p_X;               // Number of bioclimatic variables 
   int<lower=1> q_X;               // Number of latent factors
   int<lower=1> p_V;               // Number of treatments + 1 for intercept
-  array[4] int<lower=1> idx_sites;// Vector that connects sites to position in bioclim 
+  array[32] int<lower=1> idx_sites;// Vector that connects sites to position in bioclim, was originally set to 4 
   array[n] int<lower=1> idx_plant;// Vector that says what site each plant is from
   array[n] int<lower=1> genotype_plant;// Vector that says what genotype each plant is from
   array[n] int<lower=1> y;        // Zero-truncated Poisson data (y_i >= 1)
