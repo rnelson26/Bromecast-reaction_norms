@@ -3,7 +3,7 @@
 ######## for bromecast reaction norm paper ########
 ######## R. Nelson, M. Vahsen, & P. Adler ######
 ########### code created on 1/28/25 #######
-############ last modified: 3/12/25 ########################
+############ last modified: 4/1/25 ########################
 
 ### outstanding questions ##########
 ## whether approach to zero neighbors makes sense 
@@ -302,7 +302,9 @@ state_map_filtered <- state_map[state_map$long >= -128 & state_map$long <= -95 &
    labs(title="MAT", color="MAT") 
  
   
-##### MAT/MAP/seasonal variability with daynet ########
+##### MAT/MAP/seasonal variability with daymet ########
+ combined_clean <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean.csv")
+ 
  climD <- read.csv("/Users/Becca/Desktop/Satellites_daymet_daily.csv", header = TRUE)
  
  # set up climate seasons

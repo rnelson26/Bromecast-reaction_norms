@@ -26,8 +26,6 @@ climate_vars <- climate_vars <- c(
   "total_precip", "seasonality"
 )
 
-
-
 # Subset and scale the data
 pca_data <- data %>% filter(Emerged == "Y") %>% filter(Reproduced == "Y") %>% 
   select(site_year, all_of(climate_vars))  %>%
