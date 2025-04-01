@@ -169,10 +169,13 @@ Environments_classification <-
 
 
 bioclim <- bioclim %>%  filter(Emerged == "Y", Reproduced == "Y") %>%  
-  filter(!is.na(Fecundity)) %>% filter(Fecundity > 0) #some that have zero seeds otherwise included bc coded as reproduced 
-
-idx_sites <- which(bioclim$site %in% unique_sites)
-idx_sites <- sapply(unique(bioclim$site), function(site) which(bioclim$site == site)[1])
+  filter(!is.na(Fecundity)) %>% filter(Fecundity > 0) %>% dplyr::select(site,  year, site_year, Type, prcp.Spr, tmean.Spr, swe_mean.Spr, prcp.Sum, tmean.Sum, 
+   prcp.Win, tmean.Win, swe_mean.Win, prcp.Fall, 
+  tmean.Fall, swe_mean.Fall, MAT, 
+  total_precip, seasonality) %>% distinct()
+  ## if you don't do Fecundity >0 some are still retained with zero seeds
+unique_sites <- unique(bioclim$site) 
+idx_sites <- match(unique_sites, bioclim$site) 
 
 
 
@@ -209,8 +212,13 @@ df$site_year <- droplevels(df$site_year)
 Z <- model.matrix(~ site_year - 1, data = df)
 
 ### Create linkage matrix (for four sites)
+unique_sites <- unique(bioclim$site)  
+site_match <- match(unique_sites, bioclim$site)  
+idx_plant <- match(df$site, unique_sites)  
 
-idx_plant <- as.numeric(as.factor(df$site)) 
+
+ print(range(idx_plant))   # Should be between 1 and length(idx_sites)
+print(length(idx_sites))  # Should match the max value in idx_plant
 
 
 ### Extract genotype of each plant 
@@ -278,8 +286,8 @@ stan_data <- list(
   # For linking plants with genotypes and treatments 
   idx_sites = idx_sites,
   idx_plant = idx_plant,
-  genotype_plant = genotype_plant,
-   site_year_idx = site_year_idx #,  
+  genotype_plant = genotype_plant #,
+  # site_year_idx = site_year_idx #,  
   #n_site_year = length(unique(site_year_idx))  
 )
 
