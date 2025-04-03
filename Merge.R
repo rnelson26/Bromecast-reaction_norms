@@ -25,6 +25,11 @@ sat$Type <- "Satellite"
 
 cg$Type <- "Common_Garden"
 
+cg <- cg %>%
+  rename(site_old = site) %>%
+  mutate(site = paste(site_old, albedo, sep = "_"))
+
+
 ## allows us to filter by type of experiment once the dataframes are stacked together 
 
 ## Reproduced
@@ -169,6 +174,7 @@ sat$new_neighbors <- NA
 sat$density <- NA
 sat$possible_neighbors <- NA
 sat$live_harvest <- NA
+sat$site_old <- NA
 
 cg$Distance <- NA
 cg$Lat <- NA
@@ -210,7 +216,7 @@ colnames(combined)
 #### Remove columns not relevant to this project #######
 
 #select columns to retain from merged dataset
-combined_clean <- combined %>% dplyr::select(site, year, Treatment, Transect, Distance, Emerged, Reproduced, neighbors, Fecundity, Biomass, fecundityflag, notesFlag, Lat, Lon, annual, unknown, perennial, shrub, Type, plantID, albedo, x, y, genotype, block, plot, note_standard_harvest, note_standard_phen)
+combined_clean <- combined %>% dplyr::select(site, site_old, year, Treatment, Transect, Distance, Emerged, Reproduced, neighbors, Fecundity, Biomass, fecundityflag, notesFlag, Lat, Lon, annual, unknown, perennial, shrub, Type, plantID, albedo, x, y, genotype, block, plot, note_standard_harvest, note_standard_phen)
 
 ## make merged column for site, plot, and year
 combined_clean$Transect_Site_Year <- paste(combined_clean$Transect, combined_clean$site, combined_clean$year, sep = " - ")
@@ -233,14 +239,14 @@ climD <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/dayme
 ### add a lat and long for common gardens
 combined_clean <- combined_clean %>%
   mutate(
-    Lat = ifelse(site == "BA" & Type == "Common_Garden", 43.208482, Lat),
-    Lon = ifelse(site == "BA" & Type == "Common_Garden", -116.995198, Lon),
-    Lat = ifelse(site == "CH" & Type == "Common_Garden", 41.212078, Lat),
-    Lon = ifelse(site == "CH" & Type == "Common_Garden", -104.852543, Lon),
-    Lat = ifelse(site == "SS" & Type == "Common_Garden", 44.245590, Lat),
-    Lon = ifelse(site == "SS" & Type == "Common_Garden", -112.214337, Lon),
-    Lat = ifelse(site == "WI" & Type == "Common_Garden", 43.474370, Lat),
-    Lon = ifelse(site == "WI" & Type == "Common_Garden", -116.901770, Lon)
+    Lat = ifelse(site_old == "BA" & Type == "Common_Garden", 43.208482, Lat),
+    Lon = ifelse(site_old == "BA" & Type == "Common_Garden", -116.995198, Lon),
+    Lat = ifelse(site_old == "CH" & Type == "Common_Garden", 41.212078, Lat),
+    Lon = ifelse(site_old == "CH" & Type == "Common_Garden", -104.852543, Lon),
+    Lat = ifelse(site_old == "SS" & Type == "Common_Garden", 44.245590, Lat),
+    Lon = ifelse(site_old == "SS" & Type == "Common_Garden", -112.214337, Lon),
+    Lat = ifelse(site_old == "WI" & Type == "Common_Garden", 43.474370, Lat),
+    Lon = ifelse(site_old == "WI" & Type == "Common_Garden", -116.901770, Lon)
   )
 
 write.csv(combined_clean, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean.csv", row.names = FALSE)
@@ -343,7 +349,7 @@ write.csv(combined_clean, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_nor
  
 
  
-site_list <- combined_clean %>% select(site, Lat, Lon) %>% distinct()
+site_list <- combined_clean %>% select(site_old, Lat, Lon) %>% distinct()
 site_list$SiteCode <- site_list$site
 
 name_mapping <- data.frame(
@@ -441,7 +447,7 @@ recent %>%  filter(year > 2020 & year < 2024) %>% ggplot(aes(x = year, y = seaso
    labs(title="Seasonality", color="Seasonality")
  
  
-## combine climate summary variables with with merged data ######
+###### combine climate summary variables with with merged data ######
   
   climD_clean <- climD %>%
     group_by(climYr, SiteCode) %>%

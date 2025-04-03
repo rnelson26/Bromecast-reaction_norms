@@ -209,7 +209,7 @@ Lambda <- as.matrix(pca_out$rotation[,1:q_X])
 ### Create linkage matrix 
 df$site_year <- as.factor(df$site_year)
 df$site_year <- droplevels(df$site_year)
-Z <- model.matrix(~ site_year - 1, data = df)
+#Z <- model.matrix(~ site_year - 1, data = df)
 
 ### Create linkage matrix (for four sites)
 unique_sites <- unique(bioclim$site)  

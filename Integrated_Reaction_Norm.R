@@ -1,7 +1,7 @@
 #### Integrated Reaction Norm Model #######
 ######## code by Becca Nelson and Justin Van Ee ###############################
 ############# created 3-25-25 ######################
-############# Last modified: 4-2-25 ##########################
+############# Last modified: 4-3-25 ##########################
 ######## modifies RMD file to pull from one integrated df ########
 
 rm(list = ls())
@@ -64,7 +64,7 @@ testing_data$Dataset <- "Testing"
 combined_data <- rbind(training_data, testing_data)
 
 # Check overlap
-ggplot(combined_data, aes(x = tmean.Spr, fill = Dataset)) +
+ggplot(combined_data, aes(x = tmean.Sum, fill = Dataset)) +
   geom_histogram(alpha = 0.5, bins = 30, position = "identity") +
   theme_minimal() +
   scale_fill_manual(values = c("Training" = "blue", "Testing" = "red"))
@@ -110,7 +110,7 @@ df <- training_data %>%
   left_join(kinshipIDs, by = c("genotype", "NewSiteCode")) %>%
   filter(!is.na(Fecundity)) %>%
   filter(!is.na(genotype)) %>%
-  filter(Fecundity > 0) 
+  filter(Fecundity > 0) ## compare to flagged column, hopefully any zeros should be flagged 
 
 df <- df %>%
   filter(!site_year %in% c("GoeblS1", "Pearlwise")) #filter problem children sites that are missing climate info 
@@ -159,7 +159,7 @@ idx_sites <- match(unique_sites, df$site)
 ### Create linkage matrix 
 df$site_year <- as.factor(df$site_year)
 df$site_year <- droplevels(df$site_year)
-Z <- model.matrix(~ site_year - 1, data = df)
+Z <- model.matrix(~ site_year - 1, data = df) 
 
 ### Create linkage matrix (for four sites)
 unique_sites <- unique(df$site)  
