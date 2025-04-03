@@ -26,6 +26,10 @@ kinship <- read.table("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/d
 
 assigned_genotypes <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/assigned_genotypes.csv")
 
+cg_WC <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/common_gardens/dailyVWCdata_allgardens_allyears.csv")
+
+cg_temp <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/common_gardens/dailytempdata_allgardens_allyears.csv")
+
 #### Split the data ########
 
 ### split training and test data 
@@ -175,6 +179,12 @@ site_year_idx <- unique(as.integer(factor(df$site_year)))
 #  p_V = ncol(V), #Number of treatments + 1 for intercept
 V <- Z
 
+ 
+df$NewSiteCode <- as.character(df$NewSiteCode)
+df$NewSiteCode[is.na(df$NewSiteCode)] <- "Unknown"
+df$NewSiteCode <- as.factor(df$NewSiteCode) 
+genotype_plant <- as.numeric(as.factor(df$NewSiteCode))
+
 ####### Fit stan model #########
 stan_data <- list(
   # Dimension of objects
@@ -195,7 +205,7 @@ stan_data <- list(
   # For linking plants with genotypes and treatments 
   idx_sites = idx_sites,
   idx_plant = idx_plant,
-  #genotype_plant = genotype_plant #,
+  genotype_plant = genotype_plant #,
   # site_year_idx = site_year_idx #,  
   #n_site_year = length(unique(site_year_idx))  
 )
