@@ -87,17 +87,27 @@ ggplot(combined_data, aes(x = tmean.Sum, fill = Dataset)) +
 ####### Prepare data for model ########
 
 ### Genotypes info ##########
-genotypes_common_gardens <- 
-  kinshipIDs %>%
+#genotypes_common_gardens <- 
+ # kinshipIDs %>%
+#  mutate(source = as.factor(source)) %>%
+ # filter(genotype %in% unique(data$genotype)) %>%
+#  arrange(NewSiteCode)
+
+genotypes_all <- kinshipIDs %>%
   mutate(source = as.factor(source)) %>%
-  filter(genotype %in% unique(data$genotype)) %>%
+  filter(genotype %in% unique(c(data$genotype, assigned_genotypes$genotype))) %>%  # Include assigned genotypes
   arrange(NewSiteCode)
 
+
 # Filter for common garden genotypes 
-K_common_garden <- as.matrix(kinship[genotypes_common_gardens$kinshipID,genotypes_common_gardens$kinshipID])
+K_common_garden <- as.matrix(kinship[genotypes_all$kinshipID,genotypes_all$kinshipID])
 
 # Put genotype numbers on rows and columns
-colnames(K_common_garden) <- rownames(K_common_garden) <- as.factor(genotypes_common_gardens$NewSiteCode)
+colnames(K_common_garden) <- rownames(K_common_garden) <- as.factor(genotypes_all$NewSiteCode)
+
+missing_genotypes <- setdiff(unique(data$genotype), genotypes_common_gardens$genotype)
+
+missing_genotypes <- setdiff(unique(data$genotype), genotypes_all$genotype)
 
 ######## Demography info #########
 assigned_genotypes$site <- as.factor(assigned_genotypes$site)
@@ -128,7 +138,7 @@ df <- training_data %>%
   filter(Fecundity > 0) ## compare to flagged column, hopefully any zeros should be flagged 
 
 df <- df %>%
-  filter(!site_year %in% c("GoeblS1", "Pearlwise")) #filter problem children sites that are missing climate info 
+  filter(!year == "2024") %>%  filter(!is.na(genotype)) 
 
 
 #some that have zero seeds otherwise included bc coded as reproduced 
@@ -198,14 +208,21 @@ V <- Z
 df$NewSiteCode <- as.character(df$NewSiteCode)
 df$NewSiteCode[is.na(df$NewSiteCode)] <- "Unknown"
 df$NewSiteCode <- as.factor(df$NewSiteCode) 
-genotype_plant <- as.numeric(as.factor(df$NewSiteCode))
+
+
+
+
+genotype_plant <-df$genotype
+
+#genotype_plant <- as.numeric(as.factor(df$NewSiteCode))
 
 ####### Fit stan model #########
 stan_data <- list(
   # Dimension of objects
-  n_g = length(unique(df$genotype)), #number of genotypes, 95
-  n = nrow(V), #number of observations
-  p_V = ncol(V), #Number of treatments + 1 for intercept
+  n_g =  length(unique(genotype_plant)), #number of genotypes
+  n_s = length(unique(df$site)), ## number of sites 
+  n = nrow(df), #number of observations
+  p_V = ncol(V), #Number of treatments + 1 for intercept, now site year
   n_X = nrow(pca_data), #number of obs of climate variables 
   q_X = ncol(Lambda), #Number of latent factors
   p_X = nrow(Lambda), #number of climate variables 
