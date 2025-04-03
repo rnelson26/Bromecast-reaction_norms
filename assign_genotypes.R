@@ -51,4 +51,6 @@ nearest_matches <- find_nearest_brte(sites_sf, BRTE_sf)
 
 assigned_genoyptes <- left_join(nearest_matches, kinshipIDs, by = "NewSiteCode")
 
-write.csv(assigned_genoyptes, "assigned_genotypes.csv", row.names = FALSE)
+
+st_write(assigned_genoyptes, "assigned_genotypes.csv", layer_options = "GEOMETRY=AS_XY", delete_dsn = TRUE)
+

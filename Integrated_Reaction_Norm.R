@@ -1,13 +1,13 @@
 #### Integrated Reaction Norm Model #######
 ######## code by Becca Nelson and Justin Van Ee ###############################
 ############# created 3-25-25 ######################
-############# Last modified: 4-1-25 ##########################
+############# Last modified: 4-2-25 ##########################
 ######## modifies RMD file to pull from one integrated df ########
 
 rm(list = ls())
 
 ## to do
-### add assigned sat genotypes
+
 ## add cg climate data 
 
 ###### Load packages #####
@@ -23,6 +23,8 @@ data <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combin
 kinshipIDs <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/common_gardens/93cg_genotypes.csv")
 
 kinship <- read.table("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/BRTE307_IBSmatrix.txt", sep=",")
+
+assigned_genotypes <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/assigned_genotypes.csv")
 
 #### Split the data ########
 
@@ -79,17 +81,40 @@ K_common_garden <- as.matrix(kinship[genotypes_common_gardens$kinshipID,genotype
 colnames(K_common_garden) <- rownames(K_common_garden) <- as.factor(genotypes_common_gardens$NewSiteCode)
 
 ######## Demography info #########
+assigned_genotypes$site <- as.factor(assigned_genotypes$site)
+assigned_genotypes$genotype <- as.integer(assigned_genotypes$genotype)
+assigned_genotypes$NewSiteCode <- as.factor(assigned_genotypes$NewSiteCode)
+kinshipIDs$NewSiteCode <- as.factor(kinshipIDs$NewSiteCode)
 
 df <- training_data %>%
   filter(Emerged == "Y", Reproduced == "Y") %>%
   mutate(
     site_numeric = as.numeric(as.factor(site)),
     site_year_numeric = as.numeric(as.factor(site_year)),
-    year_numeric = as.numeric(as.factor(year)) - 1,
-    genotype = if_else(is.na(genotype), 33, genotype)  # Assign random genotype for now 
+    year_numeric = as.numeric(as.factor(year)) - 1
   ) %>%
-  left_join(kinshipIDs, by = "genotype") %>%
-  filter(!is.na(NewSiteCode), !is.na(Fecundity))  %>% filter(Fecundity > 0) #some that have zero seeds otherwise included bc coded as reproduced 
+  left_join(assigned_genotypes %>% 
+              select(site, genotype_assigned = genotype, 
+                     NewSiteCode, SeedSource, sample.id), 
+            by = "site") %>%
+  # Replace NA genotypes from training_data with those from assigned_genotypes
+  mutate(
+    genotype = ifelse(is.na(genotype), genotype_assigned, genotype)  # Ensure type consistency
+  ) %>%
+  select(-genotype_assigned) %>%  # Remove temporary column
+  # Join with kinshipIDs using the newly assigned genotype
+  left_join(kinshipIDs, by = c("genotype", "NewSiteCode")) %>%
+  filter(!is.na(Fecundity)) %>%
+  filter(!is.na(genotype)) %>%
+  filter(Fecundity > 0) 
+
+df <- df %>%
+  filter(!site_year %in% c("GoeblS1", "Pearlwise")) #filter problem children sites that are missing climate info 
+
+
+#some that have zero seeds otherwise included bc coded as reproduced 
+
+
 
 ### Extract fecundity 
 y <-
@@ -109,20 +134,22 @@ pca_data <- df %>%
   na.omit()  
 ## need to determine why certain sites are missing
 
+
+
 site_year_labels <- pca_data$site_year  
 X <- scale(pca_data %>% select(-site_year))
 
-pca_out <- prcomp(pca_scaled)
+pca_out <- prcomp(X)
 
-n_X <- nrow(bioclim)
+n_X <- nrow(pca_data)
 q_X <- 2
 Lambda <- as.matrix(pca_out$rotation[, 1:q_X])
 
 
 ##### Indices ########
 
-unique_sites <- unique(bioclim$site) 
-idx_sites <- match(unique_sites, bioclim$site) 
+unique_sites <- unique(df$site) 
+idx_sites <- match(unique_sites, df$site) 
 
 
 ### Create linkage matrix 
@@ -131,8 +158,8 @@ df$site_year <- droplevels(df$site_year)
 Z <- model.matrix(~ site_year - 1, data = df)
 
 ### Create linkage matrix (for four sites)
-unique_sites <- unique(bioclim$site)  
-site_match <- match(unique_sites, bioclim$site)  
+unique_sites <- unique(df$site)  
+site_match <- match(unique_sites, df$site)  
 idx_plant <- match(df$site, unique_sites)  
 
 
@@ -140,10 +167,8 @@ print(range(idx_plant))   # Should be between 1 and length(idx_sites)
 print(length(idx_sites))  # Should match the max value in idx_plant
 
 
-### Extract genotype of each plant 
-genotype_plant <- as.numeric(as.factor(df$NewSiteCode))
 ## site year idx
-site_year_idx <- unique(as.integer(factor(bioclim$site_year)))
+site_year_idx <- unique(as.integer(factor(df$site_year)))
 ## do we want this as an integer or categorical variable? 
 
 #n = nrow(V), #number of observations
@@ -153,10 +178,10 @@ V <- Z
 ####### Fit stan model #########
 stan_data <- list(
   # Dimension of objects
-  n_g = max(genotype_plant), #number of genotypes
+  n_g = length(unique(df$genotype)), #number of genotypes, 95
   n = nrow(V), #number of observations
   p_V = ncol(V), #Number of treatments + 1 for intercept
-  n_X = nrow(X), #number of obs of climate variables 
+  n_X = nrow(pca_data), #number of obs of climate variables 
   q_X = ncol(Lambda), #Number of latent factors
   p_X = nrow(Lambda), #number of climate variables 
   # Response (fecundity)
@@ -170,7 +195,7 @@ stan_data <- list(
   # For linking plants with genotypes and treatments 
   idx_sites = idx_sites,
   idx_plant = idx_plant,
-  genotype_plant = genotype_plant #,
+  #genotype_plant = genotype_plant #,
   # site_year_idx = site_year_idx #,  
   #n_site_year = length(unique(site_year_idx))  
 )

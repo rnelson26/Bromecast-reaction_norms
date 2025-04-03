@@ -3,7 +3,7 @@
 ######## for bromecast reaction norm paper ########
 ######## R. Nelson, M. Vahsen, & P. Adler ######
 ########### code created on 1/28/25 #######
-############ last modified: 4/1/25 ########################
+############ last modified: 4/2/25 ########################
 
 ### outstanding questions ##########
 ## whether approach to zero neighbors makes sense 
@@ -210,7 +210,7 @@ colnames(combined)
 #### Remove columns not relevant to this project #######
 
 #select columns to retain from merged dataset
-combined_clean <- combined %>% dplyr::select(site, year, Treatment, Transect, Distance, Emerged, Reproduced, neighbors, Fecundity, Biomass, fecundityflag, notesFlag, Lat, Lon, annual, unknown, perennial, shrub, Type, plantID, albedo, x, y, genotype, block, plot, note_standard_harvest, note_standard_phen, prcp.Spr, tmean.Spr, swe_mean.Spr, prcp.Sum, tmean.Sum, swe_mean.Sum, prcp.Win, tmean.Win, swe_mean.Win, prcp.Fall, tmean.Fall, swe_mean.Fall)
+combined_clean <- combined %>% dplyr::select(site, year, Treatment, Transect, Distance, Emerged, Reproduced, neighbors, Fecundity, Biomass, fecundityflag, notesFlag, Lat, Lon, annual, unknown, perennial, shrub, Type, plantID, albedo, x, y, genotype, block, plot, note_standard_harvest, note_standard_phen)
 
 ## make merged column for site, plot, and year
 combined_clean$Transect_Site_Year <- paste(combined_clean$Transect, combined_clean$site, combined_clean$year, sep = " - ")
@@ -225,6 +225,10 @@ write.csv(combined_clean, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_nor
 combined_clean <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean.csv")
 
 garden_info <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/common_gardens/garden_info.csv")
+
+daymean <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/daymet_season_means.csv")
+
+climD <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/daymet_daily.csv")
 
 ### add a lat and long for common gardens
 combined_clean <- combined_clean %>%
@@ -248,64 +252,64 @@ write.csv(combined_clean, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_nor
 
 #You can sum those seasons to get the annual totals (precip) and means (temperature). 
 
-combined_clean <- combined_clean %>%
-  mutate(
-    MAP = prcp.Win + prcp.Spr + prcp.Sum + prcp.Fall,
-    MAT = tmean.Win + tmean.Spr + tmean.Sum + tmean.Fall
-  )
+#combined_clean <- combined_clean %>%
+ # mutate(
+  #  MAP = prcp.Win + prcp.Spr + prcp.Sum + prcp.Fall,
+   # MAT = tmean.Win + tmean.Spr + tmean.Sum + tmean.Fall
+  #)
 
-summary <- combined_clean %>%
-  select(site, year, MAP, MAT, Lon, Lat) %>% distinct()
+#summary <- combined_clean %>%
+ # select(site, year, MAP, MAT, Lon, Lat) %>% distinct()
 
 ### MAP
-summary %>% filter(year < 2024) %>% ggplot(aes(x = year, y = MAP)) +
-  geom_point() + 
-  theme_classic() + facet_wrap(~site) + theme(
-    axis.text.x = element_text(angle = 90, hjust = 1)  
-  ) 
+#summary %>% filter(year < 2024) %>% ggplot(aes(x = year, y = MAP)) +
+ # geom_point() + 
+  #theme_classic() + facet_wrap(~site) + theme(
+   # axis.text.x = element_text(angle = 90, hjust = 1)  
+ # ) 
 
-custom_colors <- c("blue", "cyan", "green", "yellow", "orange", "red")
+#custom_colors <- c("blue", "cyan", "green", "yellow", "orange", "red")
 
-state_map <- map_data("state")
-state_map_filtered <- state_map[state_map$long >= -128 & state_map$long <= -95 &
+#state_map <- map_data("state")
+#state_map_filtered <- state_map[state_map$long >= -128 & state_map$long <= -95 &
                                   state_map$lat >= 30 & state_map$lat <= 52, ]
- ggplot() +
-  geom_polygon(data=state_map_filtered, aes(x=long, y=lat, group=group), fill="gray100", color="black") +
-  geom_point(data=summary, aes(x=Lon, y=Lat, color=MAP)) +
-  scale_color_gradientn(
-    colors = c("blue", "cyan", "green", "yellow", "orange", "red"))  +
-  coord_cartesian(xlim=c(-128, -95), ylim=c(30, 52)) +
-  facet_wrap(~year) +
-  theme_classic() +
- labs(title="MAP", color="MAP") 
+# ggplot() +
+ # geom_polygon(data=state_map_filtered, aes(x=long, y=lat, group=group), fill="gray100", color="black") +
+  #geom_point(data=summary, aes(x=Lon, y=Lat, color=MAP)) +
+  #scale_color_gradientn(
+   # colors = c("blue", "cyan", "green", "yellow", "orange", "red"))  +
+  #coord_cartesian(xlim=c(-128, -95), ylim=c(30, 52)) +
+  #facet_wrap(~year) +
+  #theme_classic() +
+ #labs(title="MAP", color="MAP") 
  
  ### MAT
- summary %>% filter(year < 2024) %>% ggplot(aes(x = year, y = MAT)) +
-   geom_point() + 
-   theme_classic() + facet_wrap(~site) + theme(
-     axis.text.x = element_text(angle = 90, hjust = 1)  
-   ) 
+ #summary %>% filter(year < 2024) %>% ggplot(aes(x = year, y = MAT)) +
+  # geom_point() + 
+   #theme_classic() + facet_wrap(~site) + theme(
+    # axis.text.x = element_text(angle = 90, hjust = 1)  
+   #) 
  
- custom_colors <- c("blue", "cyan", "green", "yellow", "orange", "red")
+ #custom_colors <- c("blue", "cyan", "green", "yellow", "orange", "red")
  
- state_map <- map_data("state")
- state_map_filtered <- state_map[state_map$long >= -128 & state_map$long <= -95 &
-                                   state_map$lat >= 30 & state_map$lat <= 52, ]
- ggplot() +
-   geom_polygon(data=state_map_filtered, aes(x=long, y=lat, group=group), fill="gray100", color="black") +
-   geom_point(data=summary, aes(x=Lon, y=Lat, color=MAT)) +
-   scale_color_gradientn(
-     colors = c("blue", "cyan", "green", "yellow", "orange", "red"))  +
-   coord_cartesian(xlim=c(-128, -95), ylim=c(30, 52)) +
-   facet_wrap(~year) +
-   theme_classic() +
-   labs(title="MAT", color="MAT") 
+ #state_map <- map_data("state")
+ #state_map_filtered <- state_map[state_map$long >= -128 & state_map$long <= -95 &
+#                                   state_map$lat >= 30 & state_map$lat <= 52, ]
+ #ggplot() +
+  # geom_polygon(data=state_map_filtered, aes(x=long, y=lat, group=group), fill#="gray100", color="black") +
+#   geom_point(data=summary, aes(x=Lon, y=Lat, color=MAT)) +
+ #  scale_color_gradientn(
+  #   colors = c("blue", "cyan", "green", "yellow", "orange", "red"))  +
+   #coord_cartesian(xlim=c(-128, -95), ylim=c(30, 52)) +
+   #facet_wrap(~year) +
+   #theme_classic() +
+   #labs(title="MAT", color="MAT") 
  
   
 ##### MAT/MAP/seasonal variability with daymet ########
  combined_clean <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean.csv")
  
- climD <- read.csv("/Users/Becca/Desktop/Satellites_daymet_daily.csv", header = TRUE)
+ #climD <- read.csv("/Users/Becca/Desktop/Satellites_daymet_daily.csv", header = TRUE)
  
  # set up climate seasons
  climD$season <- "Win"
@@ -438,13 +442,38 @@ recent %>%  filter(year > 2020 & year < 2024) %>% ggplot(aes(x = year, y = seaso
  
  
 ## combine climate summary variables with with merged data ######
+  
+  climD_clean <- climD %>%
+    group_by(climYr, SiteCode) %>%
+    mutate(
+      total_precip = sum(prcp),  # Total annual precipitation
+      MAT = mean((tmax + tmin) / 2)  # Mean annual temperature
+    ) %>%
+    mutate(
+      cumulative_prcp = cumsum(prcp)  # Cumulative precipitation over the year
+    ) %>%
+    filter(cumulative_prcp >= 0.5 * total_precip) %>%  # Keep only rows where cumulative_prcp reaches 50% of total
+    slice_min(climDay, with_ties = FALSE) %>%  # Select the first occurrence 
+    summarise(
+      total_precip = first(total_precip),
+      MAT = first(MAT),
+      seasonality = first(climDay)  # The first day reaching 50% MAP
+    ) %>%
+    ungroup()  %>%  filter(climYr > 2020 & climYr < 2024)
+  
 
-recent <- climD_clean_full %>% select(climYr, SiteCode, MAT, total_precip, seasonality)
+recent <- climD_clean %>% select(climYr, SiteCode, MAT, total_precip, seasonality)
+  
 
 colnames(recent)[colnames(recent) == "SiteCode"] <- "site"
 colnames(recent)[colnames(recent) == "climYr"] <- "year" 
 
 
 combined_clean_climate <- left_join(combined_clean, recent, by = c("site", "year"))
+
+colnames(daymean)[colnames(daymean) == "SiteCode"] <- "site"
+colnames(daymean)[colnames(daymean) == "climYr"] <- "year"
+
+combined_clean_climate <- left_join(combined_clean_climate, daymean, by = c("site", "year"))
 
 write.csv(combined_clean_climate, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate.csv", row.names = FALSE)
