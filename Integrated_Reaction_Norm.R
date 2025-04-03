@@ -30,6 +30,21 @@ cg_WC <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/
 
 cg_temp <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/common_gardens/dailytempdata_allgardens_allyears.csv")
 
+###### add cg climate offset #########
+## white gravel substract one, black gravel add one
+
+library(dplyr)
+
+data <- data %>%
+  mutate(across(c(tmean.Fall, tmean.Sum, tmean.Spr, tmean.Win, MAT), 
+                ~ case_when(
+                  albedo == "black" ~ . + 1,  
+                  albedo == "white" ~ . - 1,  
+                  is.na(albedo) & Type == "Satellite" ~ .,  
+                  TRUE ~ .
+                )))
+
+
 #### Split the data ########
 
 ### split training and test data 

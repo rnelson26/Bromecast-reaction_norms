@@ -174,7 +174,7 @@ sat$new_neighbors <- NA
 sat$density <- NA
 sat$possible_neighbors <- NA
 sat$live_harvest <- NA
-sat$site_old <- NA
+sat$site_old <- sat$site
 
 cg$Distance <- NA
 cg$Lat <- NA
@@ -448,6 +448,14 @@ recent %>%  filter(year > 2020 & year < 2024) %>% ggplot(aes(x = year, y = seaso
  
  
 ###### combine climate summary variables with with merged data ######
+  combined_clean <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean.csv")
+  
+  garden_info <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/common_gardens/garden_info.csv")
+  
+  daymean <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/daymet_season_means.csv")
+  
+  climD <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/daymet_daily.csv")
+  
   
   climD_clean <- climD %>%
     group_by(climYr, SiteCode) %>%
@@ -471,15 +479,15 @@ recent %>%  filter(year > 2020 & year < 2024) %>% ggplot(aes(x = year, y = seaso
 recent <- climD_clean %>% select(climYr, SiteCode, MAT, total_precip, seasonality)
   
 
-colnames(recent)[colnames(recent) == "SiteCode"] <- "site"
+colnames(recent)[colnames(recent) == "SiteCode"] <- "site_old"
 colnames(recent)[colnames(recent) == "climYr"] <- "year" 
 
 
-combined_clean_climate <- left_join(combined_clean, recent, by = c("site", "year"))
+combined_clean_climate <- left_join(combined_clean, recent, by = c("site_old", "year"))
 
-colnames(daymean)[colnames(daymean) == "SiteCode"] <- "site"
+colnames(daymean)[colnames(daymean) == "SiteCode"] <- "site_old"
 colnames(daymean)[colnames(daymean) == "climYr"] <- "year"
 
-combined_clean_climate <- left_join(combined_clean_climate, daymean, by = c("site", "year"))
+combined_clean_climate <- left_join(combined_clean_climate, daymean, by = c("site_old", "year"))
 
 write.csv(combined_clean_climate, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate.csv", row.names = FALSE)
