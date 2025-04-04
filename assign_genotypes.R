@@ -17,7 +17,11 @@ seed <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/S
 sites <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate.csv", header = TRUE)
 kinshipIDs <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/common_gardens/93cg_genotypes.csv")
 
+tips <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/307tips.csv")
+
 ####### match data to assign sat site genotypes #######
+
+BRTE <- left_join(BRTE, tips, by = "PopNum")
 
 sites <- sites %>% filter(Type == "Satellite") %>% select(site, Lon, Lat) %>% distinct()
 

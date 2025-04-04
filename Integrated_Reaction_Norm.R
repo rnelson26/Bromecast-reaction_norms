@@ -93,6 +93,8 @@ ggplot(combined_data, aes(x = tmean.Sum, fill = Dataset)) +
  # filter(genotype %in% unique(data$genotype)) %>%
 #  arrange(NewSiteCode)
 
+assigned_genotypes$kinshipID
+
 genotypes_all <- kinshipIDs %>%
   mutate(source = as.factor(source)) %>%
   filter(genotype %in% unique(c(data$genotype, assigned_genotypes$genotype))) %>%  # Include assigned genotypes

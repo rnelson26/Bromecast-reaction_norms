@@ -1,7 +1,7 @@
 ###### Pull 2024 daymet data #########
 ###### code by Becca Nelson #######
 ######## created 4/3/25 ########
-### last modfied 4/3/25 by Becca ##########
+### last modfied 4/4/25 by Becca ##########
 
 ###### load required packages #######
 library(ncdf4)
@@ -9,6 +9,38 @@ library(raster)  # terra also works
 library(dplyr)
 library(purrr)
 library(daymetr)
+
+library(terra)
+
+# Set the path to your NetCDF files
+base_path <- "/Users/Becca/Desktop/daymet2024/11551_2024"
+
+# List of Daymet variables and corresponding file names
+daymet_files <- c(
+  dayl = "dayl.nc",
+  precip = "prcp.nc",
+  srad = "srad.nc",
+  swe = "swe.nc",
+  tmax = "tmax.nc",
+  tmin = "tmin.nc",
+  vp = "vp.nc"
+)
+
+# Read each NetCDF file into a SpatRaster and store in a list
+daymet_data <- lapply(daymet_files, function(file) {
+  nc_path <- file.path(base_path, file)
+  rast(nc_path)
+})
+
+# Assign names to the list elements
+names(daymet_data) <- names(daymet_files)
+
+# Example: access the tmax raster
+tmax_raster <- daymet_data$tmax
+
+
+
+
 ########## get climate info ######
 
 # Define the base directory where the tile folders are stored
