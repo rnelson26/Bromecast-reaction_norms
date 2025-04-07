@@ -461,43 +461,59 @@ recent %>%  filter(year > 2020 & year < 2024) %>% ggplot(aes(x = year, y = seaso
   
   climD_full <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/daymet_daily_full.csv")
   
-  #climD_24 <- climD_24 %>% dplyr::select(-SiteCode_numeric)
+  climD_24 <- climD_24 %>% dplyr::select(-SiteCode_numeric, -season) %>% filter(climYr == 2024)
+  climD <- climD %>% dplyr::select(-season)
   
-  #climD_full <- rbind(climD, climD_24)
+  climD_full <- rbind(climD, climD_24)
   
-#write.csv(climD_full, "daymet_daily_full.csv", row.names = FALSE)
+  climD_full$season <- "Win"
+  climD_full$season[climD_full$climDay < 92] <- "Fall"
+  climD_full$season[climD_full$climDay > 184 & climD_full$climDay < 276] <- "Spr"
+  climD_full$season[climD_full$climDay >= 276] <- "Sum"
   
-  climD_clean <- climD %>%
+write.csv(climD_full, "daymet_daily_full.csv", row.names = FALSE)
+
+  annD <- climD_full %>% group_by(SiteCode,climYr,season) %>%
+    summarise(prcp=sum(prcp),
+              tmean=mean(tavg),
+              swe_mean=mean(swe)) #,
+  #swe_days=sum(swe>0))
+  
+  annD_wide <- annD %>%
+    pivot_wider(
+      names_from = season,
+      values_from = c(prcp, tmean, swe_mean),
+      names_sep = "."
+    )
+  
+
+  
+  climD_clean <- climD_full %>%
     group_by(climYr, SiteCode) %>%
     mutate(
-      total_precip = sum(prcp),  # Total annual precipitation
-      MAT = mean((tmax + tmin) / 2)  # Mean annual temperature
+      total_precip = sum(prcp, na.rm = TRUE),
+      MAT = mean((tmax + tmin) / 2, na.rm = TRUE),
+      cumulative_prcp = cumsum(prcp)
     ) %>%
-    mutate(
-      cumulative_prcp = cumsum(prcp)  # Cumulative precipitation over the year
-    ) %>%
-    filter(cumulative_prcp >= 0.5 * total_precip) %>%  # Keep only rows where cumulative_prcp reaches 50% of total
-    slice_min(climDay, with_ties = FALSE) %>%  # Select the first occurrence 
+    filter(cumulative_prcp >= 0.5 * total_precip) %>%
+    slice_min(climDay, with_ties = FALSE) %>%
     summarise(
       total_precip = first(total_precip),
       MAT = first(MAT),
-      seasonality = first(climDay)  # The first day reaching 50% MAP
+      seasonality = first(climDay)
     ) %>%
-    ungroup()  %>%  filter(climYr > 2020 & climYr < 2024)
+    ungroup() %>%
+    filter(climYr > 2020 & climYr < 2025)
   
 
-recent <- climD_clean %>% select(climYr, SiteCode, MAT, total_precip, seasonality)
+recent <- left_join(climD_clean, annD_wide, by = c("SiteCode", "climYr"))
   
-
+  
 colnames(recent)[colnames(recent) == "SiteCode"] <- "site_old"
 colnames(recent)[colnames(recent) == "climYr"] <- "year" 
 
 
 combined_clean_climate <- left_join(combined_clean, recent, by = c("site_old", "year"))
 
-colnames(daymean)[colnames(daymean) == "SiteCode"] <- "site_old"
-colnames(daymean)[colnames(daymean) == "climYr"] <- "year"
-
-combined_clean_climate <- left_join(combined_clean_climate, daymean, by = c("site_old", "year"))
 
 write.csv(combined_clean_climate, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate.csv", row.names = FALSE)

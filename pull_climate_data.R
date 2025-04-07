@@ -141,10 +141,13 @@ annD <- climD %>% group_by(SiteCode,climYr,season) %>%
                       tmean=mean(tavg),
                       swe_mean=mean(swe)) #,
                       #swe_days=sum(swe>0))
-annD <- as.data.frame(annD)
-annD <- reshape(annD, direction="wide",
-                idvar=c("SiteCode","climYr"),
-                timevar="season" )
+
+annD_wide <- annD %>%
+  pivot_wider(
+    names_from = season,
+    values_from = c(prcp, tmean, swe_mean),
+    names_sep = "."
+  )
             
 # since climYr 2024 data is incomplete (only fall 2023 observations available)
 # set climYr 2024 Win  Spr and Sum values to NA
