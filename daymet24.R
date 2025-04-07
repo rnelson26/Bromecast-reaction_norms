@@ -154,80 +154,137 @@ write.csv(combined_data, "location_climate_data.csv", row.names = FALSE)
 ###### make into df format######
 # Assuming 'combined_data' has row names in the form of 'variable_name_variable_value'
 
-final_data <- data.frame()
+#final_data <- data.frame()
 
 # Loop through each site in location_climate
-for (site_name in names(location_climate)) {
+#for (site_name in names(location_climate)) {
   
   # Extract the site data for this particular site
-  site_data <- location_climate[[site_name]]
+ # site_data <- location_climate[[site_name]]
   
   # Create a new dataframe to store the structured data for this site
-  site_final <- data.frame()
+#  site_final <- data.frame()
   
   # Extract variables from row names using regular expressions
   # For example, extract 'srad' and '267' from 'srad.srad_267'
-  rownames_split <- strsplit(rownames(site_data), "\\.")  # Split by dot
+ # rownames_split <- strsplit(rownames(site_data), "\\.")  # Split by dot
   
   # Extract variable names and values from rownames
-  variables <- sapply(rownames_split, function(x) x[1])  # Variable name (e.g., 'srad')
-  values <- sapply(rownames_split, function(x) gsub("[^0-9]", "", x[2]))  # Extract numeric part from 'srad_267'
+  #variables <- sapply(rownames_split, function(x) x[1])  # Variable name (e.g., 'srad')
+  #values <- sapply(rownames_split, function(x) gsub("[^0-9]", "", x[2]))  # Extract numeric part from 'srad_267'
   
   # Combine variables and values into a dataframe
-  variable_data <- data.frame(variable = variables, value = as.numeric(values))
+#  variable_data <- data.frame(variable = variables, value = as.numeric#(values))
   
   # Spread the variable data into columns
-  site_final <- reshape(variable_data, timevar = "variable", idvar = "rowname", direction = "wide")
+#  site_final <- reshape(variable_data, timevar = "variable", idvar = #"rowname", direction = "wide")
   
   # Add necessary columns like 'year', 'yday', 'climYr', 'climDay', etc.
-  site_final$year <- rep(2024, nrow(site_final))  # Assuming data is for the year 2024
-  site_final$yday <- 1:nrow(site_final)  # Assuming day of year is from 1 to nrow (change if needed)
-  site_final$climYr <- site_final$year
-  site_final$climDay <- site_final$yday
+ # site_final$year <- rep(2024, nrow(site_final))  # Assuming data is for the year 2024
+ # site_final$yday <- 1:nrow(site_final)  # Assuming day of year is from 1 to nrow (change if needed)
+  #site_final$climYr <- site_final$year
+  #site_final$climDay <- site_final$yday
   
   # Season classification (you can adjust this as needed)
-  site_final$season <- ifelse(site_final$yday <= 80 | site_final$yday >= 355, "Winter", 
-                              ifelse(site_final$yday <= 171, "Spring", 
-                                     ifelse(site_final$yday <= 264, "Summer", "Fall")))
+  #site_final$season <- ifelse(site_final$yday <= 80 | site_final$yday >= 355, "Winter", 
+   #                           ifelse(site_final$yday <= 171, "Spring", 
+    #                                 ifelse(site_final$yday <= 264, "Summer", "Fall")))
   
   # Compute tavg (assuming tmax and tmin exist)
-  site_final$tavg <- (site_final$tmax + site_final$tmin) / 2
+ # site_final$tavg <- (site_final$tmax + site_final$tmin) / 2
   
   # Add site name as SiteCode
-  site_final$SiteCode <- site_name
+#  site_final$SiteCode <- site_name
   
   # Reorder columns to match the required format
-  site_final <- site_final[, c("year", "yday", "daylength", "prcp", "radiation", "swe", "tmax", "tmin", 
-                               "vp", "SiteCode", "climYr", "climDay", "season", "tavg")]
+ # site_final <- site_final[, c("year", "yday", "daylength", "prcp", "radiation", "swe", "tmax", "tmin", 
+     #                          "vp", "SiteCode", "climYr", "climDay", "season", "tavg")]
   
   # Combine the site data into the final dataframe
-  final_data <- rbind(final_data, site_final)
-}
+ # final_data <- rbind(final_data, site_final)
+#}
 
 # Write the final data to CSV
-write.csv(final_data, "final_climate_data.csv", row.names = FALSE)
+#write.csv(final_data, "final_climate_data.csv", row.names = FALSE)
 
 
 
 
 
 # Create a new data frame with the required columns
-site_data <- data.frame(
-  year = rep(2024, length(tmax)),  # Assuming the year is 2024; modify as needed
-  yday = loc_df$day,               # Day of the year (1 to 365)
-  daylength = loc_df$dayl.dayl_1,  # Use the available daylength column
-  prcp = loc_df$prcp,              # Assuming prcp column exists
-  radiation = loc_df$radiation,    # Assuming radiation column exists
-  swe = loc_df$swe,                # Assuming swe column exists
-  tmax = loc_df$tmax,              # Assuming tmax column exists
-  tmin = loc_df$tmin,              # Assuming tmin column exists
-  vp = loc_df$vp,                  # Assuming vp column exists
-  SiteCode = rep(site_name, length(tmax)),  # Assign site name as SiteCode
-  climYr = rep(2024, length(tmax)),         # Assuming climYr is 2024
-  climDay = loc_df$day,                    # Same as yday or day of year
-  season = rep("Spring", length(tmax)),    # Assuming season is Spring; modify based on logic
-  tavg = (loc_df$tmax + loc_df$tmin) / 2  # Calculate average temperature
-)
+#site_data <- data.frame(
+ # year = rep(2024, length(tmax)),  # Assuming the year is 2024; modify as needed
+  #yday = loc_df$day,               # Day of the year (1 to 365)
+  #daylength = loc_df$dayl.dayl_1,  # Use the available daylength column
+  #prcp = loc_df$prcp,              # Assuming prcp column exists
+  #radiation = loc_df$radiation,    # Assuming radiation column exists
+  #swe = loc_df$swe,                # Assuming swe column exists
+  #tmax = loc_df$tmax,              # Assuming tmax column exists
+  #tmin = loc_df$tmin,              # Assuming tmin column exists
+  #vp = loc_df$vp,                  # Assuming vp column exists
+  #SiteCode = rep(site_name, length(tmax)),  # Assign site name as SiteCode
+  #climYr = rep(2024, length(tmax)),         # Assuming climYr is 2024
+  #climDay = loc_df$day,                    # Same as yday or day of year
+  #season = rep("Spring", length(tmax)),    # Assuming season is Spring; modify based on logic
+#  tavg = (loc_df$tmax + loc_df$tmin) / 2  # Calculate average temperature
+#)
+
+
+##### Make dataframe with Megan's code suggestions  ########
+# Read in data
+ data <- read_csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/location_climate_data.csv")
+
+# Get unique sites
+site_index <- unique(data$SiteCode)
+
+# See how many variables there are per sitre
+num_vars <- nrow(data)/365/length(site_index)
+
+# Make empty storage
+store <- list()
+
+# Loop through each site to get all variables
+for(i in 1:length(site_index)){
+  data_temp <- data %>% filter(SiteCode == site_index[i])
+  data_temp %>% 
+    mutate(variable = rep(paste("var", 1:num_vars, sep = ""), each = 365)) %>% 
+    spread(key = variable, value = `1`) -> data_temp
+  store[[i]] <- data_temp
+}
+
+# Collapse list to a single data frame
+daymet_24 <- bind_rows(store, .id = "SiteCode")
+
+daymet_24 <- daymet_24 %>%
+  rename(
+    daylength = var1,
+    prcp = var2,
+    radiation = var3,
+    swe = var4,
+    tmax = var5,
+    tmin = var6,
+    vp = var7,
+    yday = day, ## is this year day or climday?
+    SiteCode_numeric = SiteCode,
+    SiteCode = name
+  )
+
+daymet_24$year <- 2024
+
+daymet_24$climYr <- ifelse(daymet_24$yday > 273, daymet_24$year+1,daymet_24$year )
+daymet_24$climDay <- ifelse(daymet_24$yday > 273, daymet_24$yday-273,daymet_24$yday+(365-273))
+
+
+# set up climate seasons
+daymet_24$season <- "Win"
+daymet_24$season[daymet_24$climDay < 92] <- "Fall"
+daymet_24$season[daymet_24$climDay > 184 & daymet_24$climDay < 276] <- "Spr"
+daymet_24$season[daymet_24$climDay >= 276] <- "Sum"
+
+# calculate daily mean temperature
+daymet_24$tavg <- (daymet_24$tmax + daymet_24$tmin)/2
+
+write.csv(daymet_24, "daymet_daily_24.csv", row.names = FALSE)
 
 
 
