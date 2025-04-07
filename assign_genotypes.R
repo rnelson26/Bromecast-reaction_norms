@@ -3,14 +3,15 @@
 ######## for bromecast reaction norm paper ########
 ######## R. Nelson, M. Vahsen, & P. Adler ######
 ########### code created on 4/1/25 #######
-############ last modified: 4/1/25 ########################
-
+############ last modified: 4/7/25 ########################
+rm(list = ls())
 ###### Load packages #####
 library(dplyr)
 library(sf)
+library(tidyverse)
 
 #### Load in data ########
-rm(list = ls())
+
 
 BRTE <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/BRTE_NorthAmerica.csv", header = TRUE)
 seed <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/SeedCollectionData.csv", header = TRUE)
@@ -23,7 +24,7 @@ tips <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/3
 
 BRTE <- left_join(BRTE, tips, by = "PopNum")
 
-sites <- sites %>% filter(Type == "Satellite") %>% select(site, Lon, Lat) %>% distinct()
+sites <- sites %>% filter(Type == "Satellite") %>% dplyr::select(site, Lon, Lat) %>% distinct()
 
 sites_sf <- st_as_sf(sites, coords = c("Lon", "Lat"), crs = 4326)
 BRTE_sf <- st_as_sf(BRTE, coords = c("Longitude", "Latitude"), crs = 4326)
@@ -54,6 +55,7 @@ find_nearest_brte <- function(sites_sf, BRTE_sf) {
 nearest_matches <- find_nearest_brte(sites_sf, BRTE_sf)
 
 assigned_genoyptes <- left_join(nearest_matches, kinshipIDs, by = "NewSiteCode")
+
 
 
 st_write(assigned_genoyptes, "assigned_genotypes.csv", layer_options = "GEOMETRY=AS_XY", delete_dsn = TRUE)

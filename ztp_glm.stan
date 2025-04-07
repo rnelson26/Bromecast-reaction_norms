@@ -6,7 +6,7 @@ data {
   int<lower=1> p_X;               // Number of bioclimatic variables 
   int<lower=1> q_X;               // Number of latent factors
   int<lower=1> p_V;               // Number of treatments + 1 for intercept
-  array[n_s] int<lower=1> idx_sites;// Vector that connects sites to position in bioclim
+ // Vector that connects sites to position in bioclim,  array[n_s] int<lower=1> idx_sites;
   array[n] int<lower=1> idx_plant;// Vector that says what site each plant is from
   array[n] int<lower=1> genotype_plant;// Vector that says what genotype each plant is from
   array[n] int<lower=1> y;        // Zero-truncated Poisson data (y_i >= 1)
@@ -35,7 +35,7 @@ model {
   
   // Likelihood for zero-truncated Poisson
   for (i in 1:n) {
-    int idx = idx_sites[idx_plant[i]];
+    int idx = idx_plant[i]; //was originally int idx = idx_sites[idx_plant[i]]
     int idx_genotype = genotype_plant[i];
     real lambda = exp(dot_product(W[idx, ]', beta[idx_genotype,]) + dot_product(V[i, ]', gamma));
     target += poisson_lpmf(y[i] | lambda) - log1m_exp(-lambda); // Zero-truncation adjustment (we should do mean correction)

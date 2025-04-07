@@ -1,7 +1,7 @@
 #### Integrated Reaction Norm Model #######
 ######## code by Becca Nelson and Justin Van Ee ###############################
 ############# created 3-25-25 ######################
-############# Last modified: 4-3-25 ##########################
+############# Last modified: 4-7-25 ##########################
 ######## modifies RMD file to pull from one integrated df ########
 
 rm(list = ls())
@@ -26,14 +26,17 @@ kinship <- read.table("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/d
 
 assigned_genotypes <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/assigned_genotypes.csv")
 
+tips <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/307tips.csv")
+
 cg_WC <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/common_gardens/dailyVWCdata_allgardens_allyears.csv")
 
 cg_temp <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/common_gardens/dailytempdata_allgardens_allyears.csv")
 
+BRTE <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/BRTE_NorthAmerica.csv", header = TRUE)
+
 ###### add cg climate offset #########
 ## white gravel substract one, black gravel add one
 
-library(dplyr)
 
 data <- data %>%
   mutate(across(c(tmean.Fall, tmean.Sum, tmean.Spr, tmean.Win, MAT), 
@@ -87,6 +90,13 @@ ggplot(combined_data, aes(x = tmean.Sum, fill = Dataset)) +
 ####### Prepare data for model ########
 
 ### Genotypes info ##########
+BRTE <- left_join(BRTE, tips, by = "PopNum") 
+
+BRTE <- BRTE %>% dplyr::select(PopNum, NewSiteCode, tip.label, IBS.id)
+
+assigned_genotypes <- left_join(assigned_genotypes, BRTE, by = "NewSiteCode") 
+
+
 #genotypes_common_gardens <- 
  # kinshipIDs %>%
 #  mutate(source = as.factor(source)) %>%
@@ -104,12 +114,13 @@ genotypes_all <- kinshipIDs %>%
 # Filter for common garden genotypes 
 K_common_garden <- as.matrix(kinship[genotypes_all$kinshipID,genotypes_all$kinshipID])
 
+#K_common_garden <- as.matrix(kinship[assigned_genotypes$PopNumD,assigned_genotypes$IBS.id]) #doesn't work
+
+#Diana: if you go with PopNum and corresponding IBS.id (row and column number in BRTE307_IBSmatrix.txt) you should get the correct genotypes from for the new kinship matrix.
+
 # Put genotype numbers on rows and columns
-colnames(K_common_garden) <- rownames(K_common_garden) <- as.factor(genotypes_all$NewSiteCode)
+#colnames(K_common_garden) <- rownames(K_common_garden) <- as.factor(genotypes_all$NewSiteCode)
 
-missing_genotypes <- setdiff(unique(data$genotype), genotypes_common_gardens$genotype)
-
-missing_genotypes <- setdiff(unique(data$genotype), genotypes_all$genotype)
 
 ######## Demography info #########
 assigned_genotypes$site <- as.factor(assigned_genotypes$site)
@@ -118,31 +129,32 @@ assigned_genotypes$NewSiteCode <- as.factor(assigned_genotypes$NewSiteCode)
 kinshipIDs$NewSiteCode <- as.factor(kinshipIDs$NewSiteCode)
 
 df <- training_data %>%
-  filter(Emerged == "Y", Reproduced == "Y") %>%
+  dplyr::filter(Emerged == "Y", Reproduced == "Y") %>%
   mutate(
     site_numeric = as.numeric(as.factor(site)),
     site_year_numeric = as.numeric(as.factor(site_year)),
     year_numeric = as.numeric(as.factor(year)) - 1
   ) %>%
   left_join(assigned_genotypes %>% 
-              select(site, genotype_assigned = genotype, 
+              dplyr::select(site, genotype_assigned = genotype, 
                      NewSiteCode, SeedSource, sample.id), 
             by = "site") %>%
   # Replace NA genotypes from training_data with those from assigned_genotypes
   mutate(
     genotype = ifelse(is.na(genotype), genotype_assigned, genotype)  # Ensure type consistency
   ) %>%
-  select(-genotype_assigned) %>%  # Remove temporary column
+  dplyr::select(-genotype_assigned) %>%  # Remove temporary column
   # Join with kinshipIDs using the newly assigned genotype
   left_join(kinshipIDs, by = c("genotype", "NewSiteCode")) %>%
-  filter(!is.na(Fecundity)) %>%
-  filter(!is.na(genotype)) %>%
-  filter(Fecundity > 0) ## compare to flagged column, hopefully any zeros should be flagged 
+  dplyr::filter(!is.na(Fecundity)) %>%
+  dplyr::filter(!is.na(genotype)) %>%
+  dplyr::filter(Fecundity > 0) ## compare to flagged column, hopefully any zeros should be flagged 
 
 df <- df %>%
   filter(!year == "2024") %>%  filter(!is.na(genotype)) 
 
-
+valid_genotypes <- rownames(K_common_garden)
+df <- df %>% filter(genotype %in% valid_genotypes)
 #some that have zero seeds otherwise included bc coded as reproduced 
 
 
@@ -161,14 +173,14 @@ climate_vars <- c(
 )
 
 pca_data <- df %>% 
-  select(site_year, all_of(climate_vars))  %>% distinct() %>% 
+  dplyr::select(site_year, all_of(climate_vars))  %>% distinct() %>% 
   na.omit()  
 ## need to determine why certain sites are missing
 
 
 
 site_year_labels <- pca_data$site_year  
-X <- scale(pca_data %>% select(-site_year))
+X <- scale(pca_data %>% dplyr::select(-site_year))
 
 pca_out <- prcomp(X)
 
@@ -179,8 +191,19 @@ Lambda <- as.matrix(pca_out$rotation[, 1:q_X])
 
 ##### Indices ########
 
-unique_sites <- unique(df$site) 
-idx_sites <- match(unique_sites, df$site) 
+site_year_levels <- pca_data$site_year
+df$site_year <- factor(df$site_year, levels = site_year_levels)
+idx_plant <- as.integer(df$site_year)  # This goes from 1 to n_X
+stopifnot(max(idx_plant) <= n_X)
+
+
+
+
+#df$idx_site <- as.integer(as.factor(df$site))
+
+
+#range(stan_data$idx_plant)  # Should be between 1 and stan_data$n_X
+#stopifnot(max(stan_data$idx_plant) <= stan_data$n_X)
 
 
 ### Create linkage matrix 
@@ -188,14 +211,16 @@ df$site_year <- as.factor(df$site_year)
 df$site_year <- droplevels(df$site_year)
 Z <- model.matrix(~ site_year - 1, data = df) 
 
+
+
 ### Create linkage matrix (for four sites)
-unique_sites <- unique(df$site)  
-site_match <- match(unique_sites, df$site)  
-idx_plant <- match(df$site, unique_sites)  
+#unique_sites <- unique(df$site)  
+#site_match <- match(unique_sites, df$site)  
+#idx_plant <- match(df$site, unique_sites)  
 
 
 print(range(idx_plant))   # Should be between 1 and length(idx_sites)
-print(length(idx_sites))  # Should match the max value in idx_plant
+#print(length(idx_sites))  # Should match the max value in idx_plant
 
 
 ## site year idx
@@ -211,17 +236,33 @@ df$NewSiteCode <- as.character(df$NewSiteCode)
 df$NewSiteCode[is.na(df$NewSiteCode)] <- "Unknown"
 df$NewSiteCode <- as.factor(df$NewSiteCode) 
 
+# Genotype IDs that are in the kinship matrix
+valid_genotypes <- rownames(K_common_garden)
+
+# Make a lookup table
+genotype_lookup <- setNames(seq_along(valid_genotypes), valid_genotypes)
+
+# Filter df to only rows with genotypes in K
+df <- df %>% filter(genotype %in% valid_genotypes)
+
+# Recode genotype_plant as indices into K
+genotype_plant <- as.integer(genotype_lookup[as.character(df$genotype)])
+
+# Check again
+range(genotype_plant)  # should be 1 to 93
+length(unique(genotype_plant))  # should be ≤ 93
 
 
 
-genotype_plant <-df$genotype
+
+#genotype_plant <-df$genotype
 
 #genotype_plant <- as.numeric(as.factor(df$NewSiteCode))
 
 ####### Fit stan model #########
 stan_data <- list(
   # Dimension of objects
-  n_g =  length(unique(genotype_plant)), #number of genotypes
+  n_g =  nrow(K_common_garden), #number of genotypes
   n_s = length(unique(df$site)), ## number of sites 
   n = nrow(df), #number of observations
   p_V = ncol(V), #Number of treatments + 1 for intercept, now site year
@@ -237,7 +278,7 @@ stan_data <- list(
   # Kinship
   K = K_common_garden,
   # For linking plants with genotypes and treatments 
-  idx_sites = idx_sites,
+ # idx_sites = idx_sites,
   idx_plant = idx_plant,
   genotype_plant = genotype_plant #,
   # site_year_idx = site_year_idx #,  
@@ -245,7 +286,7 @@ stan_data <- list(
 )
 
 # Warmup and iterations 
-iter_warmup = 100
+iter_warmup = 1000 #upped from 100 to 1000 to improve performance 
 iter_sampling = 1000
 
 # Fit using cmdrstan 
