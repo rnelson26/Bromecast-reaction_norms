@@ -20,6 +20,7 @@ sat <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/sa
 
 cg <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/common_gardens/cg_fullData_withFlags.csv", header = TRUE)
 
+
 ##### create a new column for type ######
 sat$Type <- "Satellite"
 
@@ -227,7 +228,7 @@ str(combined_clean)
 ## save as .csv 
 write.csv(combined_clean, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean.csv", row.names = FALSE)
 
-###### Climate Variables ######
+###### CG Lat Lon ######
 combined_clean <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean.csv")
 
 garden_info <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/common_gardens/garden_info.csv")
@@ -456,6 +457,15 @@ recent %>%  filter(year > 2020 & year < 2024) %>% ggplot(aes(x = year, y = seaso
   
   climD <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/daymet_daily.csv")
   
+  climD_24 <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/daymet_daily_24.csv")
+  
+  climD_full <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/daymet_daily_full.csv")
+  
+  #climD_24 <- climD_24 %>% dplyr::select(-SiteCode_numeric)
+  
+  #climD_full <- rbind(climD, climD_24)
+  
+#write.csv(climD_full, "daymet_daily_full.csv", row.names = FALSE)
   
   climD_clean <- climD %>%
     group_by(climYr, SiteCode) %>%
