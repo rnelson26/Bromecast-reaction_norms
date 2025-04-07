@@ -290,8 +290,8 @@ iter_warmup = 1000 #upped from 100 to 1000 to improve performance
 iter_sampling = 1000
 
 # Fit using cmdrstan 
-mod <- cmdstan_model("ztp_glm.stan")
-#mod <- cmdstan_model("ztp_glm.stan_with_intercept") #for site_year random intercept 
+#mod <- cmdstan_model("ztp_glm.stan")
+mod <- cmdstan_model("ztp_glm_with_intercept.stan") #for site_year random intercept 
 
 # Compile and fit the model
 fit <- mod$sample(
