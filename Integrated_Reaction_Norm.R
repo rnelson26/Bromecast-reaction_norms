@@ -1,19 +1,19 @@
 #### Integrated Reaction Norm Model #######
 ######## code by Becca Nelson and Justin Van Ee ###############################
 ############# created 3-25-25 ######################
-############# Last modified: 4-7-25 ##########################
+############# Last modified: 4-8-25 ##########################
 ######## modifies RMD file to pull from one integrated df ########
 
 rm(list = ls())
 
 ## to do
 
-## add cg climate data 
 
 ###### Load packages #####
 library(tidyverse)
 library(bayesplot)
 library(cmdstanr)
+
 #library(ggplot2) #if you don't want to load the whole tidyverse
 #library(dplyr)
 
@@ -90,7 +90,7 @@ ggplot(combined_data, aes(x = tmean.Sum, fill = Dataset)) +
 ####### Prepare data for model ########
 
 ### Genotypes info ##########
-K <- diag(1, 93, 93) #indep matrix
+K <- diag(1, 93, 93) #indep kinship matrix
 
 BRTE <- left_join(BRTE, tips, by = "PopNum") 
 
@@ -114,14 +114,15 @@ genotypes_all <- kinshipIDs %>%
 
 
 # Filter for common garden genotypes 
-K_common_garden <- as.matrix(kinship[genotypes_all$kinshipID,genotypes_all$kinshipID])
+K_common_garden <- as.matrix(K[genotypes_all$kinshipID,genotypes_all$kinshipID])
+#use kinship for actual matrix 
 
 #K_common_garden <- as.matrix(kinship[assigned_genotypes$PopNumD,assigned_genotypes$IBS.id]) #doesn't work
 
 #Diana: if you go with PopNum and corresponding IBS.id (row and column number in BRTE307_IBSmatrix.txt) you should get the correct genotypes from for the new kinship matrix.
 
 # Put genotype numbers on rows and columns
-#colnames(K_common_garden) <- rownames(K_common_garden) <- as.factor(genotypes_all$NewSiteCode)
+colnames(K_common_garden) <- rownames(K_common_garden) <- as.factor(genotypes_all$genotype)
 
 
 ######## Demography info #########
