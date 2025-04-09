@@ -178,7 +178,7 @@ climate_vars <- c(
 pca_data <- df %>% 
   dplyr::select(site_year, all_of(climate_vars))  %>% distinct() %>% 
   na.omit()  
-## need to determine why certain sites are missing
+
 
 
 
@@ -213,7 +213,7 @@ stopifnot(max(idx_plant) <= n_X)
 df$site_year <- as.factor(df$site_year)
 df$site_year <- droplevels(df$site_year)
 Z <- model.matrix(~ site_year - 1, data = df) 
-
+## might be issue 
 
 
 ### Create linkage matrix (for four sites)
@@ -276,7 +276,7 @@ stan_data <- list(
   y = y,
   # Matrices 
   Lambda = Lambda,
-  V = V,
+  #V = V,
   X = X,
   # Kinship
   K = K_common_garden,
@@ -310,7 +310,7 @@ fit <- mod$sample(
 fit$summary()
 
 # Extract posterior samples
-posterior <- fit$draws(variables = c("beta", "gamma", "sigma", "W", "zeta"))
+posterior <- fit$draws(variables = c("beta",  "sigma", "W", "zeta"))
 
 #
 # Traceplots for diagnostics
@@ -322,9 +322,9 @@ p <- mcmc_trace(posterior,  pars = c("beta[1,1]","beta[2,1]"), n_warmup = iter_w
 p + facet_text(size = 15)
 
 # gamma
-color_scheme_set("mix-blue-pink")
-p <- mcmc_trace(posterior[51:200,,],  pars = paste0("gamma[", 1:ncol(V), "]"), n_warmup = iter_warmup)
-p + facet_text(size = 15)
+#color_scheme_set("mix-blue-pink")
+#p <- mcmc_trace(posterior,  pars = paste0("gamma[", 1:2, "]"), #n_warmup = iter_warmup)#
+#p + facet_text(size = 15)
 
 # sigma
 color_scheme_set("mix-blue-pink")
@@ -333,10 +333,10 @@ p + facet_text(size = 15)
 
 # zeta
 color_scheme_set("mix-blue-pink")
-p <- mcmc_trace(posterior[51:200,,],  pars = paste0("zeta[", 1:q_X, "]"), n_warmup = iter_warmup)
+p <- mcmc_trace(posterior,  pars = paste0("zeta[", 1:q_X, "]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 
 # W
 color_scheme_set("mix-blue-pink")
-p <- mcmc_trace(posterior,  pars = c("W[1,1]","W[1,2]", "W[101,1]", "W[101,2]"), n_warmup = iter_warmup)
+p <- mcmc_trace(posterior,  pars = c("W[1,1]","W[1,2]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
