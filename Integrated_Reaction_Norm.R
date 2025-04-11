@@ -287,20 +287,23 @@ stan_data <- list(
   y = y,
   # Matrices 
   Lambda = Lambda,
-  V = V,
+  #V = V,
   X = X,
   # Kinship
   K = K_common_garden,
   # For linking plants with genotypes and treatments 
  # idx_sites = idx_sites,
   idx_plant = idx_plant,
-  genotype_plant = genotype_plant #,
+  genotype_plant = genotype_plant,
+ # Site-year random effect 
+ site_year_id = as.integer(as.factor(df$site_year)),                  # Integer index: 1..n_site_year for each row in df
+ n_site_year = length(unique(as.integer(as.factor(df$site_year))))
+)                      
   # site_year_idx = site_year_idx #,  
   #n_site_year = length(unique(site_year_idx))  
-)
 
 # Fit using cmdrstan 
-mod <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/ztnb_glm.stan")
+mod <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/ztnb_glm.random.stan")
 #mod <- cmdstan_model("ztp_glm_with_intercept.stan") #for site_year random intercept 
 
 
@@ -333,7 +336,7 @@ summary <- fit$summary()
 range(summary$rhat)
 
 # Extract posterior samples
-posterior <- fit$draws(variables = c("theta","beta", "gamma", "sigma", "W", "zeta", "mu"))
+posterior <- fit$draws(variables = c("theta","beta", "sigma", "W", "zeta", "mu"))
 
 #
 # Traceplots for diagnostics
@@ -350,9 +353,9 @@ p <- mcmc_trace(posterior,  pars = c("beta[20,1]","beta[20,2]"), n_warmup = iter
 p + facet_text(size = 15)
 
 # gamma
-color_scheme_set("mix-blue-pink")
-p <- mcmc_trace(posterior,  pars = paste0("gamma[", 1:6, "]"), n_warmup = iter_warmup)
-p + facet_text(size = 15)
+#color_scheme_set("mix-blue-pink")
+#p <- mcmc_trace(posterior,  pars = paste0("gamma[", 1:6, "]"), n_warmup = iter_warmup)
+#p + facet_text(size = 15)
 
 # sigma
 color_scheme_set("mix-blue-pink")
@@ -373,3 +376,13 @@ p + facet_text(size = 15)
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = c("mu[199]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
+
+library(bayesplot)
+
+
+
+
+
+
+
+
