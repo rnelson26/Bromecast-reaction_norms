@@ -1,0 +1,96 @@
+functions {
+  // Log-likelihood for a zero-truncated Negative Binomial
+  real zt_negbinom_lpmf(int y, real mu, real theta) {
+    return neg_binomial_2_lpmf(y | mu, theta) - log1m_exp(neg_binomial_2_lpmf(0 | mu, theta));
+  }
+}
+
+data {
+  int<lower=1> n;
+  int<lower=1> n_s;
+  int<lower=1> n_g;
+  int<lower=1> n_X;
+  int<lower=1> p_X;
+  int<lower=1> q_X;
+  int<lower=1> p_V;
+  array[n] int<lower=1> idx_plant;
+  array[n] int<lower=1> genotype_plant;
+  array[n] int<lower=1> y; // Integer-valued response for Negative Binomial
+  matrix[n_X, p_X] X;
+  matrix[p_X, q_X] Lambda;
+  matrix[n_g, n_g] K;
+  matrix[n, p_V] V;
+  vector[n] neighbors;
+  vector[n] annual;
+  vector[n] perennial;
+  vector[n] shrub;
+}
+
+parameters {
+  matrix[n_g, q_X] beta_raw;
+  vector<lower=0, upper=1.57079632679>[p_X] u_sigma;
+  vector<lower=0, upper=1.57079632679>[q_X] u_zeta;
+  matrix[n_X, q_X] W;
+  vector[p_V] gamma;
+  real beta_neighbors;
+  real beta_annual;
+  real beta_perennial;
+  real beta_shrub;
+  real<lower=0, upper=10000> theta; // Dispersion parameter for the negative binomial
+}
+
+transformed parameters {
+  vector<lower=0>[p_X] sigma;
+  vector<lower=0>[q_X] zeta;
+  matrix[n_g, q_X] beta;
+
+  for (j in 1:p_X)
+    sigma[j] = tan(u_sigma[j]);
+
+  for (l in 1:q_X)
+    zeta[l] = tan(u_zeta[l]);
+
+  for (l in 1:q_X) {
+    beta[, l] = cholesky_decompose(K) * (sqrt(zeta[l]) * beta_raw[, l]);
+  }
+}
+
+model {
+  for (l in 1:q_X) {
+    beta_raw[, l] ~ normal(0, 1);
+  }
+  //theta ~ gamma(1, 0.1);
+  gamma ~ normal(0, 1);
+  to_vector(W) ~ normal(0, 1);
+
+  // Likelihood for zero-truncated negative binomial
+  for (i in 1:n) {
+    int idx = idx_plant[i];
+    int idx_genotype = genotype_plant[i];
+    real mu = exp(dot_product(W[idx, ], beta[idx_genotype, ]) +
+              dot_product(V[i], gamma) +
+              beta_neighbors * neighbors[i] + beta_annual * annual[i] + beta_perennial * perennial[i] + beta_shrub * shrub[i]);
+    //real mu = exp(dot_product(W[idx, ], beta[idx_genotype, ]) + dot_product(V[i], gamma));
+    target += zt_negbinom_lpmf(y[i] | mu, theta);
+  }
+
+  // Priors for X data
+  for (i in 1:n_X) {
+    for (j in 1:p_X) {
+      target += normal_lpdf(X[i, j] | dot_product(Lambda[j, ], W[i, ]), sigma[j]);
+    }
+  }
+}
+
+generated quantities {
+  vector[n] mu;
+
+  for (i in 1:n) {
+    int idx = idx_plant[i];
+    int idx_genotype = genotype_plant[i];
+    mu[i] = exp(dot_product(W[idx, ], beta[idx_genotype, ]) +
+            dot_product(V[i], gamma) +
+            beta_neighbors * neighbors[i] + beta_annual * annual[i] + beta_perennial * perennial[i] + beta_shrub * shrub[i]);
+   // mu[i] = exp(dot_product(W[idx, ], beta[idx_genotype, ]) + dot_product(V[i], gamma));
+  }
+}

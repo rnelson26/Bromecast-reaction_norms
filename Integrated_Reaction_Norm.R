@@ -64,7 +64,7 @@ set.seed(123)  # For reproducibility
 
 selected_categories <- data_sat %>%
   distinct(site_year) %>%  
-  slice_sample(n = 36) %>% 
+  slice_sample(n = 12) %>% ##36 for whole split
   pull(site_year)          
 
 training_data <-data %>%
@@ -114,7 +114,8 @@ genotypes_all <- kinshipIDs %>%
 
 
 # Filter for common garden genotypes 
-K_common_garden <- as.matrix(K[genotypes_all$kinshipID,genotypes_all$kinshipID])
+#K_common_garden <- as.matrix(K[genotypes_all$kinshipID,genotypes_all$kinshipID])
+K_common_garden <- as.matrix(kinship[genotypes_all$kinshipID,genotypes_all$kinshipID])
 #use kinship for actual matrix 
 
 #K_common_garden <- as.matrix(kinship[assigned_genotypes$PopNumD,assigned_genotypes$IBS.id]) #doesn't work
@@ -151,6 +152,10 @@ df <- training_data %>%
   left_join(kinshipIDs, by = c("genotype", "NewSiteCode")) %>%
   dplyr::filter(!is.na(Fecundity)) %>%
   dplyr::filter(!is.na(genotype)) %>%
+  dplyr::filter(!is.na(neighbors)) %>%
+  dplyr::filter(!is.na(annual)) %>%
+  dplyr::filter(!is.na(perennial)) %>%
+  dplyr::filter(!is.na(shrub)) %>%
   dplyr::filter(Fecundity > 0) ## compare to flagged column, hopefully any zeros should be flagged 
 
 df <- df %>%
@@ -165,7 +170,9 @@ df <- df %>% filter(genotype %in% valid_genotypes)
 ### Extract fecundity 
 y <-
   df %>%
-  pluck("Fecundity") 
+  pluck("Fecundity") %>%
+  #log() %>%
+  c()
 
 ###### Climate PCA #########
 climate_vars <- c(
@@ -213,7 +220,7 @@ stopifnot(max(idx_plant) <= n_X)
 df$site_year <- as.factor(df$site_year)
 df$site_year <- droplevels(df$site_year)
 Z <- model.matrix(~ site_year - 1, data = df) 
-## might be issue 
+
 
 
 ### Create linkage matrix (for four sites)
@@ -272,11 +279,15 @@ stan_data <- list(
   n_X = nrow(pca_data), #number of obs of climate variables 
   q_X = ncol(Lambda), #Number of latent factors
   p_X = nrow(Lambda), #number of climate variables 
+  neighbors = df$neighbors, ## cheatgrass density 
+  annual = df$annual, ## interspecific competition variables
+  perennial = df$perennial,
+  shrub = df$shrub,
   # Response (fecundity)
   y = y,
   # Matrices 
   Lambda = Lambda,
-  #V = V,
+  V = V,
   X = X,
   # Kinship
   K = K_common_garden,
@@ -288,43 +299,60 @@ stan_data <- list(
   #n_site_year = length(unique(site_year_idx))  
 )
 
-# Warmup and iterations 
-iter_warmup = 1000 #upped from 100 to 1000 to improve performance 
-iter_sampling = 1000
-
 # Fit using cmdrstan 
-mod <- cmdstan_model("ztp_glm.stan")
+mod <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/ztnb_glm.stan")
 #mod <- cmdstan_model("ztp_glm_with_intercept.stan") #for site_year random intercept 
+
+
+#### Find good starting values ####
+pathfinder_fit <- mod$pathfinder(
+  data = stan_data,          # your named list of data
+  init = 0,                  # or a list of reasonable inits
+  num_paths = 1              # usually equal to number of chains
+)
+init_list <- pathfinder_fit$draws(format = "list")
+
+
+# Warmup and iterations 
+iter_warmup = 100 
+iter_sampling = 1000
 
 # Compile and fit the model
 fit <- mod$sample(
   data = stan_data,
   seed = 123,
-  chains = 4,
-  parallel_chains = 4,
+  chains = 3,
+  parallel_chains = 3,
   iter_warmup = iter_warmup,
-  iter_sampling = iter_sampling
+  iter_sampling = iter_sampling,
+  init = init_list
 )
 
 # Summary of results
-fit$summary()
+summary <- fit$summary()
+range(summary$rhat)
 
 # Extract posterior samples
-posterior <- fit$draws(variables = c("beta",  "sigma", "W", "zeta"))
+posterior <- fit$draws(variables = c("theta","beta", "gamma", "sigma", "W", "zeta", "mu"))
 
 #
 # Traceplots for diagnostics
 #
 
+# theta
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior,  pars = c("theta"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
 # beta
 color_scheme_set("mix-blue-pink")
-p <- mcmc_trace(posterior,  pars = c("beta[1,1]","beta[2,1]"), n_warmup = iter_warmup)
+p <- mcmc_trace(posterior,  pars = c("beta[20,1]","beta[20,2]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 
 # gamma
-#color_scheme_set("mix-blue-pink")
-#p <- mcmc_trace(posterior,  pars = paste0("gamma[", 1:2, "]"), #n_warmup = iter_warmup)#
-#p + facet_text(size = 15)
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior,  pars = paste0("gamma[", 1:6, "]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
 
 # sigma
 color_scheme_set("mix-blue-pink")
@@ -339,4 +367,9 @@ p + facet_text(size = 15)
 # W
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = c("W[1,1]","W[1,2]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+# mu
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior,  pars = c("mu[199]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
