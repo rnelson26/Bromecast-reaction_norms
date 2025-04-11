@@ -377,12 +377,58 @@ color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = c("mu[199]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 
-library(bayesplot)
+### explore parameters
+library(posterior)
+posterior_df <- as_draws_df(posterior)
+names(posterior_df)
+
+summary %>%
+  filter(variable %in% c("beta_annual", "beta_neighbors", "beta_perennial", "beta_shrub")) %>%
+  ggplot(aes(x = variable, y = mean)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = q5, ymax = q95), width = 0.2) +
+  theme_minimal() +
+  labs(y = "Estimate", title = " with 90% Credible Interval")
 
 
 
 
+beta_summary <- posterior_df %>%
+  select(starts_with("beta")) %>%
+  summarise(across(everything(), list(mean = ~mean(.), q5 = ~quantile(., 0.05), q95 = ~quantile(., 0.95))))
 
+
+beta_long <- beta_summary %>%
+  pivot_longer(cols = everything(), 
+               names_to = c("variable", ".value"), 
+               names_pattern = "(.*)_(.*)")
+
+ggplot(beta_long, aes(x = variable, y = mean)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = q5, ymax = q95), width = 0.2) +
+  theme_minimal() +
+  labs(y = "Estimate", title = "Parameter Estimates with 90% Credible Interval")
+
+
+
+# Select all W coefficients
+ 
+W_summary <- posterior_df %>%
+  select(matches("W\\[.*\\]")) %>%  # Match all W[i,j] values
+  summarise(across(everything(), list(mean = ~mean(.), q5 = ~quantile(., 0.05), q95 = ~quantile(., 0.95))))
+
+# Reshape data into long format for plotting
+W_long <- W_summary %>%
+  pivot_longer(cols = everything(), 
+               names_to = c("variable", ".value"), 
+               names_pattern = "(.*)_(.*)")  # Separate variable name from summary stat
+
+# Create the plot
+ggplot(W_long, aes(x = variable, y = mean)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = q5, ymax = q95), width = 0.2) +
+  theme_minimal() +
+  labs(y = "Estimate", title = "Parameter Estimates with 90% Credible Interval")
 
 
 
