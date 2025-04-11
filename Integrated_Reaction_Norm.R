@@ -423,7 +423,7 @@ W_long <- W_summary %>%
                names_to = c("variable", ".value"), 
                names_pattern = "(.*)_(.*)")  # Separate variable name from summary stat
 
-# Create the plot
+
 ggplot(W_long, aes(x = variable, y = mean)) +
   geom_point(size = 3) +
   geom_errorbar(aes(ymin = q5, ymax = q95), width = 0.2) +
