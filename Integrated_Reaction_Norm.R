@@ -65,7 +65,7 @@ set.seed(123)  # For reproducibility
 
 selected_categories <- data_sat %>%
   distinct(site_year) %>%  
-  slice_sample(n = 12) %>% ##36 for whole split
+  slice_sample(n = 36) %>% ##36 for whole split
   pull(site_year)          
 
 training_data <-data %>%
@@ -133,7 +133,7 @@ assigned_genotypes$genotype <- as.integer(assigned_genotypes$genotype)
 assigned_genotypes$NewSiteCode <- as.factor(assigned_genotypes$NewSiteCode)
 kinshipIDs$NewSiteCode <- as.factor(kinshipIDs$NewSiteCode)
 
-df <- training_data %>%
+training_df <- training_data %>%
   dplyr::filter(Emerged == "Y", Reproduced == "Y") %>%
   mutate(
     site_numeric = as.numeric(as.factor(site)),
@@ -159,8 +159,35 @@ df <- training_data %>%
   dplyr::filter(!is.na(shrub)) %>%
   dplyr::filter(Fecundity > 0) ## compare to flagged column, hopefully any zeros should be flagged 
 
+testing_df <- testing_data %>%
+  dplyr::filter(Emerged == "Y", Reproduced == "Y") %>%
+  mutate(
+    site_numeric = as.numeric(as.factor(site)),
+    site_year_numeric = as.numeric(as.factor(site_year)),
+    year_numeric = as.numeric(as.factor(year)) - 1
+  ) %>%
+  left_join(assigned_genotypes %>% 
+              dplyr::select(site, genotype_assigned = genotype, 
+                            NewSiteCode, SeedSource, sample.id), 
+            by = "site") %>%
+  # Replace NA genotypes from training_data with those from assigned_genotypes
+  mutate(
+    genotype = ifelse(is.na(genotype), genotype_assigned, genotype)  # Ensure type consistency
+  ) %>%
+  dplyr::select(-genotype_assigned) %>%  # Remove temporary column
+  # Join with kinshipIDs using the newly assigned genotype
+  left_join(kinshipIDs, by = c("genotype", "NewSiteCode")) %>%
+  dplyr::filter(!is.na(Fecundity)) %>%
+  dplyr::filter(!is.na(genotype)) %>%
+  dplyr::filter(!is.na(neighbors)) %>%
+  dplyr::filter(!is.na(annual)) %>%
+  dplyr::filter(!is.na(perennial)) %>%
+  dplyr::filter(!is.na(shrub)) %>%
+  dplyr::filter(Fecundity > 0) ## compare to flagged column, hopefully any zeros should be flagged 
+
+
 ## scale competition variables
-df <- df %>%
+training_df <- training_df %>%
   mutate(
     neighbors.s = scale(neighbors)[,1],
     perennial.s = scale(perennial)[,1],
@@ -168,21 +195,34 @@ df <- df %>%
     annual.s = scale(annual)[,1],
   )
 
-df <- df %>%
+training_df <- df %>%
     filter(!is.na(genotype)) 
 
+testing_df <- testing_df %>%
+  mutate(
+    neighbors.s = scale(neighbors)[,1],
+    perennial.s = scale(perennial)[,1],
+    shrub.s = scale(shrub)[,1],
+    annual.s = scale(annual)[,1],
+  )
+
+testing_df <- testing_df %>%
+  filter(!is.na(genotype)) 
+
 valid_genotypes <- rownames(K_common_garden)
-df <- df %>% filter(genotype %in% valid_genotypes)
-#some that have zero seeds otherwise included bc coded as reproduced 
+training_df <- training_df %>% filter(genotype %in% valid_genotypes)
+testing_df <- testing_df %>% filter(genotype %in% valid_genotypes)
+
 
 
 
 ### Extract fecundity 
 y <-
-  df %>%
+  training_df %>%
   pluck("Fecundity") %>%
   #log() %>%
   c()
+
 
 ###### Climate PCA #########
 climate_vars <- c(
@@ -192,7 +232,7 @@ climate_vars <- c(
   "total_precip", "seasonality"
 )
 
-pca_data <- df %>% 
+pca_data <- training_df %>% 
   dplyr::select(site_year, all_of(climate_vars))  %>% distinct() %>% 
   na.omit()  
 
@@ -208,18 +248,39 @@ n_X <- nrow(pca_data)
 q_X <- 2
 Lambda <- as.matrix(pca_out$rotation[, 1:q_X])
 
+### project climate of test data
+pca_means <- pca_out$center
+pca_sds   <- pca_out$scale
+pca_rotation <- pca_out$rotation
+
+testing_clim <- testing_df[, climate_vars]
+
+testing_clim_scaled <- sweep(testing_clim, 2, pca_means, "-")
+testing_clim_scaled <- sweep(testing_clim_scaled, 2, pca_sds, "/")
+
+testing_pca_scores <- as.matrix(testing_clim_scaled) %*% pca_rotation
+
+testing_df$pca1 <- testing_pca_scores[, 1]
+testing_df$pca2 <- testing_pca_scores[, 2]
 
 ##### Indices ########
-df$plot_index <- ifelse(df$Type == "Common_Garden", df$plot[df$Type == "Common_Garden"], 0)
-plot_levels <- levels(factor(df$plot[df$Type == "Common_Garden"]))
+training_df$plot_index <- ifelse(training_df$Type == "Common_Garden", training_df$plot[training_df$Type == "Common_Garden"], 0)
+plot_levels <- levels(factor(training_df$plot[training_df$Type == "Common_Garden"]))
 
 site_year_levels <- pca_data$site_year
-df$site_year <- factor(df$site_year, levels = site_year_levels)
-idx_plant <- as.integer(df$site_year)  # This goes from 1 to n_X
+training_df$site_year <- factor(training_df$site_year, levels = site_year_levels)
+idx_plant <- as.integer(training_df$site_year)  # This goes from 1 to n_X
 stopifnot(max(idx_plant) <= n_X)
 
+site_year_levels <- testing_data$site_year
+training_df$site_year <- factor(testing_df$site_year, levels = site_year_levels)
+site_year_levels <- levels(combined_data$site_year)  # or training_df if full isn't available
 
+training_df$site_year <- factor(training_df$site_year, levels = site_year_levels)
+testing_df$site_year  <- factor(testing_df$site_year, levels = site_year_levels)
 
+training_df$site_year_id <- as.integer(training_df$site_year)
+testing_df$site_year_id  <- as.integer(testing_df$site_year)
 
 #df$idx_site <- as.integer(as.factor(df$site))
 
@@ -229,16 +290,9 @@ stopifnot(max(idx_plant) <= n_X)
 
 
 ### Create linkage matrix 
-df$site_year <- as.factor(df$site_year)
-df$site_year <- droplevels(df$site_year)
-Z <- model.matrix(~ site_year - 1, data = df) 
+training_df$site_year <- as.factor(training_df$site_year)
+training_df$site_year <- droplevels(training_df$site_year)
 
-
-
-### Create linkage matrix (for four sites)
-#unique_sites <- unique(df$site)  
-#site_match <- match(unique_sites, df$site)  
-#idx_plant <- match(df$site, unique_sites)  
 
 
 print(range(idx_plant))   # Should be between 1 and length(idx_sites)
@@ -246,17 +300,12 @@ print(range(idx_plant))   # Should be between 1 and length(idx_sites)
 
 
 ## site year idx
-site_year_idx <- unique(as.integer(factor(df$site_year)))
-## do we want this as an integer or categorical variable? 
-
-#n = nrow(V), #number of observations
-#  p_V = ncol(V), #Number of treatments + 1 for intercept
-V <- Z
+site_year_idx <- unique(as.integer(factor(training_df$site_year)))
 
  
-df$NewSiteCode <- as.character(df$NewSiteCode)
-df$NewSiteCode[is.na(df$NewSiteCode)] <- "Unknown"
-df$NewSiteCode <- as.factor(df$NewSiteCode) 
+training_df$NewSiteCode <- as.character(training_df$NewSiteCode)
+training_df$NewSiteCode[is.na(training_df$NewSiteCode)] <- "Unknown"
+training_df$NewSiteCode <- as.factor(training_df$NewSiteCode) 
 
 # Genotype IDs that are in the kinship matrix
 valid_genotypes <- rownames(K_common_garden)
@@ -265,10 +314,10 @@ valid_genotypes <- rownames(K_common_garden)
 genotype_lookup <- setNames(seq_along(valid_genotypes), valid_genotypes)
 
 # Filter df to only rows with genotypes in K
-df <- df %>% filter(genotype %in% valid_genotypes)
+training_df <- training_df %>% filter(genotype %in% valid_genotypes)
 
 # Recode genotype_plant as indices into K
-genotype_plant <- as.integer(genotype_lookup[as.character(df$genotype)])
+genotype_plant <- as.integer(genotype_lookup[as.character(training_df$genotype)])
 
 # Check again
 range(genotype_plant)  # should be 1 to 93
@@ -276,10 +325,6 @@ length(unique(genotype_plant))  # should be ≤ 93
 
 
 
-
-#genotype_plant <-df$genotype
-
-#genotype_plant <- as.numeric(as.factor(df$NewSiteCode))
 
 ####### Fit stan model #########
 stan_data <- list(
@@ -301,7 +346,6 @@ stan_data <- list(
   y = y,
   # Matrices 
   Lambda = Lambda,
-  #V = V,
   X = X,
   # Kinship
   K = K_common_garden,
@@ -315,6 +359,39 @@ stan_data <- list(
 )                      
   # site_year_idx = site_year_idx #,  
   #n_site_year = length(unique(site_year_idx))  
+
+stan_data <- list(
+  n_X = nrow(X),           # Total number of individuals (from your PCA scores or latent trait input)
+  p_X = ncol(X),           # Number of PCA scores (or observed traits)
+  q_X = ncol(Lambda),      # Number of latent traits
+  X = X,                   # Matrix of individual-level traits
+  Lambda = Lambda,         # Matrix of factor loadings
+  n_g = length(unique(train_data$genotype_plant)),  # Total number of genotypes
+  K = K,                   # Kinship matrix
+  n_site_year = length(unique(full_data$site_year_id)),
+  n_plot = length(unique(full_data$plot_index[full_data$plot_index > 0]))
+)
+
+stan_data$n_train <- nrow(training_df)
+stan_data$y_train <- training_df$y
+stan_data$idx_plant_train <- training_df$idx_plant
+stan_data$genotype_plant_train <- training_df$genotype_plant
+stan_data$neighbors_train <- training_df$neighbors
+stan_data$annual_train <- training_df$annual
+stan_data$perennial_train <- training_df$perennial
+stan_data$shrub_train <- training_df$shrub
+stan_data$plot_index_train <- training_df$plot_index
+stan_data$site_year_id_train <- training_dfa$site_year_id
+
+stan_data$n_test <- nrow(testing_df)
+stan_data$idx_plant_test <- testing_df$idx_plant
+stan_data$genotype_plant_test <- testing_df$genotype_plant
+stan_data$neighbors_test <- testing_df$neighbors
+stan_data$annual_test <- testing_df$annual
+stan_data$perennial_test <- testing_df$perennial
+stan_data$shrub_test <- testing_df$shrub
+stan_data$plot_index_test <- testing_df$plot_index
+stan_data$site_year_id_test <- testing_df$site_year_id
 
 # Fit using cmdrstan 
 mod <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/ztnb_glm.random.stan")
