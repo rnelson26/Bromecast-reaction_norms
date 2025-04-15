@@ -1,7 +1,7 @@
 #### Integrated Reaction Norm Model #######
 ######## code by Becca Nelson and Justin Van Ee ###############################
 ############# created 3-25-25 ######################
-############# Last modified: 4-8-25 ##########################
+############# Last modified: 4-11-25 ##########################
 ######## modifies RMD file to pull from one integrated df ########
 
 rm(list = ls())
@@ -158,8 +158,17 @@ df <- training_data %>%
   dplyr::filter(!is.na(shrub)) %>%
   dplyr::filter(Fecundity > 0) ## compare to flagged column, hopefully any zeros should be flagged 
 
+## scale competition variables
 df <- df %>%
-  filter(!year == "2024") %>%  filter(!is.na(genotype)) 
+  mutate(
+    neighbors.s = scale(neighbors)[,1],
+    perennial.s = scale(perennial)[,1],
+    shrub.s = scale(shrub)[,1],
+    annual.s = scale(annual)[,1],
+  )
+
+df <- df %>%
+    filter(!is.na(genotype)) 
 
 valid_genotypes <- rownames(K_common_garden)
 df <- df %>% filter(genotype %in% valid_genotypes)
@@ -200,6 +209,8 @@ Lambda <- as.matrix(pca_out$rotation[, 1:q_X])
 
 
 ##### Indices ########
+df$plot_index <- ifelse(df$Type == "Common_Garden", df$plot[df$Type == "Common_Garden"], 0)
+plot_levels <- levels(factor(df$plot[df$Type == "Common_Garden"]))
 
 site_year_levels <- pca_data$site_year
 df$site_year <- factor(df$site_year, levels = site_year_levels)
@@ -275,14 +286,16 @@ stan_data <- list(
   n_g =  nrow(K_common_garden), #number of genotypes
   n_s = length(unique(df$site)), ## number of sites 
   n = nrow(df), #number of observations
+  plot_index = df$plot_index,
+  n_plot = max(df$plot_index),  # number of unique common garden plots
   p_V = ncol(V), #Number of treatments + 1 for intercept, now site year
   n_X = nrow(pca_data), #number of obs of climate variables 
   q_X = ncol(Lambda), #Number of latent factors
   p_X = nrow(Lambda), #number of climate variables 
-  neighbors = df$neighbors, ## cheatgrass density 
-  annual = df$annual, ## interspecific competition variables
-  perennial = df$perennial,
-  shrub = df$shrub,
+  neighbors = df$neighbors.s, ## cheatgrass density 
+  annual = df$annual.s, ## interspecific competition variables
+  perennial = df$perennial.s,
+  shrub = df$shrub.s,
   # Response (fecundity)
   y = y,
   # Matrices 
@@ -432,3 +445,38 @@ ggplot(W_long, aes(x = variable, y = mean)) +
 
 
 
+
+Lambda$climate_variable <- rownames(Lambda)
+
+# Reshape to long format
+library(reshape2)
+Lambda_long <- melt(Lambda, id.vars = "climate_variable",
+                    variable.name = "PC", value.name = "loading")
+
+# Heatmap
+ggplot(Lambda_long, aes(x = Var2, y = Var1, fill = loading)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
+  theme_minimal(base_size = 12) +
+  labs(title = "PCA Loadings: Climate variables on W axes",
+       x = "Principal Component",
+       y = "Climate Variable")
+
+#PC1 loads negatively on most temperature variables and positively on precipitation/SWE: temperature–moisture tradeoff axis.
+
+#PC2 loads heavily on Fall/Winter precipitation/SWE and prcp.Sum (negatively): a seasonal moisture pattern axis.
+
+ggplot(Lambda_long, aes(x = reorder(Var1, loading), y = loading, fill = loading > 0)) +
+  geom_col() +
+  facet_wrap(~ Var2, scales = "free_y") +
+  coord_flip() +
+  scale_fill_manual(values = c("TRUE" = "red", "FALSE" = "blue")) +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Contribution of Climate Variables to Each PCA Axis",
+    x = "Climate Variable",
+    y = "Loading"
+  ) +
+  theme(legend.position = "none")
+
+    

@@ -25,6 +25,8 @@ data {
   vector[n] annual;
   vector[n] perennial;
   vector[n] shrub;
+  array[n] int<lower=0> plot_index;  // 0 = no plot, >0 = valid plot ID
+int<lower=1> n_plot;               // number of unique plots
 }
 
 parameters {
@@ -39,6 +41,8 @@ parameters {
   real<lower=0, upper=10000> theta; // Dispersion parameter for the negative binomial
   vector[n_site_year] site_year_raw;
 real<lower=0> sigma_site_year;
+vector[n_plot] eta_plot_raw;
+real<lower=0> sigma_plot;
 
 }
 
@@ -48,6 +52,8 @@ transformed parameters {
   matrix[n_g, q_X] beta;
   vector[n_site_year] site_year_effect;
   site_year_effect = sigma_site_year * site_year_raw;
+  vector[n_plot] eta_plot;
+eta_plot = sigma_plot * eta_plot_raw;
 
   for (j in 1:p_X)
     sigma[j] = tan(u_sigma[j]);
@@ -72,20 +78,33 @@ model {
   for (i in 1:n) {
     int idx = idx_plant[i];
     int idx_genotype = genotype_plant[i];
- real mu = exp(
-  dot_product(W[idx, ], beta[idx_genotype, ]) +
-  site_year_effect[site_year_id[i]] +
-  beta_neighbors * neighbors[i] +
-  beta_annual * annual[i] +
-  beta_perennial * perennial[i] +
-  beta_shrub * shrub[i]
-);
+real mu_base = dot_product(W[idx, ], beta[idx_genotype, ]) +
+               site_year_effect[site_year_id[i]] +
+               beta_neighbors * neighbors[i] +
+               beta_annual * annual[i] +
+               beta_perennial * perennial[i] +
+               beta_shrub * shrub[i];
+
+real mu;
+if (plot_index[i] == 0)
+  mu = exp(mu_base);
+else
+  mu = exp(mu_base + eta_plot[plot_index[i]]);
     target += zt_negbinom_lpmf(y[i] | mu, theta);
   }
 
-      // Priors for random intercept of site_year_effect
+      // Priors for random intercept of site_year_effect and for common garden plot random effect
 site_year_raw ~ normal(0, 1);
 sigma_site_year ~ normal(0, 1);
+eta_plot_raw ~ normal(0, 1);
+sigma_plot ~ normal(0, 1); 
+
+// Priors for competition
+beta_neighbors ~ normal(0, 1);
+beta_annual ~ normal(0, 1);
+beta_perennial ~ normal(0, 1);
+beta_shrub ~ normal(0, 1);
+
 
   // Priors for X data
   for (i in 1:n_X) {
@@ -101,9 +120,14 @@ generated quantities {
   for (i in 1:n) {
     int idx = idx_plant[i];
     int idx_genotype = genotype_plant[i];
-   mu[i] = exp(dot_product(W[idx, ], beta[idx_genotype, ]) +
-            site_year_effect[site_year_id[i]] +
-            beta_neighbors * neighbors[i] + beta_annual * annual[i] +
-            beta_perennial * perennial[i] + beta_shrub * shrub[i]);
+  real mu_base = dot_product(W[idx, ], beta[idx_genotype, ]) +
+               site_year_effect[site_year_id[i]] +
+               beta_neighbors * neighbors[i] + beta_annual * annual[i] +
+               beta_perennial * perennial[i] + beta_shrub * shrub[i];
+
+if (plot_index[i] == 0) // Only applies random plot effect if it's a common garden (plot_index > 0)
+  mu[i] = exp(mu_base);
+else
+  mu[i] = exp(mu_base + eta_plot[plot_index[i]]);
   }
 }
