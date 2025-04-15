@@ -3,7 +3,7 @@
 ######## for bromecast reaction norm paper ########
 ######## R. Nelson, M. Vahsen, & P. Adler ######
 ########### code created on 1/28/25 #######
-############ last modified: 4/2/25 ########################
+############ last modified: 4/15/25 ########################
 
 ### outstanding questions ##########
 ## whether approach to zero neighbors makes sense 
@@ -84,7 +84,7 @@ for(i in 1:nrow(cg)){
   }
   
   cg[i, "possible_neighbors"] <- nrow(possible_neighbors)
-  cg[i, "neighbors"] <- nrow(possible_neighbors %>% filter(Reproduced == "Yes"))
+  cg[i, "neighbors"] <- nrow(possible_neighbors %>% filter(Reproduced == "Y"))
   
 }
 

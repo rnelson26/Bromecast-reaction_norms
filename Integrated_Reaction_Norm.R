@@ -1,7 +1,7 @@
 #### Integrated Reaction Norm Model #######
 ######## code by Becca Nelson and Justin Van Ee ###############################
 ############# created 3-25-25 ######################
-############# Last modified: 4-11-25 ##########################
+############# Last modified: 4-15-25 ##########################
 ######## modifies RMD file to pull from one integrated df ########
 
 rm(list = ls())
@@ -13,6 +13,7 @@ rm(list = ls())
 library(tidyverse)
 library(bayesplot)
 library(cmdstanr)
+library(reshape2)
 
 #library(ggplot2) #if you don't want to load the whole tidyverse
 #library(dplyr)
@@ -533,3 +534,37 @@ ggplot(data.frame(Climate_Variable = names(avg_effects), Effect = avg_effects),
   theme_minimal(base_size = 14) +
   labs(title = "Average Effect of Climate Variables on Fecundity",
        x = "Climate Variable", y = "Mean Effect")
+
+### just beta
+# Melt the matrix
+beta_df <- melt(beta_mean)
+colnames(beta_df) <- c("Genotype", "LatentFactor", "Effect")
+
+# Plot
+ggplot(beta_df, aes(x = factor(LatentFactor), y = factor(Genotype), fill = Effect)) +
+  geom_tile() +
+  scale_fill_gradient2(midpoint = 0, low = "blue", mid = "white", high = "red") +
+  labs(
+    x = "Latent Factor",
+    y = "Genotype",
+    fill = "Beta Effect",
+    title = "Heatmap of Beta Coefficients"
+  ) +
+  theme_minimal(base_size = 14)
+
+
+######### Explore intraspecific density values ######
+
+ggplot(df, aes(x = neighbors, y = Fecundity, color = Type)) +
+  geom_point() +
+  theme_minimal() 
+
+df %>% filter(Type == "Satellite") %>% ggplot(aes(x = neighbors, y = Fecundity)) +
+  geom_point() +
+  theme_minimal()
+
+df %>% filter(Type == "Common_Garden") %>% ggplot(aes(x = neighbors, y = Fecundity)) +
+  geom_point() +
+  theme_minimal() 
+
+df %>% filter(Type == "Common_Garden") %>% select(neighbors) %>% distinct()
