@@ -479,4 +479,57 @@ ggplot(Lambda_long, aes(x = reorder(Var1, loading), y = loading, fill = loading 
   ) +
   theme(legend.position = "none")
 
-    
+# Get the matrix values
+lambda_values <- unlist(Lambda[1:(length(Lambda)-1)])  # remove the 'climate_variable' entry
+
+p_X <- length(Lambda$climate_variable)  # number of climate variables
+q_X <- length(lambda_values) / p_X     # number of PCs
+
+Lambda_mat <- matrix(lambda_values, nrow = p_X, ncol = q_X, byrow = FALSE)
+rownames(Lambda_mat) <- Lambda$climate_variable
+
+#### means
+beta_draws <- posterior_df %>% 
+  select(starts_with("beta["))
+
+beta_names <- colnames(beta_draws)
+beta_idx <- stringr::str_match(beta_names, "beta\\[(\\d+),(\\d+)\\]") %>% as.data.frame()
+colnames(beta_idx) <- c("full", "row", "col")
+beta_idx$row <- as.integer(beta_idx$row)
+beta_idx$col <- as.integer(beta_idx$col)
+
+n_g <- max(beta_idx$row)
+q_X_beta <- max(beta_idx$col)
+stopifnot(q_X == q_X_beta)
+
+beta_mean <- matrix(NA, nrow = n_g, ncol = q_X)
+for (i in seq_along(beta_names)) {
+  r <- beta_idx$row[i]
+  c <- beta_idx$col[i]
+  beta_mean[r, c] <- mean(beta_draws[[i]])
+}
+
+
+climate_effects <- Lambda_mat %*% t(beta_mean)
+
+
+library(reshape2)
+
+
+heat_df <- melt(climate_effects, varnames = c("Climate_Variable", "Genotype"), value.name = "Effect")
+
+ggplot(heat_df, aes(x = Genotype, y = Climate_Variable, fill = Effect)) +
+  geom_tile() +
+  scale_fill_gradient2(midpoint = 0, low = "blue", mid = "white", high = "red") +
+  theme_minimal(base_size = 14) +
+  labs(title = "Effect of Climate Variables on Fecundity by Genotype")
+
+avg_effects <- rowMeans(climate_effects)
+
+ggplot(data.frame(Climate_Variable = names(avg_effects), Effect = avg_effects),
+       aes(x = reorder(Climate_Variable, Effect), y = Effect)) +
+  geom_col(fill = "darkgreen") +
+  coord_flip() +
+  theme_minimal(base_size = 14) +
+  labs(title = "Average Effect of Climate Variables on Fecundity",
+       x = "Climate Variable", y = "Mean Effect")
