@@ -1,7 +1,7 @@
 #### Integrated Reaction Norm Model #######
 ######## code by Becca Nelson and Justin Van Ee ###############################
 ############# created 3-25-25 ######################
-############# Last modified: 4-16-25 ##########################
+############# Last modified: 4-18-25 ##########################
 ######## modifies RMD file to pull from one integrated df ########
 
 rm(list = ls())
@@ -14,6 +14,8 @@ library(tidyverse)
 library(bayesplot)
 library(cmdstanr)
 library(reshape2)
+library(FactoMineR)   
+library(factoextra)
 
 #library(ggplot2) #if you don't want to load the whole tidyverse
 #library(dplyr)
@@ -49,49 +51,11 @@ data <- data %>%
                 )))
 
 
-#### Split the data ########
-
-### split training and test data 
-
-data$site <- as.factor(data$site)
-data$year <- as.factor(data$year)
-
-data <- data %>%
-  mutate(site_year = paste(site, year))
-
-data_sat <- data %>% filter(Type == "Satellite")
-
-set.seed(123)  # For reproducibility
-
-selected_categories <- data_sat %>%
-  distinct(site_year) %>%  
-  slice_sample(n = 36) %>% ##36 for whole split
-  pull(site_year)          
-
-training_data <-data %>%
-  filter(site_year %in% selected_categories | Type == "Common_Garden")
-
-testing_data <- data %>%
-  filter(!(site_year %in% selected_categories) & Type == "Satellite")
-
-### compare data to make sure we have decent coverage of climate 
-
-training_data$Dataset <- "Training"
-testing_data$Dataset <- "Testing"
-
-# Combine the datasets
-combined_data <- rbind(training_data, testing_data)
-
-# Check overlap
-ggplot(combined_data, aes(x = tmean.Sum, fill = Dataset)) +
-  geom_histogram(alpha = 0.5, bins = 30, position = "identity") +
-  theme_minimal() +
-  scale_fill_manual(values = c("Training" = "blue", "Testing" = "red"))
 
 ####### Prepare data for model ########
 
 ### Genotypes info ##########
-K <- diag(1, 93, 93) #indep kinship matrix
+#K <- diag(1, 93, 93) #indep kinship matrix
 
 BRTE <- left_join(BRTE, tips, by = "PopNum") 
 
@@ -133,7 +97,13 @@ assigned_genotypes$genotype <- as.integer(assigned_genotypes$genotype)
 assigned_genotypes$NewSiteCode <- as.factor(assigned_genotypes$NewSiteCode)
 kinshipIDs$NewSiteCode <- as.factor(kinshipIDs$NewSiteCode)
 
-training_df <- training_data %>%
+## make site year column 
+data$site <- as.factor(data$site)
+data$year <- as.factor(data$year)
+data <- data %>%
+  mutate(site_year = paste(site, year))
+
+df <- data %>%
   dplyr::filter(Emerged == "Y", Reproduced == "Y") %>%
   mutate(
     site_numeric = as.numeric(as.factor(site)),
@@ -159,35 +129,8 @@ training_df <- training_data %>%
   dplyr::filter(!is.na(shrub)) %>%
   dplyr::filter(Fecundity > 0) ## compare to flagged column, hopefully any zeros should be flagged 
 
-testing_df <- testing_data %>%
-  dplyr::filter(Emerged == "Y", Reproduced == "Y") %>%
-  mutate(
-    site_numeric = as.numeric(as.factor(site)),
-    site_year_numeric = as.numeric(as.factor(site_year)),
-    year_numeric = as.numeric(as.factor(year)) - 1
-  ) %>%
-  left_join(assigned_genotypes %>% 
-              dplyr::select(site, genotype_assigned = genotype, 
-                            NewSiteCode, SeedSource, sample.id), 
-            by = "site") %>%
-  # Replace NA genotypes from training_data with those from assigned_genotypes
-  mutate(
-    genotype = ifelse(is.na(genotype), genotype_assigned, genotype)  # Ensure type consistency
-  ) %>%
-  dplyr::select(-genotype_assigned) %>%  # Remove temporary column
-  # Join with kinshipIDs using the newly assigned genotype
-  left_join(kinshipIDs, by = c("genotype", "NewSiteCode")) %>%
-  dplyr::filter(!is.na(Fecundity)) %>%
-  dplyr::filter(!is.na(genotype)) %>%
-  dplyr::filter(!is.na(neighbors)) %>%
-  dplyr::filter(!is.na(annual)) %>%
-  dplyr::filter(!is.na(perennial)) %>%
-  dplyr::filter(!is.na(shrub)) %>%
-  dplyr::filter(Fecundity > 0) ## compare to flagged column, hopefully any zeros should be flagged 
-
-
 ## scale competition variables
-training_df <- training_df %>%
+df <- df %>%
   mutate(
     neighbors.s = scale(neighbors)[,1],
     perennial.s = scale(perennial)[,1],
@@ -195,33 +138,14 @@ training_df <- training_df %>%
     annual.s = scale(annual)[,1],
   )
 
-training_df <- training_df %>%
+df <- df %>%
     filter(!is.na(genotype)) 
 
-testing_df <- testing_df %>%
-  mutate(
-    neighbors.s = scale(neighbors)[,1],
-    perennial.s = scale(perennial)[,1],
-    shrub.s = scale(shrub)[,1],
-    annual.s = scale(annual)[,1],
-  )
-
-testing_df <- testing_df %>%
-  filter(!is.na(genotype)) 
 
 valid_genotypes <- rownames(K_common_garden)
-training_df <- training_df %>% filter(genotype %in% valid_genotypes)
-testing_df <- testing_df %>% filter(genotype %in% valid_genotypes)
+df <- df %>% filter(genotype %in% valid_genotypes)
 
 
-
-
-### Extract fecundity 
-y <-
-  training_df %>%
-  pluck("Fecundity") %>%
-  #log() %>%
-  c()
 
 
 ###### Climate PCA #########
@@ -232,7 +156,7 @@ climate_vars <- c(
   "total_precip", "seasonality"
 )
 
-pca_data <- training_df %>% 
+pca_data <- df %>% 
   dplyr::select(site_year, all_of(climate_vars))  %>% distinct() %>% 
   na.omit()  
 
@@ -248,52 +172,55 @@ n_X <- nrow(pca_data)
 q_X <- 2
 Lambda <- as.matrix(pca_out$rotation[, 1:q_X])
 
-### project climate of test data
-pca_means <- pca_out$center
-pca_sds   <- pca_out$scale
-pca_rotation <- pca_out$rotation
-
-testing_clim <- testing_df[, climate_vars]
-
-testing_clim_scaled <- sweep(testing_clim, 2, pca_means, "-")
-testing_clim_scaled <- sweep(testing_clim_scaled, 2, pca_sds, "/")
-
-testing_pca_scores <- as.matrix(testing_clim_scaled) %*% pca_rotation
-
-testing_df$pca1 <- testing_pca_scores[, 1]
-testing_df$pca2 <- testing_pca_scores[, 2]
-
-site_year_pca_test <- testing_df %>%
-  dplyr::select(site_year, pca1, pca2) %>%
-  distinct()
-
-site_year_pca_train <- data.frame(
-  site_year = site_year_labels,  # From pca_data, so already unique site-years
-  pca1 = training_pca_scores[, 1],
-  pca2 = training_pca_scores[, 2]
-)
-
-site_year_pca_full <- bind_rows(site_year_pca_train, site_year_pca_test) %>%
-  distinct(site_year, .keep_all = TRUE) %>%
-  mutate(site_year = factor(site_year),
-         idx = as.integer(factor(site_year)))
-
-training_df <- left_join(training_df, site_year_pca_full, by = "site_year")
-testing_df  <- left_join(testing_df, site_year_pca_full, by = "site_year")
-
-training_df <- training_df[order(training_df$idx), ]
-testing_df  <- testing_df[order(testing_df$idx), ]
-
-idx_plant_train <- training_df$idx
-idx_plant_test  <- testing_df$idx
+fviz_pca_biplot(pca_out,
+                geom.ind = "point",               
+                fill.ind = "grey80",              
+                col.var = "contrib",              
+                gradient.cols = c("blue", "red"), 
+                repel = TRUE) +                   
+  theme_minimal()
 
 
-X_full <- as.matrix(site_year_pca_full[order(site_year_pca_full$idx), c("pca1", "pca2")])
-n_X <- nrow(X_full)
+#### Split the data ########
 
-# check
-stopifnot(all(idx_plant_train <= n_X))
-stopifnot(all(idx_plant_test <= n_X))
+### split training and test data 
+
+data_sat <- df %>% filter(Type == "Satellite")
+
+set.seed(123)  # For reproducibility
+
+selected_categories <- data_sat %>%
+  distinct(site_year) %>%  
+  slice_sample(n = 28) %>% 
+  pull(site_year)          
+
+training_df <-df %>%
+  filter(site_year %in% selected_categories | Type == "Common_Garden")
+
+testing_df <- df %>%
+  filter(!(site_year %in% selected_categories) & Type == "Satellite")
+
+### compare data to make sure we have decent coverage of climate 
+
+training_df$Dataset <- "Training"
+testing_df$Dataset <- "Testing"
+
+# Combine the datasets
+combined_data <- rbind(training_df, testing_df)
+
+# Check overlap
+ggplot(combined_data, aes(x = tmean.Sum, fill = Dataset)) +
+  geom_histogram(alpha = 0.5, bins = 30, position = "identity") +
+  theme_minimal() +
+  scale_fill_manual(values = c("Training" = "blue", "Testing" = "red"))
+
+### Extract fecundity##### 
+y <-
+  training_df %>%
+  pluck("Fecundity") %>%
+  #log() %>%
+  c()
+
 
 ##### Indices ########
 training_df$plot_index <- ifelse(training_df$Type == "Common_Garden", training_df$plot[training_df$Type == "Common_Garden"], 0)
@@ -302,16 +229,14 @@ plot_levels <- levels(factor(training_df$plot[training_df$Type == "Common_Garden
 training_df$site_year <- factor(training_df$site_year)
 testing_df$site_year <- factor(testing_df$site_year)
 
-
-
-# Create index for training site-years (1 to 39)
+# Create index for training site-years 
 training_site_years <- sort(unique(training_df$site_year))
 site_year_index_train <- data.frame(
   site_year = training_site_years,
-  idx = seq_along(training_site_years)  # Indices 1 to 39
+  idx = seq_along(training_site_years)  
 )
 
-# Create index for testing site-years (40 to 64)
+# Create index for testing site-years 
 testing_site_years <- sort(unique(testing_df$site_year))
 site_year_index_test <- data.frame(
   site_year = testing_site_years,
@@ -319,60 +244,40 @@ site_year_index_test <- data.frame(
 )
 
 
-# Ensure that 'site_year' in the index data frames has the same levels as in the main datasets
-site_year_index_train$site_year <- factor(site_year_index_train$site_year, levels = levels(training_df$site_year))
-site_year_index_test$site_year <- factor(site_year_index_test$site_year, levels = levels(testing_df$site_year))
-
 # Merge site-year indices into the original dataframes
 training_df <- left_join(training_df, site_year_index_train, by = "site_year")
 testing_df <- left_join(testing_df, site_year_index_test, by = "site_year")
 
-# Check if idx is assigned correctly
-print(head(training_df$idx))
-print(head(testing_df$idx))
 
-# Assign the indices to the Stan data
-stan_data$site_year_id_train <- training_df$idx
-stan_data$site_year_id_test <- testing_df$idx
-
-# Ensure proper dimensions (check the number of unique site-years in Stan data)
-print(length(unique(stan_data$site_year_id_train)))  # Should be 39
-print(length(unique(stan_data$site_year_id_test)))   # Should be 25
-
-
-
-
-
-
-
+### genotype indices
  
 training_df$NewSiteCode <- as.character(training_df$NewSiteCode)
 training_df$NewSiteCode[is.na(training_df$NewSiteCode)] <- "Unknown"
 training_df$NewSiteCode <- as.factor(training_df$NewSiteCode) 
 
-# Genotype IDs that are in the kinship matrix
 valid_genotypes <- rownames(K_common_garden)
-
-# Make a lookup table
 genotype_lookup <- setNames(seq_along(valid_genotypes), valid_genotypes)
-
 
 # Filter df to only rows with genotypes in K
 training_df <- training_df %>% filter(genotype %in% valid_genotypes)
 
 testing_df <- testing_df %>% filter(genotype %in% valid_genotypes)
 
-# Recode genotype_plant as indices into K
 genotype_plant_train <- as.integer(genotype_lookup[as.character(training_df$genotype)])
 
 genotype_plant_test <- as.integer(genotype_lookup[as.character(testing_df$genotype)])
 
+
 # Check again
-range(genotype_plant_test)  # should be 1 to 93
-length(unique(genotype_plant_test))  # should be ≤ 93
+range(genotype_plant_train)  # should be 1 to 93
+length(genotype_plant_train)  
 
+range(genotype_plant_test) 
+length(genotype_plant_test) 
 
-
+#### plant index
+idx_plant_train <- as.numeric(training_df$site_year)
+idx_plant_test  <- as.numeric(testing_df$site_year)
 
 ####### Fit stan model #########
 stan_data <- list(
@@ -402,7 +307,6 @@ stan_data <- list(
   
   # Testing data specifics
   n_test = nrow(testing_df),
-  X_test = X_test,
   idx_plant_test = idx_plant_test,
   genotype_plant_test = genotype_plant_test,
   neighbors_test = testing_df$neighbors.s,
@@ -417,15 +321,15 @@ stan_data <- list(
 
 
 ## checks
-stopifnot(length(stan_data$y_train) == stan_data$n_train)
-stopifnot(length(stan_data$genotype_plant_train) == stan_data$n_train)
-stopifnot(length(stan_data$idx_plant_train) == stan_data$n_train)
-stopifnot(nrow(stan_data$X_test) == stan_data$n_test)
+#stopifnot(length(stan_data$y_train) == stan_data$n_train)
+#stopifnot(length(stan_data$genotype_plant_train) == stan_data$n_train)
+#stopifnot(length(stan_data$idx_plant_train) == stan_data$n_train)
+#stopifnot(nrow(stan_data$X_test) == stan_data$n_test)
 
 
 # Sanity check
-range(stan_data$site_year_id_train)  # Should be 1 to n_site_year_train
-length(unique(stan_data$site_year_id_train))  # Should be n_site_year_train
+#range(stan_data$site_year_id_train)  # Should be 1 to n_site_year_train
+#length(unique(stan_data$site_year_id_train))  # Should be n_site_year_train
 
 
 # Fit using cmdrstan 

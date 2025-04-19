@@ -32,8 +32,6 @@ data {
   array[n_test] int<lower=0> plot_index_test;
 
   // Correct bounds for site_year arrays to use n_site_year
- // array[n_train] int<lower=1, upper=n_site_year> site_year_id_train;  // Correct bounds
- // array[n_test] int<lower=1, upper=n_site_year> site_year_id_test;    // Correct bounds
 
 array[n_train] int<lower=1, upper=n_site_year_train> site_year_id_train;  // Training set
 array[n_test] int<lower=n_site_year_train + 1, upper=n_site_year> site_year_id_test; // Test set
@@ -44,7 +42,7 @@ array[n_test] int<lower=n_site_year_train + 1, upper=n_site_year> site_year_id_t
   int<lower=1> n_g;
   int<lower=1> n_plot;
 
-  matrix[n_X, p_X] X;
+  matrix[n_X, p_X] X; // full climate space 
   matrix[p_X, q_X] Lambda;
   matrix[n_g, n_g] K;
 }
@@ -61,7 +59,6 @@ parameters {
   real beta_shrub;
   real<lower=0, upper=10000> theta; // Dispersion parameter for the negative binomial
 vector[n_site_year_train] site_year_effect_train_raw;
-vector[n_site_year_test] site_year_effect_test_raw;
 real<lower=0> sigma_site_year;
 vector[n_plot] eta_plot_raw;
 real<lower=0> sigma_plot;
@@ -73,7 +70,6 @@ transformed parameters {
   vector<lower=0>[q_X] zeta;
   matrix[n_g, q_X] beta;
 vector[n_site_year_train] site_year_effect_train_scaled = sigma_site_year * site_year_effect_train_raw;
-vector[n_site_year_test] site_year_effect_test_scaled = sigma_site_year * site_year_effect_test_raw;
   vector[n_plot] eta_plot;
 eta_plot = sigma_plot * eta_plot_raw;
 
@@ -101,12 +97,13 @@ model {
   int idx = idx_plant_train[i];
   int idx_genotype = genotype_plant_train[i];
   real mu_base = dot_product(W[idx, ], beta[idx_genotype, ]) +
-                 site_year_effect_train_scaled[site_year_id_train[i]] +
+                 site_year_effect_train_scaled[site_year_id_train[i]] +  
+                 //beta[idx_genotype, 1] augment matrix for genotype intercepts index by genotype to get variable intercepts for genotype
                  beta_neighbors * neighbors_train[i] +
                  beta_annual * annual_train[i] +
                  beta_perennial * perennial_train[i] +
                  beta_shrub * shrub_train[i];
-
+//add minus one within bracket idx_genotpe,-1 
   real mu;
   if (plot_index_train[i] == 0)
     mu = exp(mu_base);
@@ -119,7 +116,6 @@ model {
 
       // Priors for random intercept of site_year_effect and for common garden plot random effect
 site_year_effect_train_raw ~ normal(0, 1);
-site_year_effect_test_raw ~ normal(0, 1);
 sigma_site_year ~ normal(0, 1);
 eta_plot_raw ~ normal(0, 1);
 sigma_plot ~ normal(0, 1); 
@@ -143,22 +139,6 @@ generated quantities {
   vector[n_test] mu_test;
   vector[n_train] mu_train;
 
-  for (i in 1:n_test) {
-    int idx = idx_plant_test[i];
-    int idx_genotype = genotype_plant_test[i];
-real mu_base = dot_product(W[idx, ], beta[idx_genotype, ]) +
-               site_year_effect_test_scaled[site_year_id_test[i] - n_site_year_train] + 
-               beta_neighbors * neighbors_test[i] +
-               beta_annual * annual_test[i] +
-               beta_perennial * perennial_test[i] +
-               beta_shrub * shrub_test[i];
-
-
-    if (plot_index_test[i] == 0)
-      mu_test[i] = exp(mu_base);
-    else
-      mu_test[i] = exp(mu_base + eta_plot[plot_index_test[i]]);
-  }
 
   for (i in 1:n_train) {
     int idx = idx_plant_train[i];
@@ -175,4 +155,24 @@ real mu_base = dot_product(W[idx, ], beta[idx_genotype, ]) +
     else
       mu_train[i] = exp(mu_base + eta_plot[plot_index_train[i]]);
   }
+
+  for (i in 1:n_test) {
+  int idx = idx_plant_test[i];
+  int idx_genotype = genotype_plant_test[i];
+  
+  // Simulate a random effect for site-year test that is a random draw 
+  real site_year_noise = normal_rng(0, sigma_site_year);
+
+  real mu_base = dot_product(W[idx, ], beta[idx_genotype, ]) +
+                 site_year_noise +
+                 beta_neighbors * neighbors_test[i] +
+                 beta_annual * annual_test[i] +
+                 beta_perennial * perennial_test[i] +
+                 beta_shrub * shrub_test[i];
+
+  if (plot_index_test[i] == 0)
+    mu_test[i] = exp(mu_base);
+  else
+    mu_test[i] = exp(mu_base + eta_plot[plot_index_test[i]]);
+}
 }
