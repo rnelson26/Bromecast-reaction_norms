@@ -365,7 +365,7 @@ summary <- fit$summary()
 range(summary$rhat)
 
 # Extract posterior samples
-posterior <- fit$draws(variables = c("theta","beta", "sigma", "W", "zeta", "mu"))
+posterior <- fit$draws(variables = c("theta","beta", "sigma", "W", "zeta", "mu_test", "mu_train"))
 
 #
 # Traceplots for diagnostics
@@ -403,7 +403,11 @@ p + facet_text(size = 15)
 
 # mu
 color_scheme_set("mix-blue-pink")
-p <- mcmc_trace(posterior,  pars = c("mu[199]"), n_warmup = iter_warmup)
+p <- mcmc_trace(posterior,  pars = c("mu_train[199]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior,  pars = c("mu_test[199]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 
 ### explore parameters
@@ -566,6 +570,50 @@ ggplot(beta_df, aes(x = factor(LatentFactor), y = factor(Genotype), fill = Effec
     title = "Heatmap of Beta Coefficients"
   ) +
   theme_minimal(base_size = 14)
+
+###### Evaluate Prediction ######
+mu_test_post  <- fit$draws("mu_test", format = "draws_matrix")  
+mu_test_mean <- apply(mu_test_post, 2, mean)
+
+mu_test_lower <- apply(mu_test_post, 2, quantile, probs = 0.025)
+mu_test_upper <- apply(mu_test_post, 2, quantile, probs = 0.975)
+
+plot(mu_test_mean, testing_df$Fecundity, main = "Test: Predicted vs Observed",
+     xlab = "Predicted", ylab = "Observed")
+abline(0, 1, col = "red")
+
+rmse <- function(pred, obs) sqrt(mean((pred - obs)^2))
+mae <- function(pred, obs) mean(abs(pred - obs))
+rsq <- function(pred, obs) cor(pred, obs)^2
+
+
+rmse(mu_test_mean, testing_df$Fecundity)
+mae(mu_test_mean, testing_df$Fecundity)
+rsq(mu_test_mean, testing_df$Fecundity)
+
+testing_df$mu_pred <- mu_test_mean
+
+ggplot(testing_df, aes(x = mu_pred, y = Fecundity, color = site_year)) +
+  geom_point(alpha = 0.6) +  
+  geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
+  labs(
+    title = "Test: Predicted vs Observed Fecundity",
+    x = "Predicted Fecundity",
+    y = "Observed Fecundity",
+    color = "Site-Year"
+  ) +
+  theme_minimal()
+
+ggplot(testing_df, aes(x = mu_pred, y = Fecundity, color = genotype)) +
+  geom_point(alpha = 0.6) +  
+  geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
+  labs(
+    title = "Test: Predicted vs Observed Fecundity",
+    x = "Predicted Fecundity",
+    y = "Observed Fecundity",
+    color = "Genotype"
+  ) +
+  theme_minimal()
 
 
 ######### Explore intraspecific density values ######
