@@ -615,6 +615,64 @@ ggplot(testing_df, aes(x = mu_pred, y = Fecundity, color = genotype)) +
   ) +
   theme_minimal()
 
+######## W and climate ########
+cor_WX <- fit$draws(variables = c("cor_WX"))
+
+cor_WX_draws <- posterior::as_draws_df(cor_WX, variables = "cor_WX")
+
+cor_WX_long <- cor_WX_draws %>%
+  pivot_longer(cols = starts_with("cor_WX["), names_to = "element", values_to = "cor") %>%
+  mutate(
+    element = gsub("cor_WX\\[|\\]", "", element),
+    q = as.integer(sub(",.*", "", element)),
+    p = as.integer(sub(".*,", "", element))
+  )
+
+cor_WX_means <- cor_WX_long %>%
+  group_by(q, p) %>%
+  summarize(mean_cor = mean(cor), .groups = "drop")
+
+ggplot(cor_WX_means, aes(x = factor(p), y = factor(q), fill = mean_cor)) +
+  geom_tile() +
+  scale_fill_viridis_c(option = "C") +
+  labs(x = "Climate Variable (X)", y = "Latent Dimension (W)", fill = "Mean Correlation") +
+  theme_minimal()
+
+
+ggplot(cor_WX_long, aes(x = factor(p), y = cor)) +
+  geom_violin(fill = "skyblue", alpha = 0.6) +
+  facet_wrap(~ q, labeller = label_both) +
+  labs(x = "Climate Variable (X)", y = "Correlation with W", title = "Posterior Correlations: W vs. X") +
+  theme_minimal()
+
+##### back transforming with lambda #######
+climate_effects <- fit$draws(variables = c("climate_effects"))
+
+climate_effect_draws <- posterior::as_draws_df(climate_effects, variables = "climate_effects")
+
+climate_effects_long <- climate_effect_draws %>%
+  pivot_longer(cols = starts_with("climate_effects["), names_to = "param", values_to = "value") %>%
+  mutate(
+    param = gsub("climate_effects\\[|\\]", "", param),
+    genotype = as.integer(sub(",.*", "", param)),
+    climate_var = as.integer(sub(".*,", "", param))
+  )
+
+ggplot(climate_effects_long, aes(x = factor(climate_var), y = value)) +
+  geom_violin(fill = "tomato", alpha = 0.6) +
+  labs(x = "Climate Variable", y = "Effect Size", title = "Distribution of Climate Effects Across Genotypes") +
+  theme_minimal()
+
+climate_effects_mean <- climate_effects_long %>%
+  group_by(genotype, climate_var) %>%
+  summarize(mean_effect = mean(value), .groups = "drop")
+
+ggplot(climate_effects_mean, aes(x = factor(climate_var), y = factor(genotype), fill = mean_effect)) +
+  geom_tile() +
+  scale_fill_viridis_c(option = "D") +
+  labs(x = "Climate Variable", y = "Genotype", fill = "Mean Effect") +
+  theme_minimal()
+
 
 ######### Explore intraspecific density values ######
 
