@@ -62,7 +62,8 @@ vector[n_site_year_train] site_year_effect_train_raw;
 real<lower=0> sigma_site_year;
 vector[n_plot] eta_plot_raw;
 real<lower=0> sigma_plot;
-
+// Random intercepts for genotype (half-Cauchy prior)
+vector<lower=0>[n_g] genotype_intercept; 
 }
 
 transformed parameters {
@@ -102,7 +103,8 @@ model {
                  beta_neighbors * neighbors_train[i] +
                  beta_annual * annual_train[i] +
                  beta_perennial * perennial_train[i] +
-                 beta_shrub * shrub_train[i];
+                 beta_shrub * shrub_train[i] +
+                genotype_intercept[idx_genotype]; // Adding genotype-specific random intercept
 //add minus one within bracket idx_genotpe,-1 
   real mu;
   if (plot_index_train[i] == 0)
@@ -119,6 +121,7 @@ site_year_effect_train_raw ~ normal(0, 1);
 sigma_site_year ~ normal(0, 1);
 eta_plot_raw ~ normal(0, 1);
 sigma_plot ~ normal(0, 1); 
+genotype_intercept ~ cauchy(0, 5); // Half-Cauchy prior for random genotype intercept
 
 // Priors for competition
 beta_neighbors ~ normal(0, 1);
@@ -126,8 +129,6 @@ beta_annual ~ normal(0, 1);
 beta_perennial ~ normal(0, 1);
 beta_shrub ~ normal(0, 1);
 
-
-  // Priors for X data
   for (i in 1:n_X) {
     for (j in 1:p_X) {
       target += normal_lpdf(X[i, j] | dot_product(Lambda[j, ], W[i, ]), sigma[j]);
@@ -143,7 +144,7 @@ generated quantities {
   for (i in 1:n_train) {
     int idx = idx_plant_train[i];
     int idx_genotype = genotype_plant_train[i];
-    real mu_base = dot_product(W[idx, ], beta[idx_genotype, ]) +
+    real mu_base = dot_product(W[idx, ], beta[idx_genotype, ]) +  genotype_intercept[idx_genotype] +
                    site_year_effect_train_scaled[site_year_id_train[i]] +
                    beta_neighbors * neighbors_train[i] +
                    beta_annual * annual_train[i] +
@@ -163,7 +164,7 @@ generated quantities {
   // Simulate a random effect for site-year test that is a random draw 
   real site_year_noise = normal_rng(0, sigma_site_year);
 
-  real mu_base = dot_product(W[idx, ], beta[idx_genotype, ]) +
+  real mu_base = dot_product(W[idx, ], beta[idx_genotype, ]) +  genotype_intercept[idx_genotype] +
                  site_year_noise +
                  beta_neighbors * neighbors_test[i] +
                  beta_annual * annual_test[i] +
@@ -175,4 +176,20 @@ generated quantities {
   else
     mu_test[i] = exp(mu_base + eta_plot[plot_index_test[i]]);
 }
+//correlation matrix between latent variable W and observed climate data X for each iteration
+matrix[q_X, p_X] cor_WX;
+for (q in 1:q_X) {
+  for (p in 1:p_X) {
+    vector[n_X] w_col = W[, q];
+    vector[n_X] x_col = X[, p];
+    cor_WX[q, p] = dot_product(w_col - mean(w_col), x_col - mean(x_col)) /
+                   (sqrt(dot_self(w_col - mean(w_col))) * sqrt(dot_self(x_col - mean(x_col))));
+  }
+}
+//back-transform to get relationship between original climate variables & genotypes
+matrix[p_X, n_g] climate_effects;
+matrix[q_X, n_g] beta_transpose;
+
+beta_transpose = beta';  // Transpose beta to [q_X x n_g]
+climate_effects = Lambda * beta_transpose;  // [p_X x n_g]
 }
