@@ -599,14 +599,22 @@ plot(log(mu_train_fixed_mean), log(training_df$Fecundity), main = "Test: Predict
      xlab = "Predicted", ylab = "Observed")
 abline(0, 1, col = "red")
 
-rmse <- function(pred, obs) sqrt(mean((pred - obs)^2))
-mae <- function(pred, obs) mean(abs(pred - obs))
-rsq <- function(pred, obs) cor(pred, obs)^2
+rmse <- function(pred, obs) sqrt(mean((pred - obs)^2)) #root-mean squared error
+mae <- function(pred, obs) mean(abs(pred - obs)) #mean absolute error
+rsq <- function(pred, obs) cor(pred, obs)^2 #R2
 
 
 rmse(mu_test_mean, testing_df$Fecundity)
+rmse(mu_train_mean, training_df$Fecundity)
+rmse(mu_train_fixed_mean, training_df$Fecundity)
+
 mae(mu_test_mean, testing_df$Fecundity)
+mae(mu_train_mean, training_df$Fecundity)
+mae(mu_train_fixed_mean, training_df$Fecundity)
+
 rsq(mu_test_mean, testing_df$Fecundity)
+rsq(mu_train_mean, training_df$Fecundity)
+rsq(mu_train_fixed_mean, training_df$Fecundity)
 
 testing_df$mu_pred <- mu_test_mean
 training_df$mu_pred <- mu_train_mean
