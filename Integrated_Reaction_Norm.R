@@ -578,7 +578,7 @@ mu_test_mean <- apply(mu_test_post, 2, mean)
 mu_test_lower <- apply(mu_test_post, 2, quantile, probs = 0.025)
 mu_test_upper <- apply(mu_test_post, 2, quantile, probs = 0.975)
 
-plot(mu_test_mean, testing_df$Fecundity, main = "Test: Predicted vs Observed",
+plot(log(mu_test_mean), log(testing_df$Fecundity), main = "Test: Predicted vs Observed",
      xlab = "Predicted", ylab = "Observed")
 abline(0, 1, col = "red")
 
@@ -593,7 +593,7 @@ rsq(mu_test_mean, testing_df$Fecundity)
 
 testing_df$mu_pred <- mu_test_mean
 
-ggplot(testing_df, aes(x = mu_pred, y = Fecundity, color = site_year)) +
+ggplot(testing_df, aes(x = log(mu_pred), y = log(Fecundity), color = site_year)) +
   geom_point(alpha = 0.6) +  
   geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
   labs(
@@ -604,7 +604,7 @@ ggplot(testing_df, aes(x = mu_pred, y = Fecundity, color = site_year)) +
   ) +
   theme_minimal()
 
-ggplot(testing_df, aes(x = mu_pred, y = Fecundity, color = genotype)) +
+ggplot(testing_df, aes(x = log(mu_pred), y = log(Fecundity), color = genotype)) +
   geom_point(alpha = 0.6) +  
   geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
   labs(
