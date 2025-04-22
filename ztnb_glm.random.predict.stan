@@ -176,6 +176,21 @@ generated quantities {
   else
     mu_test[i] = exp(mu_base + eta_plot[plot_index_test[i]]);
 }
+vector[n_train] mu_train_fixed;
+
+for (i in 1:n_train) {
+  int idx = idx_plant_train[i];
+  int idx_genotype = genotype_plant_train[i];
+  real mu_fixed_base = dot_product(W[idx, ], beta[idx_genotype, ]) +
+                       genotype_intercept[idx_genotype] +
+                       beta_neighbors * neighbors_train[i] +
+                       beta_annual * annual_train[i] +
+                       beta_perennial * perennial_train[i] +
+                       beta_shrub * shrub_train[i];
+
+  mu_train_fixed[i] = exp(mu_fixed_base);  // no site-year or plot effects
+}
+
 //correlation matrix between latent variable W and observed climate data X for each iteration
 matrix[q_X, p_X] cor_WX;
 for (q in 1:q_X) {

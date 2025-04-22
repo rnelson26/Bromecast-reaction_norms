@@ -575,10 +575,27 @@ ggplot(beta_df, aes(x = factor(LatentFactor), y = factor(Genotype), fill = Effec
 mu_test_post  <- fit$draws("mu_test", format = "draws_matrix")  
 mu_test_mean <- apply(mu_test_post, 2, mean)
 
+mu_train_post  <- fit$draws("mu_train", format = "draws_matrix")  
+mu_train_mean <- apply(mu_train_post, 2, mean)
+
+mu_train_fixed_post  <- fit$draws("mu_train_fixed", format = "draws_matrix")  
+mu_train_fixed_mean <- apply(mu_train_fixed_post, 2, mean)
+
 mu_test_lower <- apply(mu_test_post, 2, quantile, probs = 0.025)
 mu_test_upper <- apply(mu_test_post, 2, quantile, probs = 0.975)
 
+mu_train_lower <- apply(mu_train_post, 2, quantile, probs = 0.025)
+mu_train_upper <- apply(mu_train_post, 2, quantile, probs = 0.975)
+
 plot(log(mu_test_mean), log(testing_df$Fecundity), main = "Test: Predicted vs Observed",
+     xlab = "Predicted", ylab = "Observed")
+abline(0, 1, col = "red")
+
+plot(log(mu_train_mean), log(training_df$Fecundity), main = "Test: Predicted vs Observed",
+     xlab = "Predicted", ylab = "Observed")
+abline(0, 1, col = "red")
+
+plot(log(mu_train_fixed_mean), log(training_df$Fecundity), main = "Test: Predicted vs Observed",
      xlab = "Predicted", ylab = "Observed")
 abline(0, 1, col = "red")
 
@@ -592,12 +609,25 @@ mae(mu_test_mean, testing_df$Fecundity)
 rsq(mu_test_mean, testing_df$Fecundity)
 
 testing_df$mu_pred <- mu_test_mean
+training_df$mu_pred <- mu_train_mean
+training_df$mu_fixed_pred <- mu_train_fixed_mean
 
 ggplot(testing_df, aes(x = log(mu_pred), y = log(Fecundity), color = site_year)) +
   geom_point(alpha = 0.6) +  
   geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
   labs(
     title = "Test: Predicted vs Observed Fecundity",
+    x = "Predicted Fecundity",
+    y = "Observed Fecundity",
+    color = "Site-Year"
+  ) +
+  theme_minimal()
+
+ggplot(training_df, aes(x = log(mu_pred), y = log(Fecundity), color = Type)) +
+  geom_point(alpha = 0.6) +  
+  geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
+  labs(
+    title = "Train: Predicted vs Observed Fecundity",
     x = "Predicted Fecundity",
     y = "Observed Fecundity",
     color = "Site-Year"
@@ -614,6 +644,20 @@ ggplot(testing_df, aes(x = log(mu_pred), y = log(Fecundity), color = genotype)) 
     color = "Genotype"
   ) +
   theme_minimal()
+
+### without random effects
+
+ggplot(training_df, aes(x = log(mu_fixed_pred), y = log(Fecundity), color = Type)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
+  labs(
+    title = "Train: Predicted vs Observed (Fixed Effects Only)",
+    x = "Predicted Fecundity (no random effects)",
+    y = "Observed Fecundity",
+    color = "Site-Year"
+  ) +
+  theme_minimal()
+
 
 ######## W and climate ########
 cor_WX <- fit$draws(variables = c("cor_WX"))
