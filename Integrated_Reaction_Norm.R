@@ -37,6 +37,14 @@ cg_temp <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/dat
 
 BRTE <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/BRTE_NorthAmerica.csv", header = TRUE)
 
+soil_clean <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/sat_sites/soil_clean.csv")
+
+###### summarise soil data to site-year ########
+## also need to assign cg values
+
+soil_summary <- soil_clean %>% group_by(site_old) %>% summarise(across(c(pH, EC, OMpercent, Protein_g.kg), \(x) mean(x, na.rm = TRUE)))
+
+
 ###### add cg climate offset #########
 ## white gravel substract one, black gravel add one
 
