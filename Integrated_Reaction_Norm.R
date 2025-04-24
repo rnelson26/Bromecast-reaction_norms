@@ -44,6 +44,21 @@ soil_clean <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/
 
 soil_summary <- soil_clean %>% group_by(site_old) %>% summarise(across(c(pH, EC, OMpercent, Protein_g.kg), \(x) mean(x, na.rm = TRUE)))
 
+data <- left_join(data, soil_summary, by = "site_old")
+
+
+vars_to_fill <- c("pH", "EC", "OMpercent", "Protein_g.kg")
+
+## use Boise Low sat soil values for wildcat cg
+reference_values <- data %>%
+  filter(site_old == "Boise_Low") %>%
+  select(all_of(vars_to_fill)) %>%
+  summarise(across(everything(), ~ first(na.omit(.))))
+
+for (var in vars_to_fill) {
+  data[[var]][data$site_old == "WI" & is.na(data[[var]])] <- reference_values[[var]]
+}
+
 
 ###### add cg climate offset #########
 ## white gravel substract one, black gravel add one
@@ -164,17 +179,40 @@ climate_vars <- c(
   "total_precip", "seasonality"
 )
 
+soil_vars <- c(
+  "pH", "EC", "OMpercent", "Protein_g.kg")
+
+full_vars <- c(
+  "prcp.Spr", "tmean.Spr",  "prcp.Sum", "tmean.Sum", 
+  "prcp.Win", "tmean.Win", "swe_mean.Win", "prcp.Fall", 
+  "tmean.Fall", "swe_mean.Fall", "MAT", 
+  "total_precip", "seasonality",  "pH", "EC", "OMpercent", "Protein_g.kg"
+)
+
 pca_data <- df %>% 
   dplyr::select(site_year, all_of(climate_vars))  %>% distinct() %>% 
   na.omit()  
 
+soil_data <- df %>% 
+  dplyr::select(site_year, all_of(soil_vars))  %>% distinct() %>% 
+  na.omit() 
 
+full_data <- df %>% 
+  dplyr::select(site_year, all_of(full_vars))  %>% distinct() %>% 
+  na.omit() 
 
 
 site_year_labels <- pca_data$site_year  
+site_year_labels_soil <- soil_data$site_year  
+site_year_labels_full <- full_data$site_year 
+
 X <- scale(pca_data %>% dplyr::select(-site_year))
+X_soil <- scale(soil_data %>% dplyr::select(-site_year))
+X_full <- scale(full_data %>% dplyr::select(-site_year))
 
 pca_out <- prcomp(X)
+pca_out_soil <- prcomp(X_soil)
+pca_out_full <- prcomp(X_full)
 
 n_X <- nrow(pca_data)
 q_X <- 2
@@ -188,6 +226,25 @@ fviz_pca_biplot(pca_out,
                 repel = TRUE) +                   
   theme_minimal()
 
+fviz_pca_biplot(pca_out_soil,
+                geom.ind = "point",               
+                fill.ind = "grey80",              
+                col.var = "contrib",              
+                gradient.cols = c("blue", "red"), 
+                repel = TRUE) +                   
+  theme_minimal()
+
+fviz_pca_biplot(pca_out_full,
+                geom.ind = "point",               
+                fill.ind = "grey80",              
+                col.var = "contrib",              
+                gradient.cols = c("blue", "red"), 
+                repel = TRUE) +                   
+  theme_minimal()
+
+fviz_cos2(pca_out, choice = "var", axes = 1:2)
+fviz_cos2(pca_out_soil, choice = "var", axes = 1:2)
+fviz_cos2(pca_out_full, choice = "var", axes = 1:2)
 
 #### Split the data ########
 
