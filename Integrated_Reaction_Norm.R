@@ -1,7 +1,7 @@
 #### Integrated Reaction Norm Model #######
 ######## code by Becca Nelson and Justin Van Ee ###############################
 ############# created 3-25-25 ######################
-############# Last modified: 4-18-25 ##########################
+############# Last modified: 4-25-25 ##########################
 ######## modifies RMD file to pull from one integrated df ########
 
 rm(list = ls())
@@ -16,6 +16,9 @@ library(cmdstanr)
 library(reshape2)
 library(FactoMineR)   
 library(factoextra)
+library(verification)
+library(VGAM)
+library(scoringRules)
 
 #library(ggplot2) #if you don't want to load the whole tidyverse
 #library(dplyr)
@@ -58,6 +61,16 @@ reference_values <- data %>%
 for (var in vars_to_fill) {
   data[[var]][data$site_old == "WI" & is.na(data[[var]])] <- reference_values[[var]]
 }
+
+reference_values <- data %>%
+  filter(site_old == "CG PASTURE") %>%
+  select(all_of(vars_to_fill)) %>%
+  summarise(across(everything(), ~ first(na.omit(.))))
+
+for (var in vars_to_fill) {
+  data[[var]][data$site_old == "CH" & is.na(data[[var]])] <- reference_values[[var]]
+}
+
 
 
 ###### add cg climate offset #########
@@ -685,6 +698,7 @@ testing_df$mu_pred <- mu_test_mean
 training_df$mu_pred <- mu_train_mean
 training_df$mu_fixed_pred <- mu_train_fixed_mean
 
+
 ggplot(testing_df, aes(x = log(mu_pred), y = log(Fecundity), color = site_year)) +
   geom_point(alpha = 0.6) +  
   geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
@@ -731,6 +745,119 @@ ggplot(training_df, aes(x = log(mu_fixed_pred), y = log(Fecundity), color = Type
   ) +
   theme_minimal()
 
+#### RPS
+mu_test_draws <- fit$draws("mu_test", format = "draws_matrix")
+mu_train_draws <- fit$draws("mu_train", format = "draws_matrix")
+mu_train_fixed_draws <- fit$draws("mu_train_fixed", format = "draws_matrix")
+theta_draws <- fit$draws("theta", format = "draws_matrix")
+
+y_obs <- testing_df$Fecundity
+y_obs_train <- training_df$Fecundity
+# Define bins (adjust as needed based on your data spread)
+bins <- c(1:20, seq(25, 100, 5), seq(120, 500, 20), seq(600, 2000, 100),
+          seq(2200, 5000, 200), seq(5500, 15000, 500), seq(16000, 31000, 1000))
+
+# Initialize matrix: [n_obs x n_bins]
+n_test <- length(y_obs)
+n_train <- length(y_obs_train)
+n_bins <- length(bins)
+pred_probs <- matrix(0, nrow = n_test, ncol = n_bins)
+pred_probs_train <- matrix(0, nrow = n_train, ncol = n_bins)
+
+# Loop through test posterior draws
+for (s in 1:nrow(mu_test_draws)) {
+  mu_s <- mu_test_draws[s, ]
+  theta_s <- theta_draws[s]
+  
+  # Compute unnormalized probabilities for each bin and obs
+  for (i in 1:n_test) {
+    probs <- dnbinom(bins, size = theta_s, mu = mu_s[i])
+    norm_const <- 1 - dnbinom(0, size = theta_s, mu = mu_s[i])  # ZT adjustment
+    probs <- probs / norm_const
+    pred_probs[i, ] <- pred_probs[i, ] + probs
+  }
+}
+
+### train
+
+for (s in 1:nrow(mu_train_draws)) {
+  mu_s <- mu_train_draws[s, ]
+  theta_s <- theta_draws[s]
+  
+  for (i in 1:n_train) {
+    probs <- dnbinom(bins, size = theta_s, mu = mu_s[i])
+    norm_const <- 1 - dnbinom(0, size = theta_s, mu = mu_s[i])  # ZT adjustment
+    probs <- probs / norm_const
+    pred_probs_train[i, ] <- pred_probs_train[i, ] + probs
+  }
+}
+
+## train fixed
+# Loop through test posterior draws
+for (s in 1:nrow(mu_train_fixed_draws)) {
+  mu_s <- mu_train_fixed_draws[s, ]
+  theta_s <- theta_draws[s]
+  
+  # Compute unnormalized probabilities for each bin and obs
+  for (i in 1:n_train) {
+    probs <- dnbinom(bins, size = theta_s, mu = mu_s[i])
+    norm_const <- 1 - dnbinom(0, size = theta_s, mu = mu_s[i])  # ZT adjustment
+    probs <- probs / norm_const
+    pred_probs_train[i, ] <- pred_probs_train[i, ] + probs
+  }
+}
+
+
+# Average across draws
+pred_probs <- pred_probs / nrow(mu_test_draws)
+pred_probs_train_avg <- pred_probs_train / nrow(mu_train_draws)
+pred_probs_train_fixed_avg <- pred_probs_train / nrow(mu_train_fixed_draws)
+
+# For scoringRules::rps, we need a vector of observed values and a full predictive CDF
+# Find the index of the closest bin for each observed value
+obs_bin_indices <- sapply(y_obs, function(y) which.min(abs(bins - y)))
+
+obs_bin_indices_train <- sapply(y_obs_train, function(y) which.min(abs(bins - y)))
+# One-hot encode observed values into bins
+obs_matrix <- matrix(0, nrow = n_test, ncol = n_bins)
+for (i in 1:n_test) {
+  obs_matrix[i, obs_bin_indices[i]] <- 1
+}
+
+obs_matrix_train <- matrix(0, nrow = n_train, ncol = n_bins)
+for (i in 1:n_train) {
+  obs_matrix_train[i, obs_bin_indices[i]] <- 1
+}
+
+# Now compute RPS using cumulative sums (CDFs)
+rps_values <- numeric(n_test)
+for (i in 1:n_test) {
+  pred_cdf <- cumsum(pred_probs[i, ])
+  obs_cdf <- cumsum(obs_matrix[i, ])
+  rps_values[i] <- sum((pred_cdf - obs_cdf)^2)
+}
+
+
+rps_values_train <- numeric(n_train)
+for (i in 1:n_train) {
+  pred_cdf <- cumsum(pred_probs_train_avg[i, ])
+  obs_cdf <- cumsum(obs_matrix_train[i, ])
+  rps_values[i] <- sum((pred_cdf - obs_cdf)^2)
+}
+
+rps_values_train_fixed <- numeric(n_train)
+for (i in 1:n_train) {
+  pred_cdf <- cumsum(pred_probs_train_fixed_avg[i, ])
+  obs_cdf <- cumsum(obs_matrix_train[i, ])
+  rps_values[i] <- sum((pred_cdf - obs_cdf)^2)
+}
+
+# Final result
+mean(rps_values) #13.76532
+mean(rps_values_train) #0
+mean(rps_values_train_fixed) #0
+
+#used scoring rules instead as model is generating posterior samples of count predictions (continuous-valued mu parameters from a negative binomial), which doesn’t directly map to forecast probability vectors for verification::rps().
 
 ######## W and climate ########
 cor_WX <- fit$draws(variables = c("cor_WX"))
