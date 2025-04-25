@@ -41,9 +41,13 @@ array[n_test] int<lower=n_site_year_train + 1, upper=n_site_year> site_year_id_t
   int<lower=1> q_X;
   int<lower=1> n_g;
   int<lower=1> n_plot;
+  int<lower=1> n_X_soil;
+  int<lower=1> s_X;
 
   matrix[n_X, p_X] X; // full climate space 
   matrix[p_X, q_X] Lambda;
+  matrix[s_X, q_X] Lambda_soil;
+  matrix[n_X_soil, s_X] X_soil;
   matrix[n_g, n_g] K;
 }
 
@@ -129,9 +133,17 @@ beta_annual ~ normal(0, 1);
 beta_perennial ~ normal(0, 1);
 beta_shrub ~ normal(0, 1);
 
+// likelihood for climate and W
   for (i in 1:n_X) {
     for (j in 1:p_X) {
       target += normal_lpdf(X[i, j] | dot_product(Lambda[j, ], W[i, ]), sigma[j]);
+    }
+  }
+
+// likelihood for soil and W
+  for (i in 1:n_X_soil) {
+    for (j in 1:s_X) {
+      target += normal_lpdf(X_soil[i, j] | dot_product(Lambda_soil[j, ], W[i, ]), sigma[j]);
     }
   }
 }

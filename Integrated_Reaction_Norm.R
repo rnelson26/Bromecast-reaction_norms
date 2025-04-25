@@ -231,6 +231,10 @@ n_X <- nrow(pca_data)
 q_X <- 2
 Lambda <- as.matrix(pca_out$rotation[, 1:q_X])
 
+n_X_soil <- nrow(soil_data)
+Lambda_soil <- as.matrix(pca_out_soil$rotation[, 1:q_X])
+# still have some cg sites that need soil info
+
 fviz_pca_biplot(pca_out,
                 geom.ind = "point",               
                 fill.ind = "grey80",              
@@ -360,11 +364,15 @@ idx_plant_test  <- as.numeric(testing_df$site_year)
 ####### Fit stan model #########
 stan_data <- list(
   # General inputs for the model
-  n_X = nrow(X),           
-  p_X = ncol(X),           
+  n_X = nrow(X),  
+  n_X_soil = n_X_soil,
+  p_X = ncol(X),   
+  s_X = ncol(X_soil),
   q_X = ncol(Lambda),      
-  X = X,                   
-  Lambda = Lambda,         
+  X = X,    
+  X_soil = X_soil, 
+  Lambda = Lambda,  
+  Lambda_soil = Lambda_soil,  
   n_g = length(unique(genotype_plant_train)),  
   K = K_common_garden,    
   n_plot = max(training_df$plot_index),
@@ -397,17 +405,6 @@ stan_data <- list(
 )
 
 
-
-## checks
-#stopifnot(length(stan_data$y_train) == stan_data$n_train)
-#stopifnot(length(stan_data$genotype_plant_train) == stan_data$n_train)
-#stopifnot(length(stan_data$idx_plant_train) == stan_data$n_train)
-#stopifnot(nrow(stan_data$X_test) == stan_data$n_test)
-
-
-# Sanity check
-#range(stan_data$site_year_id_train)  # Should be 1 to n_site_year_train
-#length(unique(stan_data$site_year_id_train))  # Should be n_site_year_train
 
 
 # Fit using cmdrstan 
@@ -753,72 +750,61 @@ theta_draws <- fit$draws("theta", format = "draws_matrix")
 
 y_obs <- testing_df$Fecundity
 y_obs_train <- training_df$Fecundity
-# Define bins (adjust as needed based on your data spread)
+
 bins <- c(1:20, seq(25, 100, 5), seq(120, 500, 20), seq(600, 2000, 100),
           seq(2200, 5000, 200), seq(5500, 15000, 500), seq(16000, 31000, 1000))
 
-# Initialize matrix: [n_obs x n_bins]
 n_test <- length(y_obs)
 n_train <- length(y_obs_train)
 n_bins <- length(bins)
+
+# Initialize matrices
 pred_probs <- matrix(0, nrow = n_test, ncol = n_bins)
 pred_probs_train <- matrix(0, nrow = n_train, ncol = n_bins)
+pred_probs_train_fixed <- matrix(0, nrow = n_train, ncol = n_bins)
 
-# Loop through test posterior draws
+# Test predictions
 for (s in 1:nrow(mu_test_draws)) {
   mu_s <- mu_test_draws[s, ]
   theta_s <- theta_draws[s]
-  
-  # Compute unnormalized probabilities for each bin and obs
   for (i in 1:n_test) {
     probs <- dnbinom(bins, size = theta_s, mu = mu_s[i])
-    norm_const <- 1 - dnbinom(0, size = theta_s, mu = mu_s[i])  # ZT adjustment
-    probs <- probs / norm_const
+    probs <- probs / (1 - dnbinom(0, size = theta_s, mu = mu_s[i]))  # ZT adjustment
     pred_probs[i, ] <- pred_probs[i, ] + probs
   }
 }
 
-### train
-
+# Train predictions
 for (s in 1:nrow(mu_train_draws)) {
   mu_s <- mu_train_draws[s, ]
   theta_s <- theta_draws[s]
-  
   for (i in 1:n_train) {
     probs <- dnbinom(bins, size = theta_s, mu = mu_s[i])
-    norm_const <- 1 - dnbinom(0, size = theta_s, mu = mu_s[i])  # ZT adjustment
-    probs <- probs / norm_const
+    probs <- probs / (1 - dnbinom(0, size = theta_s, mu = mu_s[i]))
     pred_probs_train[i, ] <- pred_probs_train[i, ] + probs
   }
 }
 
-## train fixed
-# Loop through test posterior draws
+# Train fixed predictions
 for (s in 1:nrow(mu_train_fixed_draws)) {
   mu_s <- mu_train_fixed_draws[s, ]
   theta_s <- theta_draws[s]
-  
-  # Compute unnormalized probabilities for each bin and obs
   for (i in 1:n_train) {
     probs <- dnbinom(bins, size = theta_s, mu = mu_s[i])
-    norm_const <- 1 - dnbinom(0, size = theta_s, mu = mu_s[i])  # ZT adjustment
-    probs <- probs / norm_const
-    pred_probs_train[i, ] <- pred_probs_train[i, ] + probs
+    probs <- probs / (1 - dnbinom(0, size = theta_s, mu = mu_s[i]))
+    pred_probs_train_fixed[i, ] <- pred_probs_train_fixed[i, ] + probs
   }
 }
-
 
 # Average across draws
 pred_probs <- pred_probs / nrow(mu_test_draws)
 pred_probs_train_avg <- pred_probs_train / nrow(mu_train_draws)
-pred_probs_train_fixed_avg <- pred_probs_train / nrow(mu_train_fixed_draws)
+pred_probs_train_fixed_avg <- pred_probs_train_fixed / nrow(mu_train_fixed_draws)
 
-# For scoringRules::rps, we need a vector of observed values and a full predictive CDF
-# Find the index of the closest bin for each observed value
+# Bin indices
 obs_bin_indices <- sapply(y_obs, function(y) which.min(abs(bins - y)))
-
 obs_bin_indices_train <- sapply(y_obs_train, function(y) which.min(abs(bins - y)))
-# One-hot encode observed values into bins
+
 obs_matrix <- matrix(0, nrow = n_test, ncol = n_bins)
 for (i in 1:n_test) {
   obs_matrix[i, obs_bin_indices[i]] <- 1
@@ -826,10 +812,10 @@ for (i in 1:n_test) {
 
 obs_matrix_train <- matrix(0, nrow = n_train, ncol = n_bins)
 for (i in 1:n_train) {
-  obs_matrix_train[i, obs_bin_indices[i]] <- 1
+  obs_matrix_train[i, obs_bin_indices_train[i]] <- 1
 }
 
-# Now compute RPS using cumulative sums (CDFs)
+# RPS for test
 rps_values <- numeric(n_test)
 for (i in 1:n_test) {
   pred_cdf <- cumsum(pred_probs[i, ])
@@ -837,27 +823,31 @@ for (i in 1:n_test) {
   rps_values[i] <- sum((pred_cdf - obs_cdf)^2)
 }
 
-
+# RPS for train
 rps_values_train <- numeric(n_train)
 for (i in 1:n_train) {
   pred_cdf <- cumsum(pred_probs_train_avg[i, ])
   obs_cdf <- cumsum(obs_matrix_train[i, ])
-  rps_values[i] <- sum((pred_cdf - obs_cdf)^2)
+  rps_values_train[i] <- sum((pred_cdf - obs_cdf)^2)
 }
 
+# RPS for train fixed
 rps_values_train_fixed <- numeric(n_train)
 for (i in 1:n_train) {
   pred_cdf <- cumsum(pred_probs_train_fixed_avg[i, ])
   obs_cdf <- cumsum(obs_matrix_train[i, ])
-  rps_values[i] <- sum((pred_cdf - obs_cdf)^2)
+  rps_values_train_fixed[i] <- sum((pred_cdf - obs_cdf)^2)
 }
 
 # Final result
-mean(rps_values) #13.76532
-mean(rps_values_train) #0
-mean(rps_values_train_fixed) #0
+mean(rps_values)              # 13.29077
+mean(rps_values_train)        # 41.68328
+mean(rps_values_train_fixed)  # 17.07908
 
-#used scoring rules instead as model is generating posterior samples of count predictions (continuous-valued mu parameters from a negative binomial), which doesn’t directly map to forecast probability vectors for verification::rps().
+hist(rps_values)
+hist(rps_values_train)
+hist(rps_values_train_fixed)
+#use manual calculation scoring rules instead as model is generating posterior samples of count predictions (continuous-valued mu parameters from a negative binomial), which doesn’t directly map to forecast probability vectors for verification::rps().
 
 ######## W and climate ########
 cor_WX <- fit$draws(variables = c("cor_WX"))
