@@ -1,7 +1,7 @@
 #### Integrated Reaction Norm Model #######
 ######## code by Becca Nelson and Justin Van Ee ###############################
 ############# created 3-25-25 ######################
-############# Last modified: 4-25-25 ##########################
+############# Last modified: 4-28-25 ##########################
 ######## modifies RMD file to pull from one integrated df ########
 
 rm(list = ls())
@@ -19,6 +19,7 @@ library(factoextra)
 library(verification)
 library(VGAM)
 library(scoringRules)
+library(hypergeo)
 
 #library(ggplot2) #if you don't want to load the whole tidyverse
 #library(dplyr)
@@ -54,18 +55,18 @@ vars_to_fill <- c("pH", "EC", "OMpercent", "Protein_g.kg")
 
 ## use Boise Low sat soil values for wildcat cg
 reference_values <- data %>%
-  filter(site_old == "Boise_Low") %>%
-  select(all_of(vars_to_fill)) %>%
-  summarise(across(everything(), ~ first(na.omit(.))))
+  dplyr::filter(site_old == "Boise_Low") %>%
+  dplyr::select(all_of(vars_to_fill)) %>%
+  dplyr::summarise(across(everything(), ~ first(na.omit(.))))
 
 for (var in vars_to_fill) {
   data[[var]][data$site_old == "WI" & is.na(data[[var]])] <- reference_values[[var]]
 }
 
 reference_values <- data %>%
-  filter(site_old == "CG PASTURE") %>%
-  select(all_of(vars_to_fill)) %>%
-  summarise(across(everything(), ~ first(na.omit(.))))
+  dplyr::filter(site_old == "CG PASTURE") %>%
+  dplyr::select(all_of(vars_to_fill)) %>%
+  dplyr::summarise(across(everything(), ~ first(na.omit(.))))
 
 for (var in vars_to_fill) {
   data[[var]][data$site_old == "CH" & is.na(data[[var]])] <- reference_values[[var]]
@@ -742,7 +743,50 @@ ggplot(training_df, aes(x = log(mu_fixed_pred), y = log(Fecundity), color = Type
   ) +
   theme_minimal()
 
-#### RPS
+###### CRPS with scoring rules package #######
+mu_test_draws <- fit$draws("mu_test", format = "draws_matrix")
+mu_train_draws <- fit$draws("mu_train", format = "draws_matrix")
+mu_train_fixed_draws <- fit$draws("mu_train_fixed", format = "draws_matrix")
+theta_draws <- fit$draws("theta", format = "draws_matrix")
+
+y_obs <- testing_df$Fecundity
+y_obs_train <- training_df$Fecundity
+
+mu_test_mean <- apply(mu_test_draws, 2, mean)
+mu_train_mean <- apply(mu_train_draws, 2, mean)
+mu_train_fixed_mean <- apply(mu_train_fixed_draws, 2, mean)
+theta_mean <- mean(theta_draws)
+
+
+rps_values_scoringRules <- scoringRules::crps_nbinom(
+  y = y_obs,
+  size = theta_mean,
+  mu = mu_test_mean
+)
+
+rps_values_scoringRules_train <- scoringRules::crps_nbinom(
+  y = y_obs_train,
+  size = theta_mean,
+  mu = mu_train_mean
+)
+
+rps_values_scoringRules_train_fixed <- scoringRules::crps_nbinom(
+  y = y_obs_train,
+  size = theta_mean,
+  mu = mu_train_fixed_mean
+)
+
+mean(rps_values_scoringRules) #317.0385
+mean(rps_values_scoringRules_train) # 84.578
+mean(rps_values_scoringRules_train_fixed) #154.6696
+
+## this should be adjusting internally for discrete data 
+
+hist(rps_values_scoringRules)
+hist(rps_values_scoringRules_train)
+hist(rps_values_scoringRules_train_fixed)
+
+#### manual RPS ############
 mu_test_draws <- fit$draws("mu_test", format = "draws_matrix")
 mu_train_draws <- fit$draws("mu_train", format = "draws_matrix")
 mu_train_fixed_draws <- fit$draws("mu_train_fixed", format = "draws_matrix")
