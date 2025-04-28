@@ -786,6 +786,8 @@ hist(rps_values_scoringRules)
 hist(rps_values_scoringRules_train)
 hist(rps_values_scoringRules_train_fixed)
 
+### seems to generate values that make more sense than the manual approach which likely gets messed up by the bins. 
+
 #### manual RPS ############
 mu_test_draws <- fit$draws("mu_test", format = "draws_matrix")
 mu_train_draws <- fit$draws("mu_train", format = "draws_matrix")
