@@ -264,6 +264,21 @@ fviz_cos2(pca_out, choice = "var", axes = 1:2)
 fviz_cos2(pca_out_soil, choice = "var", axes = 1:2)
 fviz_cos2(pca_out_full, choice = "var", axes = 1:2)
 
+## elbow plots
+explained_var <- pca_out$sdev^2
+prop_var <- explained_var / sum(explained_var)
+plot(prop_var, type = "b", 
+     xlab = "Principal Component", 
+     ylab = "Proportion of Variance Explained", 
+     main = "Elbow Plot")
+
+explained_var <- pca_out_soil$sdev^2
+prop_var <- explained_var / sum(explained_var)
+plot(prop_var, type = "b", 
+     xlab = "Principal Component", 
+     ylab = "Proportion of Variance Explained", 
+     main = "Elbow Plot")
+
 #### Split the data ########
 
 ### split training and test data 
@@ -423,7 +438,7 @@ init_list <- pathfinder_fit$draws(format = "list")
 
 # Warmup and iterations 
 iter_warmup = 100 
-iter_sampling = 1000
+iter_sampling = 1000 ## run for 10,000 and look at overall diff in scores
 
 # Compile and fit the model
 fit <- mod$sample(
@@ -438,10 +453,10 @@ fit <- mod$sample(
 
 # Summary of results
 summary <- fit$summary()
-range(summary$rhat)
+range(summary$rhat) ## Gelman Rubin statistic of convergence 
 
 # Extract posterior samples
-posterior <- fit$draws(variables = c("theta","beta", "sigma", "W", "zeta", "mu_test", "mu_train"))
+posterior <- fit$draws(variables = c("theta","beta", "sigma", "W", "zeta", "mu_test", "mu_train", "W_soil"))
 
 #
 # Traceplots for diagnostics
@@ -475,6 +490,11 @@ p + facet_text(size = 15)
 # W
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = c("W[1,1]","W[1,2]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+# W soil
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior,  pars = c("W_soil[1,1]","W_soil[1,2]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 
 # mu
@@ -744,6 +764,46 @@ ggplot(training_df, aes(x = log(mu_fixed_pred), y = log(Fecundity), color = Type
   theme_minimal()
 
 ###### CRPS with scoring rules package #######
+
+draws_df <- fit$draws(format = "df")
+# Access posterior predictive samples
+y_train_pred_draws <- draws_df[, grep("^y_train_pred\\[", names(draws_df))]
+y_train_fixed_pred_draws <- draws_df[, grep("^y_train_fixed_pred\\[", names(draws_df))]
+y_test_pred_draws <- draws_df[, grep("^y_test_pred\\[", names(draws_df))]
+
+y_train_obs <- training_df$Fecundity 
+y_test_obs <- testing_df$Fecundity
+
+# Transpose predictive samples to match expected dimensions
+y_train_pred_draws_t <- t(as.matrix(y_train_pred_draws))
+y_train_fixed_pred_draws_t <- t(as.matrix(y_train_fixed_pred_draws))
+y_test_pred_draws_t <- t(as.matrix(y_test_pred_draws))
+
+# Compute CRPS for each dataset
+crps_train <- crps_sample(y = y_train_obs, dat = y_train_pred_draws_t)
+crps_train_fixed <- crps_sample(y = y_train_obs, dat = y_train_fixed_pred_draws_t)
+crps_test <- crps_sample(y = y_test_obs, dat = y_test_pred_draws_t)
+
+mean_crps_train <- mean(crps_train) #89.54672
+mean_crps_train_fixed <- mean(crps_train_fixed) #153.5981
+mean_crps_test <- mean(crps_test) #197.4062
+
+ 
+hist(crps_train)
+hist(crps_train_fixed)
+hist(crps_test)
+
+# Histogram for the first training data point
+hist(y_train_pred_draws_t[1, ],
+     breaks = 30,
+     main = "Posterior Predictive Distribution for First Training Data Point",
+     xlab = "Predicted Value",
+     col = "skyblue",
+     border = "white")
+
+
+
+#keep at 10,000
 mu_test_draws <- fit$draws("mu_test", format = "draws_matrix")
 mu_train_draws <- fit$draws("mu_train", format = "draws_matrix")
 mu_train_fixed_draws <- fit$draws("mu_train_fixed", format = "draws_matrix")
@@ -762,7 +822,11 @@ rps_values_scoringRules <- scoringRules::crps_nbinom(
   y = y_obs,
   size = theta_mean,
   mu = mu_test_mean
-)
+) #this uses a single posterior predictive but might be better to use last 1000 mcmc since it would be more robust 
+
+## score utilz package 
+
+crps_sample()
 
 rps_values_scoringRules_train <- scoringRules::crps_nbinom(
   y = y_obs_train,
@@ -788,112 +852,6 @@ hist(rps_values_scoringRules_train_fixed)
 
 ### seems to generate values that make more sense than the manual approach which likely gets messed up by the bins. 
 
-#### manual RPS ############
-mu_test_draws <- fit$draws("mu_test", format = "draws_matrix")
-mu_train_draws <- fit$draws("mu_train", format = "draws_matrix")
-mu_train_fixed_draws <- fit$draws("mu_train_fixed", format = "draws_matrix")
-theta_draws <- fit$draws("theta", format = "draws_matrix")
-
-y_obs <- testing_df$Fecundity
-y_obs_train <- training_df$Fecundity
-
-bins <- c(1:20, seq(25, 100, 5), seq(120, 500, 20), seq(600, 2000, 100),
-          seq(2200, 5000, 200), seq(5500, 15000, 500), seq(16000, 31000, 1000))
-
-n_test <- length(y_obs)
-n_train <- length(y_obs_train)
-n_bins <- length(bins)
-
-# Initialize matrices
-pred_probs <- matrix(0, nrow = n_test, ncol = n_bins)
-pred_probs_train <- matrix(0, nrow = n_train, ncol = n_bins)
-pred_probs_train_fixed <- matrix(0, nrow = n_train, ncol = n_bins)
-
-# Test predictions
-for (s in 1:nrow(mu_test_draws)) {
-  mu_s <- mu_test_draws[s, ]
-  theta_s <- theta_draws[s]
-  for (i in 1:n_test) {
-    probs <- dnbinom(bins, size = theta_s, mu = mu_s[i])
-    probs <- probs / (1 - dnbinom(0, size = theta_s, mu = mu_s[i]))  # ZT adjustment
-    pred_probs[i, ] <- pred_probs[i, ] + probs
-  }
-}
-
-# Train predictions
-for (s in 1:nrow(mu_train_draws)) {
-  mu_s <- mu_train_draws[s, ]
-  theta_s <- theta_draws[s]
-  for (i in 1:n_train) {
-    probs <- dnbinom(bins, size = theta_s, mu = mu_s[i])
-    probs <- probs / (1 - dnbinom(0, size = theta_s, mu = mu_s[i]))
-    pred_probs_train[i, ] <- pred_probs_train[i, ] + probs
-  }
-}
-
-# Train fixed predictions
-for (s in 1:nrow(mu_train_fixed_draws)) {
-  mu_s <- mu_train_fixed_draws[s, ]
-  theta_s <- theta_draws[s]
-  for (i in 1:n_train) {
-    probs <- dnbinom(bins, size = theta_s, mu = mu_s[i])
-    probs <- probs / (1 - dnbinom(0, size = theta_s, mu = mu_s[i]))
-    pred_probs_train_fixed[i, ] <- pred_probs_train_fixed[i, ] + probs
-  }
-}
-
-# Average across draws
-pred_probs <- pred_probs / nrow(mu_test_draws)
-pred_probs_train_avg <- pred_probs_train / nrow(mu_train_draws)
-pred_probs_train_fixed_avg <- pred_probs_train_fixed / nrow(mu_train_fixed_draws)
-
-# Bin indices
-obs_bin_indices <- sapply(y_obs, function(y) which.min(abs(bins - y)))
-obs_bin_indices_train <- sapply(y_obs_train, function(y) which.min(abs(bins - y)))
-
-obs_matrix <- matrix(0, nrow = n_test, ncol = n_bins)
-for (i in 1:n_test) {
-  obs_matrix[i, obs_bin_indices[i]] <- 1
-}
-
-obs_matrix_train <- matrix(0, nrow = n_train, ncol = n_bins)
-for (i in 1:n_train) {
-  obs_matrix_train[i, obs_bin_indices_train[i]] <- 1
-}
-
-# RPS for test
-rps_values <- numeric(n_test)
-for (i in 1:n_test) {
-  pred_cdf <- cumsum(pred_probs[i, ])
-  obs_cdf <- cumsum(obs_matrix[i, ])
-  rps_values[i] <- sum((pred_cdf - obs_cdf)^2)
-}
-
-# RPS for train
-rps_values_train <- numeric(n_train)
-for (i in 1:n_train) {
-  pred_cdf <- cumsum(pred_probs_train_avg[i, ])
-  obs_cdf <- cumsum(obs_matrix_train[i, ])
-  rps_values_train[i] <- sum((pred_cdf - obs_cdf)^2)
-}
-
-# RPS for train fixed
-rps_values_train_fixed <- numeric(n_train)
-for (i in 1:n_train) {
-  pred_cdf <- cumsum(pred_probs_train_fixed_avg[i, ])
-  obs_cdf <- cumsum(obs_matrix_train[i, ])
-  rps_values_train_fixed[i] <- sum((pred_cdf - obs_cdf)^2)
-}
-
-# Final result
-mean(rps_values)              # 13.29077
-mean(rps_values_train)        # 41.68328
-mean(rps_values_train_fixed)  # 17.07908
-
-hist(rps_values)
-hist(rps_values_train)
-hist(rps_values_train_fixed)
-#use manual calculation scoring rules instead as model is generating posterior samples of count predictions (continuous-valued mu parameters from a negative binomial), which doesn’t directly map to forecast probability vectors for verification::rps().
 
 ######## W and climate ########
 cor_WX <- fit$draws(variables = c("cor_WX"))
