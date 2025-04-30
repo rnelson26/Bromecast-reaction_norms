@@ -1,3 +1,15 @@
+//This shouldn't effect anything, but I would change sigma_genotype_intercept ~ normal(0, 1); to zeta_0 and give it an induced half-cauchy prior like for     zeta[l] = tan(u_zeta[l]);
+
+
+
+
+NEW
+
+12:00
+How are the genotype random effects treated at satellite sites currently? You are assuming kinship coefficient of the nearest known genotype, correct?
+12:03
+Also, vector<lower=0>[n_g] genotype_intercept;  should not have <lower=0>.  They can be positive or negative.
+
 functions {
   // Log-likelihood for a zero-truncated Negative Binomial
   real zt_negbinom_lpmf(int y, real mu, real theta) {
