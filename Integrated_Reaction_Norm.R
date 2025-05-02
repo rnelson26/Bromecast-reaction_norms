@@ -1,7 +1,7 @@
 #### Integrated Reaction Norm Model #######
 ######## code by Becca Nelson and Justin Van Ee ###############################
 ############# created 3-25-25 ######################
-############# Last modified: 4-28-25 ##########################
+############# Last modified: 5-1-25 ##########################
 ######## modifies RMD file to pull from one integrated df ########
 
 rm(list = ls())
@@ -771,6 +771,13 @@ y_train_pred_draws <- draws_df[, grep("^y_train_pred\\[", names(draws_df))]
 y_train_fixed_pred_draws <- draws_df[, grep("^y_train_fixed_pred\\[", names(draws_df))]
 y_test_pred_draws <- draws_df[, grep("^y_test_pred\\[", names(draws_df))]
 
+y_train_pred_matrix <- as.matrix(y_train_pred_draws)
+y_test_pred_matrix <- as.matrix(y_test_pred_draws)
+y_train_fixed_pred_matrix <- as.matrix(y_train_fixed_pred_draws)
+rhat(y_train_pred_matrix) #1.285371 ##above 1.05
+rhat(y_test_pred_matrix) #1.021609
+rhat(y_train_fixed_pred_matrix) #1.120833 ## above 1.05
+
 y_train_obs <- training_df$Fecundity 
 y_test_obs <- testing_df$Fecundity
 
@@ -784,9 +791,9 @@ crps_train <- crps_sample(y = y_train_obs, dat = y_train_pred_draws_t)
 crps_train_fixed <- crps_sample(y = y_train_obs, dat = y_train_fixed_pred_draws_t)
 crps_test <- crps_sample(y = y_test_obs, dat = y_test_pred_draws_t)
 
-mean_crps_train <- mean(crps_train) #89.54672
-mean_crps_train_fixed <- mean(crps_train_fixed) #153.5981
-mean_crps_test <- mean(crps_test) #197.4062
+mean_crps_train <- mean(crps_train) #87.30022
+mean_crps_train_fixed <- mean(crps_train_fixed) #151.441
+mean_crps_test <- mean(crps_test) #197.3891
 
  
 hist(crps_train)
@@ -804,54 +811,6 @@ hist(y_train_pred_draws_t[1, ],
 
 
 #keep at 10,000
-mu_test_draws <- fit$draws("mu_test", format = "draws_matrix")
-mu_train_draws <- fit$draws("mu_train", format = "draws_matrix")
-mu_train_fixed_draws <- fit$draws("mu_train_fixed", format = "draws_matrix")
-theta_draws <- fit$draws("theta", format = "draws_matrix")
-
-y_obs <- testing_df$Fecundity
-y_obs_train <- training_df$Fecundity
-
-mu_test_mean <- apply(mu_test_draws, 2, mean)
-mu_train_mean <- apply(mu_train_draws, 2, mean)
-mu_train_fixed_mean <- apply(mu_train_fixed_draws, 2, mean)
-theta_mean <- mean(theta_draws)
-
-
-rps_values_scoringRules <- scoringRules::crps_nbinom(
-  y = y_obs,
-  size = theta_mean,
-  mu = mu_test_mean
-) #this uses a single posterior predictive but might be better to use last 1000 mcmc since it would be more robust 
-
-## score utilz package 
-
-crps_sample()
-
-rps_values_scoringRules_train <- scoringRules::crps_nbinom(
-  y = y_obs_train,
-  size = theta_mean,
-  mu = mu_train_mean
-)
-
-rps_values_scoringRules_train_fixed <- scoringRules::crps_nbinom(
-  y = y_obs_train,
-  size = theta_mean,
-  mu = mu_train_fixed_mean
-)
-
-mean(rps_values_scoringRules) #317.0385
-mean(rps_values_scoringRules_train) # 84.578
-mean(rps_values_scoringRules_train_fixed) #154.6696
-
-## this should be adjusting internally for discrete data 
-
-hist(rps_values_scoringRules)
-hist(rps_values_scoringRules_train)
-hist(rps_values_scoringRules_train_fixed)
-
-### seems to generate values that make more sense than the manual approach which likely gets messed up by the bins. 
-
 
 ######## W and climate ########
 cor_WX <- fit$draws(variables = c("cor_WX"))

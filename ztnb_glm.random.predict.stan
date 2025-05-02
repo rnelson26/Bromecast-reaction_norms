@@ -1,15 +1,3 @@
-//This shouldn't effect anything, but I would change sigma_genotype_intercept ~ normal(0, 1); to zeta_0 and give it an induced half-cauchy prior like for     zeta[l] = tan(u_zeta[l]);
-
-
-
-
-NEW
-
-12:00
-How are the genotype random effects treated at satellite sites currently? You are assuming kinship coefficient of the nearest known genotype, correct?
-12:03
-Also, vector<lower=0>[n_g] genotype_intercept;  should not have <lower=0>.  They can be positive or negative.
-
 functions {
   // Log-likelihood for a zero-truncated Negative Binomial
   real zt_negbinom_lpmf(int y, real mu, real theta) {
@@ -80,21 +68,21 @@ vector[n_site_year_train] site_year_effect_train_raw;
 real<lower=0> sigma_site_year;
 vector[n_plot] eta_plot_raw;
 real<lower=0> sigma_plot;
-// Random intercepts for genotype 
-vector<lower=0>[n_g] genotype_intercept; 
- //vector[n_g] z_genotype_intercept;
-//real<lower=0> sigma_genotype_intercept;
+// Random intercepts for genotype  
+ vector[n_g] beta_0_raw; //genotype_intercept
+ real<lower=0, upper=pi()/2> u_zeta_0; //sigma_genotype_intercept
 }
 
 transformed parameters {
   vector<lower=0>[p_X] sigma;
   vector<lower=0>[q_X] zeta;
+  real<lower=0> zeta_0 = 5 * tan(u_zeta_0);
    vector<lower=0>[s_X] sigma_soil;
   matrix[n_g, q_X] beta;
 vector[n_site_year_train] site_year_effect_train_scaled = sigma_site_year * site_year_effect_train_raw;
   vector[n_plot] eta_plot;
 eta_plot = sigma_plot * eta_plot_raw;
-//vector[n_g] genotype_intercept;
+vector[n_g] beta_0;
 
   for (j in 1:p_X)
     sigma[j] = tan(u_sigma[j]);
@@ -108,11 +96,8 @@ eta_plot = sigma_plot * eta_plot_raw;
   for (l in 1:q_X) {
     beta[, l] = cholesky_decompose(K) * (sqrt(zeta[l]) * beta_raw[, l]);
   }
+   beta_0 = zeta_0 * (cholesky_decompose(K) * beta_0_raw);  
 }
-
-
-  //genotype_intercept = sigma_genotype_intercept * (cholesky_decompose(K) * z_genotype_intercept);  
-
 
  //use same structure for genotype random intercepts, start normal 0,1 and then get decomposed here with K and square root of variance parameter 
 
@@ -137,7 +122,7 @@ model {
                  beta_annual * annual_train[i] +
                  beta_perennial * perennial_train[i] +
                  beta_shrub * shrub_train[i] +
-                genotype_intercept[idx_genotype]; // Adding genotype-specific random intercept
+                beta_0[idx_genotype]; // Adding genotype-specific random intercept
 
   real mu;
   if (plot_index_train[i] == 0)
@@ -154,9 +139,8 @@ site_year_effect_train_raw ~ normal(0, 1);
 sigma_site_year ~ normal(0, 1);
 eta_plot_raw ~ normal(0, 1);
 sigma_plot ~ normal(0, 1); 
-//z_genotype_intercept ~ normal(0, 1); //eventually rename to beta0
-//sigma_genotype_intercept ~ normal(0, 1);
-genotype_intercept ~ cauchy(0, 5); // Half-Cauchy prior for random genotype intercept
+beta_0_raw ~ normal(0, 1); 
+
 
 
 // Priors for competition
@@ -192,7 +176,7 @@ generated quantities {
   for (i in 1:n_train) {
     int idx = idx_plant_train[i];
     int idx_genotype = genotype_plant_train[i];
-    real mu_base = dot_product(W[idx, ], beta[idx_genotype, ]) + genotype_intercept[idx_genotype] +
+    real mu_base = dot_product(W[idx, ], beta[idx_genotype, ]) + beta_0[idx_genotype] +
                    site_year_effect_train_scaled[site_year_id_train[i]] +
                    beta_neighbors * neighbors_train[i] +
                    beta_annual * annual_train[i] +
@@ -210,7 +194,7 @@ generated quantities {
     int idx = idx_plant_test[i];
     int idx_genotype = genotype_plant_test[i];
     real site_year_noise = normal_rng(0, sigma_site_year);
-    real mu_base = dot_product(W[idx, ], beta[idx_genotype, ]) + genotype_intercept[idx_genotype] +
+    real mu_base = dot_product(W[idx, ], beta[idx_genotype, ]) + beta_0[idx_genotype] +
                    site_year_noise +
                    beta_neighbors * neighbors_test[i] +
                    beta_annual * annual_test[i] +
@@ -228,7 +212,7 @@ generated quantities {
     int idx = idx_plant_train[i];
     int idx_genotype = genotype_plant_train[i];
     real mu_fixed_base = dot_product(W[idx, ], beta[idx_genotype, ]) +
-                         genotype_intercept[idx_genotype] +
+                         beta_0[idx_genotype] +
                          beta_neighbors * neighbors_train[i] +
                          beta_annual * annual_train[i] +
                          beta_perennial * perennial_train[i] +
