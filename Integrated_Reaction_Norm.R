@@ -833,23 +833,19 @@ ggplot(W_long, aes(x = variable, y = mean)) +
   theme_minimal() +
   labs(y = "Estimate", title = "Parameter Estimates with 90% Credible Interval")
 
+#Lambda_df <- data.frame(loading = unlist(Lambda))
+#Lambda_df$climate_variable <- rownames(Lambda_df)
+#Lambda_rep$climate_variable <- rownames(Lambda_rep)
 
 
-
-Lambda$climate_variable <- rownames(Lambda)
-
-Lambda_rep$climate_variable <- rownames(Lambda_rep)
 
 # Reshape to long format
 library(reshape2)
-Lambda_long <- melt(Lambda, id.vars = "climate_variable",
-                    variable.name = "PC", value.name = "loading")
-
-Lambda_long <- melt(Lambda_rep, id.vars = "climate_variable",
-                    variable.name = "PC", value.name = "loading")
+library(reshape2)
+Lambda_long <- melt(Lambda, varnames = c("climate_variable", "PC"), value.name = "loading")
 
 # Heatmap
-ggplot(Lambda_long, aes(x = Var2, y = Var1, fill = loading)) +
+ggplot(Lambda_long, aes(x = PC, y = climate_variable, fill = loading)) +
   geom_tile(color = "white") +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
   theme_minimal(base_size = 12) +
@@ -857,13 +853,10 @@ ggplot(Lambda_long, aes(x = Var2, y = Var1, fill = loading)) +
        x = "Principal Component",
        y = "Climate Variable")
 
-#PC1 loads negatively on most temperature variables and positively on precipitation/SWE: temperature–moisture tradeoff axis.
-
-#PC2 loads heavily on Fall/Winter precipitation/SWE and prcp.Sum (negatively): a seasonal moisture pattern axis.
-
-ggplot(Lambda_long, aes(x = reorder(Var1, loading), y = loading, fill = loading > 0)) +
+# Bar plot of loadings
+ggplot(Lambda_long, aes(x = reorder(climate_variable, loading), y = loading, fill = loading > 0)) +
   geom_col() +
-  facet_wrap(~ Var2, scales = "free_y") +
+  facet_wrap(~ PC, scales = "free_y") +
   coord_flip() +
   scale_fill_manual(values = c("TRUE" = "red", "FALSE" = "blue")) +
   theme_minimal(base_size = 12) +
@@ -874,18 +867,50 @@ ggplot(Lambda_long, aes(x = reorder(Var1, loading), y = loading, fill = loading 
   ) +
   theme(legend.position = "none")
 
-# Get the matrix values
-lambda_values <- unlist(Lambda[1:(length(Lambda)-1)])  # remove the 'climate_variable' entry
 
-p_X <- length(Lambda$climate_variable)  # number of climate variables
-q_X <- length(lambda_values) / p_X     # number of PCs
 
-Lambda_mat <- matrix(lambda_values, nrow = p_X, ncol = q_X, byrow = FALSE)
-rownames(Lambda_mat) <- Lambda$climate_variable
+
+
+
+
+
+
+
+#PC1 loads negatively on most temperature variables and positively on precipitation/SWE: temperature–moisture tradeoff axis.
+
+#PC2 loads heavily on Fall/Winter precipitation/SWE and prcp.Sum (negatively): a seasonal moisture pattern axis.
+
+### soil
+library(reshape2)
+Lambda_soil_long <- melt(Lambda_soil, varnames = c("soil_variable", "PC"), value.name = "loading")
+
+
+## heat map
+ggplot(Lambda_soil_long, aes(x = PC, y = soil_variable, fill = loading)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
+  theme_minimal(base_size = 12) +
+  labs(title = "PCA Loadings: Soil variables on W axes",
+       x = "Principal Component",
+       y = "Soil Variable")
+
+# Bar plot of loadings
+ggplot(Lambda_soil_long, aes(x = reorder(soil_variable, loading), y = loading, fill = loading > 0)) +
+  geom_col() +
+  facet_wrap(~ PC, scales = "free_y") +
+  coord_flip() +
+  scale_fill_manual(values = c("TRUE" = "red", "FALSE" = "blue")) +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Contribution of Soil Variables to Each PCA Axis",
+    x = "Soil Variable",
+    y = "Loading"
+  ) +
+  theme(legend.position = "none")
 
 #### means
 beta_draws <- posterior_df %>% 
-  select(starts_with("beta["))
+  dplyr::select(starts_with("beta["))
 
 beta_names <- colnames(beta_draws)
 beta_idx <- stringr::str_match(beta_names, "beta\\[(\\d+),(\\d+)\\]") %>% as.data.frame()
@@ -905,13 +930,16 @@ for (i in seq_along(beta_names)) {
 }
 
 
-climate_effects <- Lambda_mat %*% t(beta_mean)
-
+ 
+climate_effects <- Lambda %*% t(beta_mean)
+soil_effects <- Lambda_soil %*% t(beta_mean)
 
 library(reshape2)
 
 
 heat_df <- melt(climate_effects, varnames = c("Climate_Variable", "Genotype"), value.name = "Effect")
+
+heat_df_soil <- melt(soil_effects, varnames = c("Soil_Variable", "Genotype"), value.name = "Effect")
 
 ggplot(heat_df, aes(x = Genotype, y = Climate_Variable, fill = Effect)) +
   geom_tile() +
@@ -919,7 +947,14 @@ ggplot(heat_df, aes(x = Genotype, y = Climate_Variable, fill = Effect)) +
   theme_minimal(base_size = 14) +
   labs(title = "Effect of Climate Variables on Fecundity by Genotype")
 
+ggplot(heat_df_soil, aes(x = Genotype, y = Soil_Variable, fill = Effect)) +
+  geom_tile() +
+  scale_fill_gradient2(midpoint = 0, low = "blue", mid = "white", high = "red") +
+  theme_minimal(base_size = 14) +
+  labs(title = "Effect of Soil Variables on Fecundity by Genotype")
+
 avg_effects <- rowMeans(climate_effects)
+avg_effects_soil <- rowMeans(soil_effects)
 
 ggplot(data.frame(Climate_Variable = names(avg_effects), Effect = avg_effects),
        aes(x = reorder(Climate_Variable, Effect), y = Effect)) +
@@ -928,6 +963,14 @@ ggplot(data.frame(Climate_Variable = names(avg_effects), Effect = avg_effects),
   theme_minimal(base_size = 14) +
   labs(title = "Average Effect of Climate Variables on Fecundity",
        x = "Climate Variable", y = "Mean Effect")
+
+ggplot(data.frame(Soil_Variable = names(avg_effects_soil), Effect = avg_effects_soil),
+       aes(x = reorder(Soil_Variable, Effect), y = Effect)) +
+  geom_col(fill = "darkgreen") +
+  coord_flip() +
+  theme_minimal(base_size = 14) +
+  labs(title = "Average Effect of Soil Variables on Fecundity",
+       x = "Soil", y = "Mean Effect")
 
 ### just beta
 # Melt the matrix
