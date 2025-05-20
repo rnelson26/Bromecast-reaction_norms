@@ -1302,6 +1302,14 @@ ggplot(W_plot_df, aes(x = i)) +
   ) +
   theme_minimal()
 
+W_plot_df <- W_plot_df %>%
+  mutate(adjusted = static_value < lower | static_value > upper)
+
+# which combinations are adjusted and how many
+W_plot_df %>% filter(adjusted == TRUE)
+
+W_plot_df %>% group_by(j) %>% summarise(n_adjusted = sum(adjusted))
+
 ###### soil W vs original PCA #####
 
 W_draws <- posterior::as_draws_matrix(fit$draws("W_soil"))
