@@ -1,7 +1,7 @@
 #### Integrated Reaction Norm Model #######
 ######## code by Becca Nelson and Justin Van Ee ###############################
 ############# created 3-25-25 ######################
-############# Last modified: 5-5-25 ##########################
+############# Last modified: 5-22-25 ##########################
 ######## modifies RMD file to pull from one integrated df ########
 
 rm(list = ls())
@@ -499,10 +499,10 @@ site_year_index_train <- data.frame(
   idx = seq_along(training_site_years)  
 )
 
-training_site_years <- sort(unique(training_df_rep$site_year))
+training_site_years_rep <- sort(unique(training_df_rep$site_year))
 site_year_index_train_rep <- data.frame(
-  site_year = training_site_years,
-  idx = seq_along(training_site_years)  
+  site_year = training_site_years_rep,
+  idx = seq_along(training_site_years_rep)  
 )
 
 # Create index for testing site-years 
@@ -512,10 +512,10 @@ site_year_index_test <- data.frame(
   idx = seq_along(testing_site_years) + length(training_site_years)  # Start from 40
 )
 
-testing_site_years <- sort(unique(testing_df_rep$site_year))
+testing_site_years_rep <- sort(unique(testing_df_rep$site_year))
 site_year_index_test_rep <- data.frame(
-  site_year = testing_site_years,
-  idx = seq_along(testing_site_years) + length(training_site_years)  # Start from 40
+  site_year = testing_site_years_rep,
+  idx = seq_along(testing_site_years_rep) + length(training_site_years_rep)  # Start from 40
 )
 
 # Merge site-year indices into the original dataframes
@@ -704,7 +704,6 @@ fit <- mod$sample(
 
 fit_rep <- mod_rep$sample(
   data = stan_data_reproduced,
-  seed = 123,
   chains = 3,
   parallel_chains = 3,
   iter_warmup = iter_warmup,
@@ -722,7 +721,7 @@ range(summary_rep$rhat) #NAs
 # Extract posterior samples
 posterior <- fit$draws(variables = c("theta","beta", "sigma", "W", "zeta", "mu_test", "mu_train", "W_soil"))
 
-posterior <- fit_rep$draws(variables = c("beta", "sigma", "W", "zeta", "p_test", "p_train", "W_soil"))
+posterior_rep <- fit_rep$draws(variables = c("beta", "sigma", "W", "zeta", "p_test", "p_train", "W_soil"))
 
 #
 # Traceplots for diagnostics
@@ -733,9 +732,17 @@ color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = c("theta"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior_rep,  pars = c("theta"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
 # beta
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = c("beta[20,1]","beta[20,2]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior_rep,  pars = c("beta[20,1]","beta[20,2]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 
 # gamma
@@ -748,9 +755,17 @@ color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = paste0("sigma[", 1:ncol(X), "]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior_rep,  pars = paste0("sigma[", 1:ncol(X), "]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
 # zeta
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = paste0("zeta[", 1:q_X, "]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior_rep,  pars = paste0("zeta[", 1:q_X, "]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 
 # W
@@ -758,9 +773,17 @@ color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = c("W[1,1]","W[1,2]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior_rep,  pars = c("W[1,1]","W[1,2]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
 # W soil
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = c("W_soil[1,1]","W_soil[1,2]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior_rep,  pars = c("W_soil[1,1]","W_soil[1,2]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 
 # mu
@@ -772,6 +795,14 @@ color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = c("mu_test[199]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior_rep,  pars = c("mu_train[199]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior_rep,  pars = c("mu_test[199]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
 
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = c("p_train[199]"), n_warmup = iter_warmup)
@@ -779,6 +810,14 @@ p + facet_text(size = 15)
 
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = c("p_test[199]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior_rep,  pars = c("p_train[199]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior_rep,  pars = c("p_test[199]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 ### explore parameters
 library(posterior)
@@ -1256,12 +1295,19 @@ hist(y_train_pred_draws_t[1, ],
 
 ####### climate W vs original PCA ######
 W_draws <- posterior::as_draws_matrix(fit$draws("W"))
+W_draws_rep <- posterior::as_draws_matrix(fit_rep$draws("W"))
 
 W_draws <- W_draws[, grepl("^W\\[", colnames(W_draws))]
+W_draws_rep <- W_draws_rep[, grepl("^W\\[", colnames(W_draws))]
 
 param_names <- colnames(W_draws)
+param_names_rep <- colnames(W_draws_rep)
 
 param_info <- tibble(param = param_names) %>%
+  mutate(i = as.integer(gsub("W\\[(\\d+),.*", "\\1", param)),
+         j = as.integer(gsub(".*,(\\d+)\\]", "\\1", param)))
+
+param_info_rep <- tibble(param = param_names_rep) %>%
   mutate(i = as.integer(gsub("W\\[(\\d+),.*", "\\1", param)),
          j = as.integer(gsub(".*,(\\d+)\\]", "\\1", param)))
 
@@ -1270,11 +1316,20 @@ W_long <- bind_cols(
   value = as.vector(W_draws)
 )
 
+W_long_rep <- bind_cols(
+  param_info[rep(1:nrow(param_info_rep), each = nrow(W_draws_rep)), ],
+  value = as.vector(W_draws_rep)
+)
+
 W_static <- X %*% Lambda  
-W_static <- X_rep %*% Lambda_rep ## if reproduction  
 W_static_df <- as.data.frame(W_static)
 names(W_static_df) <- paste0("PC", 1:ncol(W_static_df))
 W_static_df$index <- 1:nrow(W_static_df)
+
+W_static_rep <- X_rep %*% Lambda_rep ## if reproduction  
+W_static_df_rep <- as.data.frame(W_static_rep)
+names(W_static_df_rep) <- paste0("PC", 1:ncol(W_static_df_rep))
+W_static_df_rep$index <- 1:nrow(W_static_df_rep)
 
 W_summary <- W_long %>%
   group_by(i, j) %>%
@@ -1285,8 +1340,22 @@ W_summary <- W_long %>%
     .groups = "drop"
   )
 
+W_summary_rep <- W_long_rep %>%
+  group_by(i, j) %>%
+  summarise(
+    mean = mean(value),
+    lower = quantile(value, 0.05),
+    upper = quantile(value, 0.95),
+    .groups = "drop"
+  )
+
 W_plot_df <- W_summary %>%
   left_join(W_static_df %>% pivot_longer(-index, names_to = "PC", values_to = "static_value") %>%
+              mutate(j = as.integer(gsub("PC", "", PC))),
+            by = c("i" = "index", "j"))
+
+W_plot_df_rep <- W_summary_rep %>%
+  left_join(W_static_df_rep %>% pivot_longer(-index, names_to = "PC", values_to = "static_value") %>%
               mutate(j = as.integer(gsub("PC", "", PC))),
             by = c("i" = "index", "j"))
 
@@ -1302,13 +1371,77 @@ ggplot(W_plot_df, aes(x = i)) +
   ) +
   theme_minimal()
 
+ggplot(W_plot_df_rep, aes(x = i)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.4) +
+  geom_line(aes(y = mean), color = "blue") +
+  geom_point(aes(y = static_value), color = "red", shape = 1, size = 1.5) +
+  facet_wrap(~ j, scales = "free_y", labeller = label_both) +
+  labs(
+    x = "Climate index (i)",
+    y = "Latent climate (W) vs PCA projection",
+    title = "Posterior W vs. Original PCA Projection"
+  ) +
+  theme_minimal()
+
 W_plot_df <- W_plot_df %>%
   mutate(adjusted = static_value < lower | static_value > upper)
 
+W_plot_df_rep <- W_plot_df_rep %>%
+  mutate(adjusted = static_value < lower | static_value > upper)
+
 # which combinations are adjusted and how many
-W_plot_df %>% filter(adjusted == TRUE)
+### Fecundity 
+W_adjusted <- W_plot_df %>%
+  filter(adjusted == TRUE)  %>%  mutate(site_year = site_year_labels[i])
+unique(W_adjusted$site_year)
 
 W_plot_df %>% group_by(j) %>% summarise(n_adjusted = sum(adjusted))
+
+# "CaseAoyamaS1 2023"                 
+# "CastValley 2021"                   
+ #"dino 2024"                         
+# "EnsingS1 SuRDC 2022"               
+# "EnsingS2 Summerland-Princeton 2022"
+# "EnsingS4 Lundbom 2022"             
+ #"GreenCanyon 2023"                  
+#"HardwareRanch 2023"                
+ #"Peavine 2024"                      
+ #"Plymouth 2024"                     
+ #"RedBluff 2023"                     
+ #"SSHigh 2022"                       
+#"SSHigh 2023"                       
+ #"SSHQ 2024"                         
+#"Symstad2 2022"                     
+# "Woodruff 2023"   
+
+### Reproduced
+W_adjusted_rep <- W_plot_df_rep %>%
+  filter(adjusted == TRUE)  %>%  mutate(site_year = site_year_labels[i])
+unique(W_adjusted_rep$site_year)
+
+## 41 site-years adjusted 
+
+W_plot_df_rep %>% group_by(j) %>% summarise(n_adjusted = sum(adjusted))
+
+#### Which ones overlap?
+
+site_years_rep <- unique(W_adjusted_rep$site_year)
+site_years <- unique(W_adjusted$site_year)
+
+# overlap
+overlap <- intersect(site_years_rep, site_years)
+#[1] "CaseAoyamaS1 2023"     "CastValley 2021"      
+#[3] "dino 2024"             "EnsingS1 SuRDC 2022"  
+#[5] "EnsingS4 Lundbom 2022" "HardwareRanch 2023"   
+#[7] "Peavine 2024"          "Plymouth 2024"        
+#[9] "SSHigh 2023"           "SSHQ 2024"            
+#[11] "Symstad2 2022"   
+#  differences
+only_in_rep <- setdiff(site_years_rep, site_years) #30
+only_in_fec <- setdiff(site_years, site_years_rep) #5
+
+
+
 
 ###### soil W vs original PCA #####
 
