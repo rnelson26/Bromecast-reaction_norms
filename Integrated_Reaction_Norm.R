@@ -238,6 +238,29 @@ df_rep <- data %>%
   dplyr::filter(!is.na(perennial)) %>%
   dplyr::filter(!is.na(shrub)) 
 
+df_emg <- data %>%
+  dplyr::filter(Emerged %in% c("Y", "N")) %>% 
+  mutate(
+    site_numeric = as.numeric(as.factor(site)),
+    site_year_numeric = as.numeric(as.factor(site_year)),
+    year_numeric = as.numeric(as.factor(year)) - 1
+  ) %>%
+  left_join(assigned_genotypes %>% 
+              dplyr::select(site, genotype_assigned = genotype, 
+                            NewSiteCode, SeedSource, sample.id), 
+            by = "site") %>%
+  mutate(
+    genotype = ifelse(is.na(genotype), genotype_assigned, genotype)  # Ensure type consistency
+  ) %>%
+  dplyr::select(-genotype_assigned) %>%  # Remove temporary column
+  # Join with kinshipIDs using the newly assigned genotype
+  left_join(kinshipIDs, by = c("genotype", "NewSiteCode")) %>%
+  dplyr::filter(!is.na(genotype)) %>%
+  dplyr::filter(!is.na(neighbors)) %>%
+  dplyr::filter(!is.na(annual)) %>%
+  dplyr::filter(!is.na(perennial)) %>%
+  dplyr::filter(!is.na(shrub)) 
+
 ## scale competition variables
 df <- df %>%
   mutate(
@@ -255,6 +278,14 @@ df_rep <- df_rep %>%
     annual.s = scale(annual)[,1],
   )
 
+df_emg <- df_emg %>%
+  mutate(
+    neighbors.s = scale(neighbors)[,1],
+    perennial.s = scale(perennial)[,1],
+    shrub.s = scale(shrub)[,1],
+    annual.s = scale(annual)[,1],
+  )
+
 
 df <- df %>%
     filter(!is.na(genotype)) 
@@ -262,11 +293,14 @@ df <- df %>%
 df_rep <- df_rep %>%
   filter(!is.na(genotype))
 
+df_emg <- df_emg %>%
+  filter(!is.na(genotype))
+
 
 valid_genotypes <- rownames(K_common_garden)
 df <- df %>% filter(genotype %in% valid_genotypes)
 df_rep <- df_rep %>% filter(genotype %in% valid_genotypes)
-
+df_emg <- df_emg %>% filter(genotype %in% valid_genotypes)
 
 
 ###### Climate PCA #########
@@ -275,6 +309,11 @@ climate_vars <- c(
   "prcp.Win", "tmean.Win", "swe_mean.Win", "prcp.Fall", 
   "tmean.Fall", "swe_mean.Fall", "MAT", 
   "total_precip", "seasonality"
+)
+
+fall_vars <- c(
+   "prcp.Fall", 
+  "tmean.Fall", "swe_mean.Fall"
 )
 
 soil_vars <- c(
@@ -297,11 +336,11 @@ pca_data_rep <- df_rep %>%
 
 
 soil_data <- df %>% 
-  dplyr::select(site_year, all_of(soil_vars))  %>% distinct() %>% 
+  dplyr::select(site, all_of(soil_vars))  %>% distinct() %>% 
   na.omit() 
 
 soil_data_rep <- df_rep %>% 
-  dplyr::select(site_year, all_of(soil_vars))  %>% distinct() %>% 
+  dplyr::select(site, all_of(soil_vars))  %>% distinct() %>% 
   na.omit() 
 
 #full_data <- df %>% 
@@ -310,18 +349,19 @@ soil_data_rep <- df_rep %>%
 
 
 site_year_labels <- pca_data$site_year  
-site_year_labels_soil <- soil_data$site_year  
+site_labels_soil <- soil_data$site
 #site_year_labels_full <- full_data$site_year 
 
 site_year_labels_rep <- pca_data_rep$site_year  
 site_year_labels_soil_rep <- soil_data_rep$site_year  
+site_labels_soil_rep <- soil_data$site_rep
 
 X <- scale(pca_data %>% dplyr::select(-site_year))
-X_soil <- scale(soil_data %>% dplyr::select(-site_year))
+X_soil <- scale(soil_data %>% dplyr::select(-site))
 #X_full <- scale(full_data %>% dplyr::select(-site_year))
 
 X_rep <- scale(pca_data_rep %>% dplyr::select(-site_year))
-X_soil_rep <- scale(soil_data_rep %>% dplyr::select(-site_year))
+X_soil_rep <- scale(soil_data_rep %>% dplyr::select(-site))
 
 pca_out <- prcomp(X)
 pca_out_soil <- prcomp(X_soil)
@@ -525,6 +565,34 @@ testing_df <- left_join(testing_df, site_year_index_test, by = "site_year")
 training_df_rep <- left_join(training_df_rep, site_year_index_train_rep, by = "site_year")
 testing_df_rep <- left_join(testing_df_rep, site_year_index_test_rep, by = "site_year")
 
+#### site level index for soil PCA
+training_df$site <- factor(training_df$site)
+testing_df$site <- factor(testing_df$site)
+
+training_df_rep$site <- factor(training_df_rep$site)
+testing_df_rep$site <- factor(testing_df_rep$site)
+
+## fecundity 
+all_sites <- sort(unique(c(training_df$site, testing_df$site)))
+
+site_index <- data.frame(
+  site = all_sites,
+  idx_site = seq_along(all_sites)
+)
+
+training_df <- training_df %>% left_join(site_index, by = "site")
+testing_df  <- testing_df %>% left_join(site_index, by = "site")
+
+### reproduced
+all_sites_rep <- sort(unique(c(training_df_rep$site, testing_df_rep$site)))
+
+site_index_rep <- data.frame(
+  site = all_sites_rep,
+  idx_site = seq_along(all_sites_rep)
+)
+
+training_df_rep <- training_df_rep %>% left_join(site_index_rep, by = "site")
+testing_df_rep  <- testing_df_rep %>% left_join(site_index_rep, by = "site")
 
 ### genotype indices
  
@@ -576,6 +644,13 @@ idx_plant_test  <- as.numeric(testing_df$site_year)
 idx_plant_train_rep <- as.numeric(training_df_rep$site_year)
 idx_plant_test_rep  <- as.numeric(testing_df_rep$site_year)
 
+## for W soil
+idx_plant_train_site <- as.numeric(training_df$site)
+idx_plant_test_site  <- as.numeric(testing_df$site)
+
+idx_plant_train_site_rep <- as.numeric(training_df_rep$site)
+idx_plant_test_site_rep  <- as.numeric(testing_df_rep$site)
+
 ####### Fit stan model #########
 stan_data <- list(
   # General inputs for the model
@@ -584,7 +659,7 @@ stan_data <- list(
   p_X = ncol(X),   
   s_X = ncol(X_soil),
   q_X = ncol(Lambda),      
-  X = X,    
+  X = X,  
   X_soil = X_soil, 
   Lambda = Lambda,  
   Lambda_soil = Lambda_soil,  
@@ -597,6 +672,7 @@ stan_data <- list(
   n_train = nrow(training_df),
   y_train = y,
   idx_plant_train = idx_plant_train,
+  idx_plant_train_site = idx_plant_train_site,
   genotype_plant_train = genotype_plant_train,
   neighbors_train = training_df$neighbors.s,
   annual_train = training_df$annual.s,
@@ -609,6 +685,7 @@ stan_data <- list(
   # Testing data specifics
   n_test = nrow(testing_df),
   idx_plant_test = idx_plant_test,
+  idx_plant_test_site = idx_plant_test_site,
   genotype_plant_test = genotype_plant_test,
   neighbors_test = testing_df$neighbors.s,
   annual_test = testing_df$annual.s,
@@ -643,6 +720,7 @@ stan_data_reproduced <- list(
   n_train = nrow(training_df_rep),
   r_train = training_df_rep$r_train,
   idx_plant_train = idx_plant_train_rep,
+  idx_plant_train_site = idx_plant_train_site_rep,
   genotype_plant_train = genotype_plant_train_rep,
   neighbors_train = training_df_rep$neighbors.s,
   annual_train = training_df_rep$annual.s,
@@ -655,6 +733,7 @@ stan_data_reproduced <- list(
   # Testing data specifics
   n_test = nrow(testing_df_rep),
   idx_plant_test = idx_plant_test_rep,
+  idx_plant_test_site = idx_plant_test_site_rep,
   genotype_plant_test = genotype_plant_test_rep,
   neighbors_test = testing_df_rep$neighbors.s,
   annual_test = testing_df_rep$annual.s,
@@ -665,6 +744,53 @@ stan_data_reproduced <- list(
   n_site_year_test = length(unique(as.integer(as.factor(testing_df_rep$site_year))))
 )
 
+### emerged/survived
+training_df_rep$e_train <- ifelse(training_df_emg$Reproduced == "Y", 1L, 0L)
+testing_df_rep$e_test <- ifelse(testing_df_emg$Reproduced == "Y", 1L, 0L)
+
+stan_data_emerged <- list(
+  # General inputs for the model
+  n_X = nrow(X_rep),  
+  n_X_soil = nrow(X_soil_rep),
+  p_X = ncol(X_rep),   
+  s_X = ncol(X_soil_rep),
+  q_X = ncol(Lambda_rep),      
+  X = X_rep,    
+  X_soil = X_soil_rep, 
+  Lambda = Lambda_rep,  
+  Lambda_soil = Lambda_soil_rep,  
+  n_g = length(unique(genotype_plant_train_rep)),  
+  K = K_common_garden,    
+  n_plot = max(training_df_rep$plot_index),
+  n_site_year = length(unique(c(training_df_rep$site_year, testing_df_rep$site_year))),
+  
+  # Training data specifics
+  n_train = nrow(training_df_rep),
+  e_train = training_df_emg$e_train,
+  idx_plant_train = idx_plant_train_rep,
+  idx_plant_train_site = idx_plant_train_site_rep,
+  genotype_plant_train = genotype_plant_train_rep,
+  neighbors_train = training_df_rep$neighbors.s,
+  annual_train = training_df_rep$annual.s,
+  perennial_train = training_df_rep$perennial.s,
+  shrub_train = training_df_rep$shrub.s,
+  plot_index_train = training_df_rep$plot_index,
+  n_site_year_train = length(unique(as.integer(as.factor(training_df_rep$site_year)))),
+  site_year_id_train = training_df_rep$idx,
+  
+  # Testing data specifics
+  n_test = nrow(testing_df_rep),
+  idx_plant_test = idx_plant_test_rep,
+  idx_plant_test_site = idx_plant_test_site_rep,
+  genotype_plant_test = genotype_plant_test_rep,
+  neighbors_test = testing_df_rep$neighbors.s,
+  annual_test = testing_df_rep$annual.s,
+  perennial_test = testing_df_rep$perennial.s,
+  shrub_test = testing_df_rep$shrub.s,
+  site_year_id_test = testing_df_rep$idx,
+  plot_index_test = rep(0, nrow(testing_df_rep)),
+  n_site_year_test = length(unique(as.integer(as.factor(testing_df_rep$site_year))))
+)
 
 
 

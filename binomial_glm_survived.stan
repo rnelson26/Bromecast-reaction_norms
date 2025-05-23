@@ -1,8 +1,7 @@
-
 data {
     int<lower=1> n_train;
     int<lower=1> n_test;
-    array[n_train] int<lower=0, upper=1> r_train;
+    array[n_train] int<lower=0, upper=1> e_train;
 
   // Define the total number of site_years first
   int<lower=1> n_site_year;  // Total number of site_years (training + testing)
@@ -187,7 +186,7 @@ array[n_train] int r_train_pred_fixed;
     
     for (i in 1:n_test) {
       int idx = idx_plant_test[i];
-      int idx_site = idx_plant_test_site[i];
+      int idx_site = idx_plant_train_site[i];
       int idx_genotype = genotype_plant_test[i];
       real site_year_noise = normal_rng(0, sigma_site_year);
     
@@ -207,7 +206,7 @@ array[n_train] int r_train_pred_fixed;
     }
     for (i in 1:n_train) {
         int idx = idx_plant_train[i];
-        int idx_site = idx_plant_train_site[i];
+         int idx_site = idx_plant_test_site[i];
         int idx_genotype = genotype_plant_train[i];
         
         real mu_fixed_base = dot_product(W[idx, ], beta[idx_genotype, ]) + dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +

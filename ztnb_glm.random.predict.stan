@@ -14,8 +14,10 @@ data {
   int<lower=1> n_site_year_test;   // Number of test site_years
   
   array[n_train] int<lower=1> idx_plant_train;
+  array[n_train] int<lower=1> idx_plant_train_site;
   array[n_train] int<lower=1> genotype_plant_train;
   array[n_test] int<lower=1> idx_plant_test;
+  array[n_test] int<lower=1> idx_plant_test_site;
   array[n_test] int<lower=1> genotype_plant_test;
 
   array[n_train] int<lower=0> y_train;
@@ -58,7 +60,7 @@ parameters {
   vector<lower=0, upper=1.57079632679>[s_X] u_sigma_soil;
   vector<lower=0, upper=1.57079632679>[q_X] u_zeta;
   matrix[n_X, q_X] W;
-  matrix[n_X, q_X] W_soil;
+  matrix[n_X_soil, q_X] W_soil;
   real beta_neighbors;
   real beta_annual;
   real beta_perennial;
@@ -115,7 +117,8 @@ model {
   for (i in 1:n_train) {
   int idx = idx_plant_train[i];
   int idx_genotype = genotype_plant_train[i];
-  real mu_base = dot_product(W[idx, ], beta[idx_genotype, ]) +  dot_product(W_soil[idx, ], beta[idx_genotype, ]) +
+  int idx_site = idx_plant_train_site[i];  
+  real mu_base = dot_product(W[idx, ], beta[idx_genotype, ]) +  dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
                  site_year_effect_train_scaled[site_year_id_train[i]] +  
                  //beta[idx_genotype, 1] augment matrix for genotype intercepts index by genotype to get variable intercepts for genotype
                  beta_neighbors * neighbors_train[i] +
@@ -175,8 +178,9 @@ generated quantities {
   // Compute mu_train
   for (i in 1:n_train) {
     int idx = idx_plant_train[i];
+    int idx_site = idx_plant_train_site[i];
     int idx_genotype = genotype_plant_train[i];
-    real mu_base = dot_product(W[idx, ], beta[idx_genotype, ]) + beta_0[idx_genotype] +
+    real mu_base = dot_product(W[idx, ], beta[idx_genotype, ]) +  dot_product(W_soil[idx_site, ], beta[idx_genotype, ])+ beta_0[idx_genotype] +
                    site_year_effect_train_scaled[site_year_id_train[i]] +
                    beta_neighbors * neighbors_train[i] +
                    beta_annual * annual_train[i] +
@@ -192,9 +196,10 @@ generated quantities {
   // Compute mu_test
   for (i in 1:n_test) {
     int idx = idx_plant_test[i];
+    int idx_site = idx_plant_test_site[i];
     int idx_genotype = genotype_plant_test[i];
     real site_year_noise = normal_rng(0, sigma_site_year);
-    real mu_base = dot_product(W[idx, ], beta[idx_genotype, ]) + beta_0[idx_genotype] +
+    real mu_base = dot_product(W[idx, ], beta[idx_genotype, ])+  dot_product(W_soil[idx_site, ], beta[idx_genotype, ])+ beta_0[idx_genotype] +
                    site_year_noise +
                    beta_neighbors * neighbors_test[i] +
                    beta_annual * annual_test[i] +
@@ -210,8 +215,9 @@ generated quantities {
   // Compute mu_train_fixed
   for (i in 1:n_train) {
     int idx = idx_plant_train[i];
+    int idx_site = idx_plant_train_site[i];
     int idx_genotype = genotype_plant_train[i];
-    real mu_fixed_base = dot_product(W[idx, ], beta[idx_genotype, ]) +
+    real mu_fixed_base = dot_product(W[idx, ], beta[idx_genotype, ]) +  dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
                          beta_0[idx_genotype] +
                          beta_neighbors * neighbors_train[i] +
                          beta_annual * annual_train[i] +
