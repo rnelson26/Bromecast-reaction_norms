@@ -1993,11 +1993,16 @@ hist(t(as.matrix(e_train_pred_full))[1, ],
 ####### climate W vs original PCA ######
 W_draws <- posterior::as_draws_matrix(fit$draws("W"))
 W_draws_rep <- posterior::as_draws_matrix(fit_rep$draws("W"))
+W_draws_emg_fall <- posterior::as_draws_matrix(fit_emg_fall$draws("W"))
+W_draws_emg_full <- posterior::as_draws_matrix(fit_emg_full$draws("W"))
 
 W_draws <- W_draws[, grepl("^W\\[", colnames(W_draws))]
 W_draws_rep <- W_draws_rep[, grepl("^W\\[", colnames(W_draws))]
+W_draws_emg_fall <- W_draws_emg_fall[, grepl("^W\\[", colnames(W_draws))]
+W_draws_emg_full <- W_draws_emg_full[, grepl("^W\\[", colnames(W_draws))]
 
 param_names <- colnames(W_draws)
+param_names_rep <- colnames(W_draws_rep)
 param_names_rep <- colnames(W_draws_rep)
 
 param_info <- tibble(param = param_names) %>%
