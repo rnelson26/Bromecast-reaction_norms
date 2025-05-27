@@ -122,7 +122,7 @@ model {
   
     if (plot_index_train[i] != 0)
       logit_p += eta_plot[plot_index_train[i]];
-      r_train[i] ~ bernoulli_logit(logit_p);
+      e_train[i] ~ bernoulli_logit(logit_p);
 }
 
 
@@ -159,10 +159,10 @@ beta_shrub ~ normal(0, 1);
 generated quantities {
     vector[n_test] p_test;
     vector[n_train] p_train;
-    array[n_train] int r_train_pred;
-    array[n_test] int r_test_pred;
+    array[n_train] int e_train_pred;
+    array[n_test] int e_test_pred;
     vector[n_train] mu_train_fixed;
-array[n_train] int r_train_pred_fixed; 
+array[n_train] int e_train_pred_fixed; 
     
     for (i in 1:n_train) {
       int idx = idx_plant_train[i];
@@ -181,7 +181,7 @@ array[n_train] int r_train_pred_fixed;
         logit_p += eta_plot[plot_index_train[i]];
       
       p_train[i] = inv_logit(logit_p);
-      r_train_pred[i] = bernoulli_logit_rng(logit_p);
+      e_train_pred[i] = bernoulli_logit_rng(logit_p);
     }
     
     for (i in 1:n_test) {
@@ -202,11 +202,11 @@ array[n_train] int r_train_pred_fixed;
         logit_p += eta_plot[plot_index_test[i]];
       
       p_test[i] = inv_logit(logit_p);
-      r_test_pred[i] = bernoulli_logit_rng(logit_p);
+      e_test_pred[i] = bernoulli_logit_rng(logit_p);
     }
     for (i in 1:n_train) {
         int idx = idx_plant_train[i];
-         int idx_site = idx_plant_test_site[i];
+         int idx_site = idx_plant_train_site[i];
         int idx_genotype = genotype_plant_train[i];
         
         real mu_fixed_base = dot_product(W[idx, ], beta[idx_genotype, ]) + dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
@@ -217,7 +217,7 @@ array[n_train] int r_train_pred_fixed;
                              beta_shrub * shrub_train[i];
       
         mu_train_fixed[i] = inv_logit(mu_fixed_base);  // Probability with fixed effects only
-        r_train_pred_fixed[i] = bernoulli_logit_rng(mu_fixed_base);
+        e_train_pred_fixed[i] = bernoulli_logit_rng(mu_fixed_base);
       }
     
 }

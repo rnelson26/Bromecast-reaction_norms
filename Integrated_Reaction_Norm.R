@@ -1,7 +1,7 @@
 #### Integrated Reaction Norm Model #######
 ######## code by Becca Nelson and Justin Van Ee ###############################
 ############# created 3-25-25 ######################
-############# Last modified: 5-22-25 ##########################
+############# Last modified: 5-27-25 ##########################
 ######## modifies RMD file to pull from one integrated df ########
 
 rm(list = ls())
@@ -334,6 +334,14 @@ pca_data_rep <- df_rep %>%
   dplyr::select(site_year, all_of(climate_vars))  %>% distinct() %>% 
   na.omit()  
 
+pca_data_emg <- df_emg %>% 
+  dplyr::select(site_year, all_of(climate_vars))  %>% distinct() %>% 
+  na.omit()  
+
+pca_data_emg_fall <- df_emg %>% 
+  dplyr::select(site_year, all_of(fall_vars))  %>% distinct() %>% 
+  na.omit()  
+
 
 soil_data <- df %>% 
   dplyr::select(site, all_of(soil_vars))  %>% distinct() %>% 
@@ -342,6 +350,11 @@ soil_data <- df %>%
 soil_data_rep <- df_rep %>% 
   dplyr::select(site, all_of(soil_vars))  %>% distinct() %>% 
   na.omit() 
+
+soil_data_emg <- df_emg %>% 
+  dplyr::select(site, all_of(soil_vars))  %>% distinct() %>% 
+  na.omit() 
+
 
 #full_data <- df %>% 
   #dplyr::select(site_year, all_of(full_vars))  %>% distinct() %>% 
@@ -354,7 +367,11 @@ site_labels_soil <- soil_data$site
 
 site_year_labels_rep <- pca_data_rep$site_year  
 site_year_labels_soil_rep <- soil_data_rep$site_year  
-site_labels_soil_rep <- soil_data$site_rep
+site_labels_soil_rep <- soil_data_rep$site
+
+site_year_labels_emg <- pca_data_emg$site_year  
+site_year_labels_soil_emg <- soil_data_emg$site_year  
+site_labels_soil_emg <- soil_data_emg$site
 
 X <- scale(pca_data %>% dplyr::select(-site_year))
 X_soil <- scale(soil_data %>% dplyr::select(-site))
@@ -363,6 +380,10 @@ X_soil <- scale(soil_data %>% dplyr::select(-site))
 X_rep <- scale(pca_data_rep %>% dplyr::select(-site_year))
 X_soil_rep <- scale(soil_data_rep %>% dplyr::select(-site))
 
+X_emg <- scale(pca_data_emg %>% dplyr::select(-site_year))
+X_emg_fall <- scale(pca_data_emg_fall %>% dplyr::select(-site_year))
+X_soil_emg <- scale(soil_data_emg %>% dplyr::select(-site))
+
 pca_out <- prcomp(X)
 pca_out_soil <- prcomp(X_soil)
 #pca_out_full <- prcomp(X_full)
@@ -370,16 +391,26 @@ pca_out_soil <- prcomp(X_soil)
 pca_out_rep <- prcomp(X_rep)
 pca_out_soil_rep <- prcomp(X_soil_rep)
 
+pca_out_emg <- prcomp(X_emg)
+pca_out_emg_fall <- prcomp(X_emg_fall)
+pca_out_soil_emg <- prcomp(X_soil_emg)
+
 n_X <- nrow(pca_data)
 q_X <- 2
 Lambda <- as.matrix(pca_out$rotation[, 1:q_X])
 
 Lambda_rep <- as.matrix(pca_out_rep$rotation[, 1:q_X])
 
+Lambda_emg <- as.matrix(pca_out_emg$rotation[, 1:q_X])
+Lambda_emg_fall <- as.matrix(pca_out_emg_fall$rotation[, 1:q_X])
+
 n_X_soil <- nrow(soil_data)
 Lambda_soil <- as.matrix(pca_out_soil$rotation[, 1:q_X])
 # still have some cg sites that need soil info
 Lambda_soil_rep <- as.matrix(pca_out_soil_rep$rotation[, 1:q_X])
+Lambda_soil_emg <- as.matrix(pca_out_soil_emg$rotation[, 1:q_X])
+
+
 
 fviz_pca_biplot(pca_out,
                 geom.ind = "point",               
@@ -415,6 +446,30 @@ fviz_pca_biplot(pca_out_soil_rep,
   theme_minimal()
 
 fviz_pca_biplot(pca_out_full,
+                geom.ind = "point",               
+                fill.ind = "grey80",              
+                col.var = "contrib",              
+                gradient.cols = c("blue", "red"), 
+                repel = TRUE) +                   
+  theme_minimal()
+
+fviz_pca_biplot(pca_out_emg,
+                geom.ind = "point",               
+                fill.ind = "grey80",              
+                col.var = "contrib",              
+                gradient.cols = c("blue", "red"), 
+                repel = TRUE) +                   
+  theme_minimal()
+
+fviz_pca_biplot(pca_out_emg_fall,
+                geom.ind = "point",               
+                fill.ind = "grey80",              
+                col.var = "contrib",              
+                gradient.cols = c("blue", "red"), 
+                repel = TRUE) +                   
+  theme_minimal()
+
+fviz_pca_biplot(pca_out_soil_emg,
                 geom.ind = "point",               
                 fill.ind = "grey80",              
                 col.var = "contrib",              
@@ -458,6 +513,27 @@ plot(prop_var, type = "b",
      ylab = "Proportion of Variance Explained", 
      main = "Elbow Plot")
 
+explained_var <- pca_out_emg$sdev^2
+prop_var <- explained_var / sum(explained_var)
+plot(prop_var, type = "b", 
+     xlab = "Principal Component", 
+     ylab = "Proportion of Variance Explained", 
+     main = "Elbow Plot")
+
+explained_var <- pca_out_emg_fall$sdev^2
+prop_var <- explained_var / sum(explained_var)
+plot(prop_var, type = "b", 
+     xlab = "Principal Component", 
+     ylab = "Proportion of Variance Explained", 
+     main = "Elbow Plot")
+
+explained_var <- pca_out_soil_emg$sdev^2
+prop_var <- explained_var / sum(explained_var)
+plot(prop_var, type = "b", 
+     xlab = "Principal Component", 
+     ylab = "Proportion of Variance Explained", 
+     main = "Elbow Plot")
+
 #### Split the data ########
 
 ### split training and test data 
@@ -483,6 +559,12 @@ training_df_rep <-df_rep %>%
 testing_df_rep <- df_rep %>%
   filter(!(site_year %in% selected_categories) & Type == "Satellite")
 
+training_df_emg <-df_emg %>%
+  filter(site_year %in% selected_categories | Type == "Common_Garden")
+
+testing_df_emg <- df_emg %>%
+  filter(!(site_year %in% selected_categories) & Type == "Satellite")
+
 ### compare data to make sure we have decent coverage of climate 
 
 training_df$Dataset <- "Training"
@@ -491,10 +573,13 @@ testing_df$Dataset <- "Testing"
 training_df_rep$Dataset <- "Training"
 testing_df_rep$Dataset <- "Testing"
 
+training_df_emg$Dataset <- "Training"
+testing_df_emg$Dataset <- "Testing"
+
 # Combine the datasets
 combined_data <- rbind(training_df, testing_df)
 combined_data_rep <- rbind(training_df_rep, testing_df_rep)
-
+combined_data_emg <- rbind(training_df_emg, testing_df_emg)
 # Check overlap
 ggplot(combined_data, aes(x = tmean.Sum, fill = Dataset)) +
   geom_histogram(alpha = 0.5, bins = 30, position = "identity") +
@@ -502,6 +587,11 @@ ggplot(combined_data, aes(x = tmean.Sum, fill = Dataset)) +
   scale_fill_manual(values = c("Training" = "blue", "Testing" = "red"))
 
 ggplot(combined_data_rep, aes(x = tmean.Sum, fill = Dataset)) +
+  geom_histogram(alpha = 0.5, bins = 30, position = "identity") +
+  theme_minimal() +
+  scale_fill_manual(values = c("Training" = "blue", "Testing" = "red"))
+
+ggplot(combined_data_emg, aes(x = tmean.Sum, fill = Dataset)) +
   geom_histogram(alpha = 0.5, bins = 30, position = "identity") +
   theme_minimal() +
   scale_fill_manual(values = c("Training" = "blue", "Testing" = "red"))
@@ -518,6 +608,11 @@ r <-
   pluck("Reproduced") %>%
   c()
 
+e <-
+  training_df %>%
+  pluck("Emerged") %>%
+  c()
+
 
 ##### Indices ########
 training_df$plot_index <- ifelse(training_df$Type == "Common_Garden", training_df$plot[training_df$Type == "Common_Garden"], 0)
@@ -526,11 +621,17 @@ plot_levels <- levels(factor(training_df$plot[training_df$Type == "Common_Garden
 training_df_rep$plot_index <- ifelse(training_df_rep$Type == "Common_Garden", training_df_rep$plot[training_df_rep$Type == "Common_Garden"], 0)
 plot_levels <- levels(factor(training_df_rep$plot[training_df_rep$Type == "Common_Garden"]))
 
+training_df_emg$plot_index <- ifelse(training_df_emg$Type == "Common_Garden", training_df_emg$plot[training_df_emg$Type == "Common_Garden"], 0)
+plot_levels <- levels(factor(training_df_emg$plot[training_df_emg$Type == "Common_Garden"]))
+
 training_df$site_year <- factor(training_df$site_year)
 testing_df$site_year <- factor(testing_df$site_year)
 
 training_df_rep$site_year <- factor(training_df_rep$site_year)
 testing_df_rep$site_year <- factor(testing_df_rep$site_year)
+
+training_df_emg$site_year <- factor(training_df_emg$site_year)
+testing_df_emg$site_year <- factor(testing_df_emg$site_year)
 
 # Create index for training site-years 
 training_site_years <- sort(unique(training_df$site_year))
@@ -543,6 +644,12 @@ training_site_years_rep <- sort(unique(training_df_rep$site_year))
 site_year_index_train_rep <- data.frame(
   site_year = training_site_years_rep,
   idx = seq_along(training_site_years_rep)  
+)
+
+training_site_years_emg <- sort(unique(training_df_emg$site_year))
+site_year_index_train_emg <- data.frame(
+  site_year = training_site_years_emg,
+  idx = seq_along(training_site_years_emg)  
 )
 
 # Create index for testing site-years 
@@ -558,6 +665,12 @@ site_year_index_test_rep <- data.frame(
   idx = seq_along(testing_site_years_rep) + length(training_site_years_rep)  # Start from 40
 )
 
+testing_site_years_emg <- sort(unique(testing_df_emg$site_year))
+site_year_index_test_emg <- data.frame(
+  site_year = testing_site_years_emg,
+  idx = seq_along(testing_site_years_emg) + length(training_site_years_emg)  # Start from 40
+)
+
 # Merge site-year indices into the original dataframes
 training_df <- left_join(training_df, site_year_index_train, by = "site_year")
 testing_df <- left_join(testing_df, site_year_index_test, by = "site_year")
@@ -565,12 +678,18 @@ testing_df <- left_join(testing_df, site_year_index_test, by = "site_year")
 training_df_rep <- left_join(training_df_rep, site_year_index_train_rep, by = "site_year")
 testing_df_rep <- left_join(testing_df_rep, site_year_index_test_rep, by = "site_year")
 
+training_df_emg <- left_join(training_df_emg, site_year_index_train_emg, by = "site_year")
+testing_df_emg <- left_join(testing_df_emg, site_year_index_test_emg, by = "site_year")
+
 #### site level index for soil PCA
 training_df$site <- factor(training_df$site)
 testing_df$site <- factor(testing_df$site)
 
 training_df_rep$site <- factor(training_df_rep$site)
 testing_df_rep$site <- factor(testing_df_rep$site)
+
+training_df_emg$site <- factor(training_df_emg$site)
+testing_df_emg$site <- factor(testing_df_emg$site)
 
 ## fecundity 
 all_sites <- sort(unique(c(training_df$site, testing_df$site)))
@@ -594,6 +713,17 @@ site_index_rep <- data.frame(
 training_df_rep <- training_df_rep %>% left_join(site_index_rep, by = "site")
 testing_df_rep  <- testing_df_rep %>% left_join(site_index_rep, by = "site")
 
+### Emerged
+all_sites_emg <- sort(unique(c(training_df_emg$site, testing_df_emg$site)))
+
+site_index_emg <- data.frame(
+  site = all_sites_emg,
+  idx_site = seq_along(all_sites_emg)
+)
+
+training_df_emg <- training_df_emg %>% left_join(site_index_emg, by = "site")
+testing_df_emg  <- testing_df_emg %>% left_join(site_index_emg, by = "site")
+
 ### genotype indices
  
 training_df$NewSiteCode <- as.character(training_df$NewSiteCode)
@@ -604,6 +734,10 @@ training_df_rep$NewSiteCode <- as.character(training_df_rep$NewSiteCode)
 training_df_rep$NewSiteCode[is.na(training_df_rep$NewSiteCode)] <- "Unknown"
 training_df_rep$NewSiteCode <- as.factor(training_df_rep$NewSiteCode)
 
+training_df_emg$NewSiteCode <- as.character(training_df_emg$NewSiteCode)
+training_df_emg$NewSiteCode[is.na(training_df_emg$NewSiteCode)] <- "Unknown"
+training_df_emg$NewSiteCode <- as.factor(training_df_emg$NewSiteCode)
+
 valid_genotypes <- rownames(K_common_garden)
 genotype_lookup <- setNames(seq_along(valid_genotypes), valid_genotypes)
 
@@ -612,8 +746,12 @@ training_df <- training_df %>% filter(genotype %in% valid_genotypes)
 
 training_df_rep <- training_df_rep %>% filter(genotype %in% valid_genotypes)
 
+training_df_emg <- training_df_emg %>% filter(genotype %in% valid_genotypes)
+
 testing_df <- testing_df %>% filter(genotype %in% valid_genotypes)
 testing_df_rep <- testing_df_rep %>% filter(genotype %in% valid_genotypes)
+
+testing_df_emg <- testing_df_emg %>% filter(genotype %in% valid_genotypes)
 
 genotype_plant_train <- as.integer(genotype_lookup[as.character(training_df$genotype)])
 
@@ -623,6 +761,10 @@ genotype_plant_train_rep <- as.integer(genotype_lookup[as.character(training_df_
 
 genotype_plant_test_rep <- as.integer(genotype_lookup[as.character(testing_df_rep$genotype)])
 
+genotype_plant_train_emg <- as.integer(genotype_lookup[as.character(training_df_emg$genotype)])
+
+genotype_plant_test_emg <- as.integer(genotype_lookup[as.character(testing_df_emg$genotype)])
+
 
 # Check again
 range(genotype_plant_train)  # should be 1 to 93
@@ -631,11 +773,17 @@ length(genotype_plant_train)
 range(genotype_plant_train_rep)  # should be 1 to 93
 length(genotype_plant_train_rep) 
 
+range(genotype_plant_train_emg)  # should be 1 to 93
+length(genotype_plant_train_emg) 
+
 range(genotype_plant_test) 
 length(genotype_plant_test) 
 
 range(genotype_plant_test_rep) 
 length(genotype_plant_test_rep) 
+
+range(genotype_plant_test_emg) 
+length(genotype_plant_test_emg) 
 
 #### plant index
 idx_plant_train <- as.numeric(training_df$site_year)
@@ -644,12 +792,18 @@ idx_plant_test  <- as.numeric(testing_df$site_year)
 idx_plant_train_rep <- as.numeric(training_df_rep$site_year)
 idx_plant_test_rep  <- as.numeric(testing_df_rep$site_year)
 
+idx_plant_train_emg <- as.numeric(training_df_emg$site_year)
+idx_plant_test_emg  <- as.numeric(testing_df_emg$site_year)
+
 ## for W soil
 idx_plant_train_site <- as.numeric(training_df$site)
 idx_plant_test_site  <- as.numeric(testing_df$site)
 
 idx_plant_train_site_rep <- as.numeric(training_df_rep$site)
 idx_plant_test_site_rep  <- as.numeric(testing_df_rep$site)
+
+idx_plant_train_site_emg <- as.numeric(training_df_emg$site)
+idx_plant_test_site_emg  <- as.numeric(testing_df_emg$site)
 
 ####### Fit stan model #########
 stan_data <- list(
@@ -744,61 +898,107 @@ stan_data_reproduced <- list(
   n_site_year_test = length(unique(as.integer(as.factor(testing_df_rep$site_year))))
 )
 
-### emerged/survived
-training_df_rep$e_train <- ifelse(training_df_emg$Reproduced == "Y", 1L, 0L)
-testing_df_rep$e_test <- ifelse(testing_df_emg$Reproduced == "Y", 1L, 0L)
+### emerged
+training_df_emg$e_train <- ifelse(training_df_emg$Emerged == "Y", 1L, 0L)
+testing_df_emg$e_test <- ifelse(testing_df_emg$Emerged == "Y", 1L, 0L)
 
-stan_data_emerged <- list(
+stan_data_emerged_full <- list(
   # General inputs for the model
-  n_X = nrow(X_rep),  
-  n_X_soil = nrow(X_soil_rep),
-  p_X = ncol(X_rep),   
-  s_X = ncol(X_soil_rep),
-  q_X = ncol(Lambda_rep),      
-  X = X_rep,    
-  X_soil = X_soil_rep, 
-  Lambda = Lambda_rep,  
-  Lambda_soil = Lambda_soil_rep,  
-  n_g = length(unique(genotype_plant_train_rep)),  
+  n_X = nrow(X_emg),  
+  n_X_soil = nrow(X_soil_emg),
+  p_X = ncol(X_emg),   
+  s_X = ncol(X_soil_emg),
+  q_X = ncol(Lambda_emg),      
+  X = X_emg,    
+  X_soil = X_soil_emg, 
+  Lambda = Lambda_emg,  
+  Lambda_soil = Lambda_soil_emg,  
+  n_g = length(unique(genotype_plant_train_emg)),  
   K = K_common_garden,    
-  n_plot = max(training_df_rep$plot_index),
-  n_site_year = length(unique(c(training_df_rep$site_year, testing_df_rep$site_year))),
+  n_plot = max(training_df_emg$plot_index),
+  n_site_year = length(unique(c(training_df_emg$site_year, testing_df_emg$site_year))),
   
   # Training data specifics
-  n_train = nrow(training_df_rep),
+  n_train = nrow(training_df_emg),
   e_train = training_df_emg$e_train,
-  idx_plant_train = idx_plant_train_rep,
-  idx_plant_train_site = idx_plant_train_site_rep,
-  genotype_plant_train = genotype_plant_train_rep,
-  neighbors_train = training_df_rep$neighbors.s,
-  annual_train = training_df_rep$annual.s,
-  perennial_train = training_df_rep$perennial.s,
-  shrub_train = training_df_rep$shrub.s,
-  plot_index_train = training_df_rep$plot_index,
-  n_site_year_train = length(unique(as.integer(as.factor(training_df_rep$site_year)))),
-  site_year_id_train = training_df_rep$idx,
+  idx_plant_train = idx_plant_train_emg,
+  idx_plant_train_site = idx_plant_train_site_emg,
+  genotype_plant_train = genotype_plant_train_emg,
+  neighbors_train = training_df_emg$neighbors.s,
+  annual_train = training_df_emg$annual.s,
+  perennial_train = training_df_emg$perennial.s,
+  shrub_train = training_df_emg$shrub.s,
+  plot_index_train = training_df_emg$plot_index,
+  n_site_year_train = length(unique(as.integer(as.factor(training_df_emg$site_year)))),
+  site_year_id_train = training_df_emg$idx,
   
   # Testing data specifics
-  n_test = nrow(testing_df_rep),
-  idx_plant_test = idx_plant_test_rep,
-  idx_plant_test_site = idx_plant_test_site_rep,
-  genotype_plant_test = genotype_plant_test_rep,
-  neighbors_test = testing_df_rep$neighbors.s,
-  annual_test = testing_df_rep$annual.s,
-  perennial_test = testing_df_rep$perennial.s,
-  shrub_test = testing_df_rep$shrub.s,
-  site_year_id_test = testing_df_rep$idx,
-  plot_index_test = rep(0, nrow(testing_df_rep)),
-  n_site_year_test = length(unique(as.integer(as.factor(testing_df_rep$site_year))))
+  n_test = nrow(testing_df_emg),
+  idx_plant_test = idx_plant_test_emg,
+  idx_plant_test_site = idx_plant_test_site_emg,
+  genotype_plant_test = genotype_plant_test_emg,
+  neighbors_test = testing_df_emg$neighbors.s,
+  annual_test = testing_df_emg$annual.s,
+  perennial_test = testing_df_emg$perennial.s,
+  shrub_test = testing_df_emg$shrub.s,
+  site_year_id_test = testing_df_emg$idx,
+  plot_index_test = rep(0, nrow(testing_df_emg)),
+  n_site_year_test = length(unique(as.integer(as.factor(testing_df_emg$site_year))))
 )
 
+
+stan_data_emerged_fall <- list(
+  # General inputs for the model
+  n_X = nrow(X_emg_fall),  
+  n_X_soil = nrow(X_soil_emg),
+  p_X = ncol(X_emg_fall),   
+  s_X = ncol(X_soil_emg),
+  q_X = ncol(Lambda_emg_fall),      
+  X = X_emg_fall,    
+  X_soil = X_soil_emg, 
+  Lambda = Lambda_emg_fall,  
+  Lambda_soil = Lambda_soil_emg,  
+  n_g = length(unique(genotype_plant_train_emg)),  
+  K = K_common_garden,    
+  n_plot = max(training_df_emg$plot_index),
+  n_site_year = length(unique(c(training_df_emg$site_year, testing_df_emg$site_year))),
+  
+  # Training data specifics
+  n_train = nrow(training_df_emg),
+  e_train = training_df_emg$e_train,
+  idx_plant_train = idx_plant_train_emg,
+  idx_plant_train_site = idx_plant_train_site_emg,
+  genotype_plant_train = genotype_plant_train_emg,
+  neighbors_train = training_df_emg$neighbors.s,
+  annual_train = training_df_emg$annual.s,
+  perennial_train = training_df_emg$perennial.s,
+  shrub_train = training_df_emg$shrub.s,
+  plot_index_train = training_df_emg$plot_index,
+  n_site_year_train = length(unique(as.integer(as.factor(training_df_emg$site_year)))),
+  site_year_id_train = training_df_emg$idx,
+  
+  # Testing data specifics
+  n_test = nrow(testing_df_emg),
+  idx_plant_test = idx_plant_test_emg,
+  idx_plant_test_site = idx_plant_test_site_emg,
+  genotype_plant_test = genotype_plant_test_emg,
+  neighbors_test = testing_df_emg$neighbors.s,
+  annual_test = testing_df_emg$annual.s,
+  perennial_test = testing_df_emg$perennial.s,
+  shrub_test = testing_df_emg$shrub.s,
+  site_year_id_test = testing_df_emg$idx,
+  plot_index_test = rep(0, nrow(testing_df_emg)),
+  n_site_year_test = length(unique(as.integer(as.factor(testing_df_emg$site_year))))
+)
 
 
 # Fit using cmdrstan 
 mod <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/ztnb_glm.random.predict.stan")
 mod_rep <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/binomial_glm_reproduced.stan")
+mod_emg <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/binomial_glm_survived.stan")
 
 #### Find good starting values ####
+### Fecundity 
 pathfinder_fit <- mod$pathfinder(
   data = stan_data,          # your named list of data
   init = 0,                  # or a list of reasonable inits
@@ -806,6 +1006,7 @@ pathfinder_fit <- mod$pathfinder(
 )
 init_list <- pathfinder_fit$draws(format = "list")
 
+### Reproduced 
 pathfinder_fit <- mod_rep$pathfinder(
   data = stan_data_reproduced,          # your named list of data
   init = 0,                  # or a list of reasonable inits
@@ -813,11 +1014,30 @@ pathfinder_fit <- mod_rep$pathfinder(
 )
 init_list <- pathfinder_fit$draws(format = "list")
 
+### Emerged == full climate var
+pathfinder_fit <- mod_emg$pathfinder(
+  data = stan_data_emerged_full,          # your named list of data
+  init = 0,                  # or a list of reasonable inits
+  num_paths = 1              # usually equal to number of chains
+)
+init_list <- pathfinder_fit$draws(format = "list")
+
+
+###### Emerged fall climate var only
+pathfinder_fit <- mod_emg$pathfinder(
+  data = stan_data_emerged_fall,          # your named list of data
+  init = 0,                  # or a list of reasonable inits
+  num_paths = 1              # usually equal to number of chains
+)
+init_list <- pathfinder_fit$draws(format = "list")
+
+
 # Warmup and iterations 
 iter_warmup = 100 
 iter_sampling = 1000 ## run for 10,000 and look at overall diff in scores
 
 # Compile and fit the model
+### Fecundity 
 fit <- mod$sample(
   data = stan_data,
   seed = 123,
@@ -828,6 +1048,7 @@ fit <- mod$sample(
   init = init_list
 )
 
+### Reproduced
 fit_rep <- mod_rep$sample(
   data = stan_data_reproduced,
   chains = 3,
@@ -837,6 +1058,29 @@ fit_rep <- mod_rep$sample(
   init = init_list
 )
 
+### Emerged Full Climate Vars
+fit_emg_full <- mod_emg$sample(
+  data = stan_data_emerged_full,
+  chains = 3,
+  parallel_chains = 3,
+  iter_warmup = iter_warmup,
+  iter_sampling = iter_sampling,
+  init = init_list
+)
+
+##### Emerged Fall Climate Vars only
+fit_emg_fall <- mod_emg$sample(
+  data = stan_data_emerged_fall,
+  chains = 3,
+  parallel_chains = 3,
+  iter_warmup = iter_warmup,
+  iter_sampling = iter_sampling,
+  init = init_list
+)
+
+## notes: Warning: 2 of 3 chains had an E-BFMI less than 0. on fall only emergence model but not one with full PCA.
+#this means that two of the Stan chains are having trouble exploring the posterior efficiently due to an issue with energy-based sampling efficiency. Might be worthwhile to calculate BFMI directly based on past bugs with stan.
+
 # Summary of results
 summary <- fit$summary()
 range(summary$rhat) ## Gelman Rubin statistic of convergence 
@@ -844,10 +1088,17 @@ range(summary$rhat) ## Gelman Rubin statistic of convergence
 summary_rep <- fit_rep$summary()
 range(summary_rep$rhat) #NAs
 
+summary_emg_full <- fit_emg_full$summary()
+range(summary_emg_full$rhat) 
+
 # Extract posterior samples
 posterior <- fit$draws(variables = c("theta","beta", "sigma", "W", "zeta", "mu_test", "mu_train", "W_soil"))
 
 posterior_rep <- fit_rep$draws(variables = c("beta", "sigma", "W", "zeta", "p_test", "p_train", "W_soil"))
+
+posterior_emg_full <- fit_emg_full$draws(variables = c("beta", "sigma", "W", "zeta", "p_test", "p_train", "W_soil"))
+
+posterior_emg_fall <- fit_emg_fall$draws(variables = c("beta", "sigma", "W", "zeta", "p_test", "p_train", "W_soil"))
 
 #
 # Traceplots for diagnostics
@@ -862,6 +1113,7 @@ color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior_rep,  pars = c("theta"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 
+
 # beta
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = c("beta[20,1]","beta[20,2]"), n_warmup = iter_warmup)
@@ -869,6 +1121,14 @@ p + facet_text(size = 15)
 
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior_rep,  pars = c("beta[20,1]","beta[20,2]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior_emg_full,  pars = c("beta[20,1]","beta[20,2]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior_emg_fall,  pars = c("beta[20,1]","beta[20,2]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 
 # gamma
@@ -885,6 +1145,15 @@ color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior_rep,  pars = paste0("sigma[", 1:ncol(X), "]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 
+
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior_emg_full,  pars = paste0("sigma[", 1:ncol(X), "]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior_emg_fall,  pars = paste0("sigma[", 1:ncol(X_emg_fall), "]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
 # zeta
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = paste0("zeta[", 1:q_X, "]"), n_warmup = iter_warmup)
@@ -892,6 +1161,14 @@ p + facet_text(size = 15)
 
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior_rep,  pars = paste0("zeta[", 1:q_X, "]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior_emg_full,  pars = paste0("zeta[", 1:q_X, "]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior_emg_fall,  pars = paste0("zeta[", 1:q_X, "]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 
 # W
@@ -903,6 +1180,14 @@ color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior_rep,  pars = c("W[1,1]","W[1,2]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior_emg_full,  pars = c("W[1,1]","W[1,2]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior_emg_fall,  pars = c("W[1,1]","W[1,2]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
 # W soil
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = c("W_soil[1,1]","W_soil[1,2]"), n_warmup = iter_warmup)
@@ -910,6 +1195,14 @@ p + facet_text(size = 15)
 
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior_rep,  pars = c("W_soil[1,1]","W_soil[1,2]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior_emg_full,  pars = c("W_soil[1,1]","W_soil[1,2]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior_emg_fall,  pars = c("W_soil[1,1]","W_soil[1,2]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 
 # mu
@@ -930,6 +1223,7 @@ p <- mcmc_trace(posterior_rep,  pars = c("mu_test[199]"), n_warmup = iter_warmup
 p + facet_text(size = 15)
 
 
+
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = c("p_train[199]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
@@ -944,6 +1238,22 @@ p + facet_text(size = 15)
 
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior_rep,  pars = c("p_test[199]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior_emg_full,  pars = c("p_train[199]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior_emg_full,  pars = c("p_test[199]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior_emg_fall,  pars = c("p_train[199]"), n_warmup = iter_warmup)
+p + facet_text(size = 15)
+
+color_scheme_set("mix-blue-pink")
+p <- mcmc_trace(posterior_emg_fall,  pars = c("p_test[199]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 ### explore parameters
 library(posterior)
@@ -1154,6 +1464,181 @@ ggplot(beta_df, aes(x = factor(LatentFactor), y = factor(Genotype), fill = Effec
   ) +
   theme_minimal(base_size = 14)
 
+##### Evaluate predictions Emergence model: Fall vs Full ######
+
+# ===== FALL MODEL ===== #
+
+# --- Test predictions ---
+p_test_fall_post <- fit_emg_fall$draws("p_test", format = "draws_matrix")
+p_test_fall_mean <- apply(p_test_fall_post, 2, mean)
+
+# --- Train predictions ---
+p_train_fall_post <- fit_emg_fall$draws("p_train", format = "draws_matrix")
+p_train_fall_mean <- apply(p_train_fall_post, 2, mean)
+
+# --- Train predictions: fixed effects only ---
+mu_train_fixed_fall_post <- fit_emg_fall$draws("mu_train_fixed", format = "draws_matrix")
+mu_train_fixed_fall_mean <- apply(mu_train_fixed_fall_post, 2, mean)
+
+rmse <- function(pred, obs) sqrt(mean((pred - obs)^2))
+mae <- function(pred, obs) mean(abs(pred - obs))
+rsq <- function(pred, obs) cor(pred, obs)^2
+
+# Observed responses
+e_train <- training_df_emg$e_train
+e_test <- testing_df_emg$e_test
+
+# ==== FALL MODEL ==== #
+
+# Train
+rmse(p_train_fall_mean, e_train) #0.3782619
+mae(p_train_fall_mean, e_train) #0.2935926
+rsq(p_train_fall_mean, e_train) #0.1813819
+
+# Train (fixed only)
+rmse(mu_train_fixed_fall_mean, e_train) #0.429194
+mae(mu_train_fixed_fall_mean, e_train) #0.4078865
+rsq(mu_train_fixed_fall_mean, e_train) # 0.03277769
+
+# Test
+rmse(p_test_fall_mean, e_test) #0.5180458
+mae(p_test_fall_mean, e_test) #0.5070795
+rsq(p_test_fall_mean, e_test) #0.002558524
+
+# ==== FULL MODEL ==== #
+
+# Train
+rmse(p_train_full_mean, e_train) #0.3777849
+mae(p_train_full_mean, e_train) #0.2908186
+rsq(p_train_full_mean, e_train) #0.1828344
+
+# Train (fixed only)
+rmse(mu_train_fixed_full_mean, e_train) #0.4239589
+mae(mu_train_fixed_full_mean, e_train) #0.3952211
+rsq(mu_train_fixed_full_mean, e_train) #0.03537912
+
+# Test
+rmse(p_test_full_mean, e_test) #0.5081168
+mae(p_test_full_mean, e_test) #0.492082
+rsq(p_test_full_mean, e_test) #0.06159678
+
+# Set up layout
+par(mfrow = c(3, 2), mar = c(4, 4, 2, 1))
+
+# ---- Row 1: Train Predictions ----
+
+# Fall - Train
+plot(p_train_fall_mean, jitter(e_train), pch = 16, col = "darkorange",
+     xlab = "Predicted", ylab = "Observed",
+     main = "Train (Fall)")
+abline(h = 0:1, col = "gray", lty = 2)
+
+# Full - Train
+plot(p_train_full_mean, jitter(e_train), pch = 16, col = "darkred",
+     xlab = "Predicted", ylab = "Observed",
+     main = "Train (Full)")
+abline(h = 0:1, col = "gray", lty = 2)
+
+# ---- Row 2: Train (Fixed Effects Only) ----
+
+# Fall - Fixed
+plot(mu_train_fixed_fall_mean, jitter(e_train), pch = 16, col = "orange",
+     xlab = "Predicted (Fixed Only)", ylab = "Observed",
+     main = "Train Fixed (Fall)")
+abline(h = 0:1, col = "gray", lty = 2)
+
+# Full - Fixed
+plot(mu_train_fixed_full_mean, jitter(e_train), pch = 16, col = "firebrick",
+     xlab = "Predicted (Fixed Only)", ylab = "Observed",
+     main = "Train Fixed (Full)")
+abline(h = 0:1, col = "gray", lty = 2)
+
+# ---- Row 3: Test Predictions ----
+
+# Fall - Test
+plot(p_test_fall_mean, jitter(e_test), pch = 16, col = "dodgerblue",
+     xlab = "Predicted", ylab = "Observed",
+     main = "Test (Fall)")
+abline(h = 0:1, col = "gray", lty = 2)
+
+# Full - Test
+plot(p_test_full_mean, jitter(e_test), pch = 16, col = "navy",
+     xlab = "Predicted", ylab = "Observed",
+     main = "Test (Full)")
+abline(h = 0:1, col = "gray", lty = 2)
+
+# Reset layout
+par(mfrow = c(1, 1))
+
+### colored by site-year
+
+
+if (!requireNamespace("viridis", quietly = TRUE)) install.packages("viridis")
+library(viridis)
+
+# Combine all site-year factors and assign consistent colors
+all_site_years <- unique(c(training_df_emg$site_year, testing_df_emg$site_year))
+site_year_colors <- setNames(viridis(length(all_site_years)), all_site_years)
+
+# Helper function to get color vector
+get_colors <- function(site_year_vec) {
+  site_year_colors[as.character(site_year_vec)]
+}
+
+# Set up layout
+par(mfrow = c(3, 2), mar = c(4, 4, 2, 1))
+
+# ---- Row 1: Train Predictions ----
+
+# Fall - Train
+plot(p_train_fall_mean, jitter(e_train), pch = 16,
+     col = get_colors(training_df_emg$site_year),
+     xlab = "Predicted", ylab = "Observed",
+     main = "Train (Fall)")
+abline(h = 0:1, col = "gray", lty = 2)
+
+# Full - Train
+plot(p_train_full_mean, jitter(e_train), pch = 16,
+     col = get_colors(training_df_emg$site_year),
+     xlab = "Predicted", ylab = "Observed",
+     main = "Train (Full)")
+abline(h = 0:1, col = "gray", lty = 2)
+
+# ---- Row 2: Train (Fixed Effects Only) ----
+
+# Fall - Fixed
+plot(mu_train_fixed_fall_mean, jitter(e_train), pch = 16,
+     col = get_colors(training_df_emg$site_year),
+     xlab = "Predicted (Fixed Only)", ylab = "Observed",
+     main = "Train Fixed (Fall)")
+abline(h = 0:1, col = "gray", lty = 2)
+
+# Full - Fixed
+plot(mu_train_fixed_full_mean, jitter(e_train), pch = 16,
+     col = get_colors(training_df_emg$site_year),
+     xlab = "Predicted (Fixed Only)", ylab = "Observed",
+     main = "Train Fixed (Full)")
+abline(h = 0:1, col = "gray", lty = 2)
+
+# ---- Row 3: Test Predictions ----
+
+# Fall - Test
+plot(p_test_fall_mean, jitter(e_test), pch = 16,
+     col = get_colors(testing_df_emg$site_year),
+     xlab = "Predicted", ylab = "Observed",
+     main = "Test (Fall)")
+abline(h = 0:1, col = "gray", lty = 2)
+
+# Full - Test
+plot(p_test_full_mean, jitter(e_test), pch = 16,
+     col = get_colors(testing_df_emg$site_year),
+     xlab = "Predicted", ylab = "Observed",
+     main = "Test (Full)")
+abline(h = 0:1, col = "gray", lty = 2)
+
+# Reset layout
+par(mfrow = c(1, 1))
+
 ###### Evaluate Prediction ######
 mu_test_post  <- fit$draws("mu_test", format = "draws_matrix")  
 mu_test_mean <- apply(mu_test_post, 2, mean)
@@ -1166,6 +1651,10 @@ mu_train_mean <- apply(mu_train_post, 2, mean)
 
 p_train_post  <- fit_rep$draws("p_train", format = "draws_matrix")
 p_train_mean <- apply(p_train_post, 2, mean)
+
+
+
+
 
 mu_train_fixed_post  <- fit$draws("mu_train_fixed", format = "draws_matrix")  
 mu_train_fixed_mean <- apply(mu_train_fixed_post, 2, mean)
@@ -1341,57 +1830,74 @@ roc_obj <- roc(training_df_rep$r_train, p_train_fixed_mean)
 plot(roc_obj, main = paste("Train Fixed only ROC Curve, AUC =", round(auc(roc_obj), 3)))
 
 ###### CRPS with scoring rules package #######
+library(posterior)
+library(scoringRules)
 
-draws_df <- fit$draws(format = "df")
-# Access posterior predictive samples
-y_train_pred_draws <- draws_df[, grep("^y_train_pred\\[", names(draws_df))]
-y_train_fixed_pred_draws <- draws_df[, grep("^y_train_fixed_pred\\[", names(draws_df))]
-y_test_pred_draws <- draws_df[, grep("^y_test_pred\\[", names(draws_df))]
+### Fecundity 
+draws_y <- fit$draws(format = "df")
+y_train_pred <- draws_y[, grep("^y_train_pred\\[", names(draws_y))]
+y_train_fixed_pred <- draws_y[, grep("^y_train_fixed_pred\\[", names(draws_y))]
+y_test_pred <- draws_y[, grep("^y_test_pred\\[", names(draws_y))]
 
-draws_df <- fit_rep$draws(format = "df")
-# Access posterior predictive samples
-r_train_pred_draws <- draws_df[, grep("^r_train_pred\\[", names(draws_df))]
-r_train_fixed_pred_draws <- draws_df[, grep("r_train_pred_fixed\\[", names(draws_df))]
-r_test_pred_draws <- draws_df[, grep("^r_test_pred\\[", names(draws_df))]
+# Reproduction
+draws_r <- fit_rep$draws(format = "df")
+r_train_pred <- draws_r[, grep("^r_train_pred\\[", names(draws_r))]
+r_train_fixed_pred <- draws_r[, grep("^r_train_pred_fixed\\[", names(draws_r))]
+r_test_pred <- draws_r[, grep("^r_test_pred\\[", names(draws_r))]
+
+### Fall emerged
+draws_e_fall <- fit_emg_fall$draws(format = "df")
+e_train_pred_fall <- draws_e_fall[, grep("^e_train_pred\\[", names(draws_e_fall))]
+e_train_fixed_pred_fall <- draws_e_fall[, grep("^e_train_pred_fixed\\[", names(draws_e_fall))]
+e_test_pred_fall <- draws_e_fall[, grep("^e_test_pred\\[", names(draws_e_fall))]
+
+# Full climate emerged
+draws_e_full <- fit_emg_full$draws(format = "df")
+e_train_pred_full <- draws_e_full[, grep("^e_train_pred\\[", names(draws_e_full))]
+e_train_fixed_pred_full <- draws_e_full[, grep("^e_train_pred_fixed\\[", names(draws_e_full))]
+e_test_pred_full <- draws_e_full[, grep("^e_test_pred\\[", names(draws_e_full))]
+
+# Rhat -- cutoff > 1.05 indicates convergence issues
+
+# Fecundity Rhat values
+rhat_y_train <- rhat(as.matrix(y_train_pred))
+rhat_y_train_fixed <- rhat(as.matrix(y_train_fixed_pred))
+rhat_y_test <- rhat(as.matrix(y_test_pred))
+
+# Reproduction Rhat values
+rhat_r_train <- rhat(as.matrix(r_train_pred))
+rhat_r_train_fixed <- rhat(as.matrix(r_train_fixed_pred))
+rhat_r_test <- rhat(as.matrix(r_test_pred))
+
+# Emerged Fall Rhat values
+rhat_e_fall_train <- rhat(as.matrix(e_train_pred_fall))
+rhat_e_fall_train_fixed <- rhat(as.matrix(e_train_fixed_pred_fall))
+rhat_e_fall_test <- rhat(as.matrix(e_test_pred_fall))
+
+# Emerged Full Rhat values
+rhat_e_full_train <- rhat(as.matrix(e_train_pred_full))
+rhat_e_full_train_fixed <- rhat(as.matrix(e_train_fixed_pred_full))
+rhat_e_full_test <- rhat(as.matrix(e_test_pred_full))
 
 
-y_train_pred_matrix <- as.matrix(y_train_pred_draws)
-y_test_pred_matrix <- as.matrix(y_test_pred_draws)
-y_train_fixed_pred_matrix <- as.matrix(y_train_fixed_pred_draws)
-rhat(y_train_pred_matrix) #1.285371 ##above 1.05
-rhat(y_test_pred_matrix) #1.021609
-rhat(y_train_fixed_pred_matrix) #1.120833 ## above 1.05
+#Error: vector memory limit of 16.0 Gb reached, see mem.maxVSize()
 
-r_train_pred_matrix <- as.matrix(r_train_pred_draws)
-r_test_pred_matrix <- as.matrix(r_test_pred_draws)
-r_train_fixed_pred_matrix <- as.matrix(r_train_fixed_pred_draws)
-rhat(r_train_pred_matrix) #1.149563 ##above 1.05
-rhat(r_test_pred_matrix) #1.012776
-rhat(r_train_fixed_pred_matrix) #1.018402
-
-y_train_obs <- training_df$Fecundity 
+# Observed data 
+y_train_obs <- training_df$Fecundity
 y_test_obs <- testing_df$Fecundity
-
 r_train_obs <- training_df_rep$r_train
 r_test_obs <- testing_df_rep$r_test
+e_train_obs <- training_df_emg$e_train
+e_test_obs <- testing_df_emg$e_test
 
-# Transpose predictive samples to match expected dimensions
-y_train_pred_draws_t <- t(as.matrix(y_train_pred_draws))
-y_train_fixed_pred_draws_t <- t(as.matrix(y_train_fixed_pred_draws))
-y_test_pred_draws_t <- t(as.matrix(y_test_pred_draws))
+#CRPS 
+get_crps <- function(obs, pred_df) {
+  pred_t <- t(as.matrix(pred_df))
+  crps_sample(y = obs, dat = pred_t)
+}
 
-r_train_pred_draws_t <- t(as.matrix(r_train_pred_draws))
-r_train_fixed_pred_draws_t <- t(as.matrix(r_train_fixed_pred_draws))
-r_test_pred_draws_t <- t(as.matrix(r_test_pred_draws))
+# CRPS calculation 
 
-# Compute CRPS for each dataset
-crps_train <- crps_sample(y = y_train_obs, dat = y_train_pred_draws_t)
-crps_train_fixed <- crps_sample(y = y_train_obs, dat = y_train_fixed_pred_draws_t)
-crps_test <- crps_sample(y = y_test_obs, dat = y_test_pred_draws_t)
-
-crps_train <- crps_sample(y = r_train_obs, dat = r_train_pred_draws_t)
-crps_train_fixed <- crps_sample(y = r_train_obs, dat = r_train_fixed_pred_draws_t)
-crps_test <- crps_sample(y = r_test_obs, dat = r_test_pred_draws_t)
 ## fecundity
 mean_crps_train <- mean(crps_train) #87.30022
 mean_crps_train_fixed <- mean(crps_train_fixed) #151.441
@@ -1402,19 +1908,84 @@ mean_crps_train <- mean(crps_train) #0.1867305
 mean_crps_train_fixed <- mean(crps_train_fixed) #0.2410395
 mean_crps_test <- mean(crps_test) #0.1896876
 
- 
-hist(crps_train)
-hist(crps_train_fixed)
-hist(crps_test)
+# Fecundity
+crps_y <- list(
+  train = get_crps(y_train_obs, y_train_pred),
+  train_fixed = get_crps(y_train_obs, y_train_fixed_pred),
+  test = get_crps(y_test_obs, y_test_pred)
+)
 
-# Histogram for the first training data point
-hist(y_train_pred_draws_t[1, ],
+# Reproduction
+crps_r <- list(
+  train = get_crps(r_train_obs, r_train_pred),
+  train_fixed = get_crps(r_train_obs, r_train_fixed_pred),
+  test = get_crps(r_test_obs, r_test_pred)
+)
+
+
+
+# E (Fall)
+crps_e_fall <- list(
+  train = get_crps(e_train_obs, e_train_pred_fall),
+  train_fixed = get_crps(e_train_obs, e_train_fixed_pred_fall),
+  test = get_crps(e_test_obs, e_test_pred_fall)
+)
+
+
+# E (Full)
+crps_e_full <- list(
+  train = get_crps(e_train_obs, e_train_pred_full),
+  train_fixed = get_crps(e_train_obs, e_train_fixed_pred_full),
+  test = get_crps(e_test_obs, e_test_pred_full)
+)
+
+# ==== Mean CRPS Summary ====
+# Mean CRPS for y
+mean_crps_y <- sapply(crps_y, mean)
+
+# Mean CRPS for r
+mean_crps_r <- sapply(crps_r, mean)
+
+# Mean CRPS for e_fall
+mean_crps_e_fall <- sapply(crps_e_fall, mean)
+
+# Mean CRPS for e_full
+mean_crps_e_full <- sapply(crps_e_full, mean)
+
+print(mean_crps_y)
+print(mean_crps_r)
+print(mean_crps_e_fall)
+#train train_fixed        test 
+#0.1431040   0.1842831   0.2683736 
+print(mean_crps_e_full)
+# 0.1427193   0.1798301   0.2583138 
+
+
+# Set up plotting layout: 3 rows (train, train_fixed, test), 2 columns (fall, full)
+par(mfrow = c(3, 2), mar = c(4, 4, 3, 1))  # Adjust margins for readability
+
+# Row 1: train
+hist(crps_e_fall$train, breaks = 30, main = "CRPS - e_fall_train", col = "skyblue", xlab = "CRPS", ylab = "Frequency")
+hist(crps_e_full$train, breaks = 30, main = "CRPS - e_full_train", col = "skyblue", xlab = "CRPS", ylab = "Frequency")
+
+# Row 2: train_fixed
+hist(crps_e_fall$train_fixed, breaks = 30, main = "CRPS - e_fall_train_fixed", col = "orange", xlab = "CRPS", ylab = "Frequency")
+hist(crps_e_full$train_fixed, breaks = 30, main = "CRPS - e_full_train_fixed", col = "orange", xlab = "CRPS", ylab = "Frequency")
+
+# Row 3: test
+hist(crps_e_fall$test, breaks = 30, main = "CRPS - e_fall_test", col = "purple", xlab = "CRPS", ylab = "Frequency")
+hist(crps_e_full$test, breaks = 30, main = "CRPS - e_full_test", col = "purple", xlab = "CRPS", ylab = "Frequency")
+
+# Reset to default plotting (optional)
+par(mfrow = c(1,1))
+
+
+#Single Posterior Predictive Check 
+hist(t(as.matrix(e_train_pred_full))[1, ],
      breaks = 30,
-     main = "Posterior Predictive Distribution for First Training Data Point",
+     main = "Posterior Predictive for 1st Training Point (Fecundity)",
      xlab = "Predicted Value",
-     col = "skyblue",
-     border = "white")
-
+     col = "skyblue", border = "white")
 
 
 #keep at 10,000
