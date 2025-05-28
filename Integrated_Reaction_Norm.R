@@ -26,6 +26,10 @@ library(hypergeo)
 
 ##### Load Data #########
 data <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate.csv", header = TRUE) 
+## run this line of code to do climate PCA without SOS variables
+
+#data <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate_SOS.csv", header = TRUE)
+## run this line of code to include SOS variables as well...
 
 kinshipIDs <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/common_gardens/93cg_genotypes.csv")
 

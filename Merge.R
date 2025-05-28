@@ -3,7 +3,7 @@
 ######## for bromecast reaction norm paper ########
 ######## R. Nelson, M. Vahsen, & P. Adler ######
 ########### code created on 1/28/25 #######
-############ last modified: 4/15/25 ########################
+############ last modified: 5/28/25 ########################
 
 ### outstanding questions ##########
 ## whether approach to zero neighbors makes sense 
@@ -227,6 +227,7 @@ str(combined_clean)
 
 ## save as .csv 
 write.csv(combined_clean, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean.csv", row.names = FALSE)
+
 
 ###### CG Lat Lon ######
 combined_clean <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean.csv")
@@ -517,3 +518,94 @@ combined_clean_climate <- left_join(combined_clean, recent, by = c("site_old", "
 
 
 write.csv(combined_clean_climate, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate.csv", row.names = FALSE)
+
+########## Start of Season Variables ##################
+data <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate.csv", header = TRUE) 
+
+sat <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/list_plots_sos.csv", header = TRUE) 
+
+cg <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/garden_plots_sos.csv", header = TRUE) 
+
+climD <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/daymet_daily.csv")
+
+sat_clean  <- sat %>% dplyr::select(site_old, Year, SOS_doy, SOS_date)
+
+cg_clean  <- cg %>% dplyr::select(site_old, Year, SOS_doy, SOS_date)
+
+ 
+sos <- rbind(sat_clean, cg_clean)
+
+## check first that none of the SOS dates for a given year are from Oct-Dec
+names(sos)[names(sos) == "Year"] <- "year"
+
+climD_short <-climD %>% dplyr::select(yday, prcp, tmax, tmin, SiteCode, climDay, tavg, climYr)
+## climate year and year the same in all of these 
+
+sos_climate <- left_join(
+  sos,
+  climD_short,
+  by = c("site_old" = "SiteCode", "year" = "climYr", "SOS_doy" = "yday")
+)
+
+## remove duplicates 
+sos_climate <- sos_climate %>% distinct()
+
+library(dplyr)
+library(purrr)
+
+windows <- c(15, 30, 60)
+
+# extract climate info function
+extract_window_stats <- function(site_old, year, SOS_doy, var, direction, window) {
+  if (direction == "before") {
+    climD_window <- climD %>%
+      filter(
+        SiteCode == site_old,
+        climYr == year,
+        yday >= SOS_doy - window,
+        yday < SOS_doy
+      )
+  } else {
+    climD_window <- climD %>%
+      filter(
+        SiteCode == site_old,
+        climYr == year,
+        yday > SOS_doy,
+        yday <= SOS_doy + window
+      )
+  }
+  climD_window[[var]]
+}
+
+# Create summaries for climate windows
+climate_summaries <- pmap_dfr(
+  list(site_old = sos$site_old, year = sos$year, SOS_doy = sos$SOS_doy),
+  function(site_old, year, SOS_doy) {
+    vals <- list()
+    for (w in windows) {
+      for (direction in c("before", "after")) {
+        vals[[paste0("prcp_", direction, w, "d_sum")]] <- sum(
+          extract_window_stats(site_old, year, SOS_doy, "prcp", direction, w), na.rm = TRUE)
+        vals[[paste0("tmin_", direction, w, "d_avg")]] <- mean(
+          extract_window_stats(site_old, year, SOS_doy, "tmin", direction, w), na.rm = TRUE)
+        vals[[paste0("tmax_", direction, w, "d_avg")]] <- mean(
+          extract_window_stats(site_old, year, SOS_doy, "tmax", direction, w), na.rm = TRUE)
+        vals[[paste0("tavg_", direction, w, "d_avg")]] <- mean(
+          extract_window_stats(site_old, year, SOS_doy, "tavg", direction, w), na.rm = TRUE)
+      }
+    }
+    as_tibble(vals)
+  }
+)
+
+# summary dataframe
+sos_with_climate <- bind_cols(sos, climate_summaries)
+### gives climate info 15,30, and 60 days before after SOS
+### sos_climate gives climate info on SOS date
+combined_clean_climate_SOS <- left_join(data, sos_with_climate, by = c("site_old", "year"))
+
+### still need to rerun with NAs
+
+### save as new file
+write.csv(combined_clean_climate_SOS, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate_SOS.csv", row.names = FALSE)
+

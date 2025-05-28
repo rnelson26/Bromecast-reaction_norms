@@ -1,4 +1,4 @@
-site_year,Lat,Lon,Type,Site,Year,geometry,SOS_doy,SOS_date
+site_year,Lat,Lon,Type,site_old,Year,geometry,SOS_doy,SOS_date
 Boise_High 2022,43.20847803,-116.9951781,Satellite,Boise_High,2022,POINT (-116.9951781 43.20847803),72.0,2022-03-14
 Boise_Low 2022,43.333643,-116.708793,Satellite,Boise_Low,2022,POINT (-116.708793 43.333643),73.0,2022-03-15
 CaseAoyamaS1 2022,43.47110267,-119.6833963,Satellite,CaseAoyamaS1,2022,POINT (-119.6833963 43.47110267),95.0,2022-04-06
