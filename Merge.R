@@ -3,7 +3,7 @@
 ######## for bromecast reaction norm paper ########
 ######## R. Nelson, M. Vahsen, & P. Adler ######
 ########### code created on 1/28/25 #######
-############ last modified: 5/28/25 ########################
+############ last modified: 6/3/25 ########################
 
 ### outstanding questions ##########
 ## whether approach to zero neighbors makes sense 
@@ -604,7 +604,6 @@ sos_with_climate <- bind_cols(sos, climate_summaries)
 ### sos_climate gives climate info on SOS date
 combined_clean_climate_SOS <- left_join(data, sos_with_climate, by = c("site_old", "year"))
 
-### still need to rerun with NAs
 
 ### save as new file
 write.csv(combined_clean_climate_SOS, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate_SOS.csv", row.names = FALSE)
