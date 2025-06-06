@@ -1,7 +1,7 @@
 #### Integrated Reaction Norm Model #######
 ######## code by Becca Nelson and Justin Van Ee ###############################
 ############# created 3-25-25 ######################
-############# Last modified: 6-3-25 ##########################
+############# Last modified: 6-6-25 ##########################
 ######## modifies RMD file to pull from one integrated df ########
 
 rm(list = ls())
@@ -1696,12 +1696,21 @@ abline(h = 0:1, col = "gray", lty = 2)
 par(mfrow = c(1, 1))
 
 ###### Evaluate Prediction ######
+## test 
 mu_test_post  <- fit$draws("mu_test", format = "draws_matrix")  
 mu_test_mean <- apply(mu_test_post, 2, mean)
 
 p_test_post  <- fit_rep$draws("p_test", format = "draws_matrix") 
 p_test_mean <- apply(p_test_post, 2, mean)
 
+## test fixed
+mu_test_post_fixed  <- fit$draws("mu_test_fixed", format = "draws_matrix")  
+mu_test_mean_fixed <- apply(mu_test_post_fixed, 2, mean)
+
+p_test_post_fixed  <- fit_rep$draws("p_test_fixed", format = "draws_matrix") 
+p_test_mean_fixed <- apply(p_test_post_fixed, 2, mean)
+
+## train
 mu_train_post  <- fit$draws("mu_train", format = "draws_matrix")
 mu_train_mean <- apply(mu_train_post, 2, mean)
 
@@ -1709,13 +1718,18 @@ p_train_post  <- fit_rep$draws("p_train", format = "draws_matrix")
 p_train_mean <- apply(p_train_post, 2, mean)
 
 
-
-
-
+## train fixed 
 mu_train_fixed_post  <- fit$draws("mu_train_fixed", format = "draws_matrix")  
 mu_train_fixed_mean <- apply(mu_train_fixed_post, 2, mean)
 
 p_train_fixed_post  <- fit_rep$draws("mu_train_fixed", format = "draws_matrix")  
+p_train_fixed_mean <- apply(p_train_fixed_post, 2, mean)
+
+## train noise
+mu_train_post_noise  <- fit$draws("mu_train_noise", format = "draws_matrix")  
+mu_train_mean_noise <- apply(mu_train_post_noise, 2, mean)
+
+p_train_fixed_post  <- fit_rep$draws("mu_train_noise", format = "draws_matrix")  
 p_train_fixed_mean <- apply(p_train_fixed_post, 2, mean)
 
 mu_test_lower <- apply(mu_test_post, 2, quantile, probs = 0.025)
@@ -1772,8 +1786,10 @@ rsq(p_train_mean, training_df_rep$r_train)
 rsq(p_train_fixed_mean, training_df_rep$r_train)
 
 testing_df$mu_pred <- mu_test_mean
+testing_df$mu_fixed_pred <- mu_test_mean_fixed
 training_df$mu_pred <- mu_train_mean
 training_df$mu_fixed_pred <- mu_train_fixed_mean
+training_df$mu_noise_pred <- mu_train_mean_noise 
 
 testing_df_rep$mu_pred <- p_test_mean
 training_df_rep$mu_pred <- p_train_mean
@@ -1874,6 +1890,55 @@ plot(p_train_fixed_mean, jitter(training_df_rep$r_train),
      pch = 16, col = colors[site_years])
 abline(h = 0:1, lty = 1, col = "black")
 
+
+###### Fecundity comparison figure ########
+library(ggplot2)
+library(patchwork)  
+
+# Panel A: Training - mu_pred
+p1 <- ggplot(training_df, aes(x = log(mu_pred), y = log(Fecundity), color = Type)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Train: mu_pred", x = "Predicted (log)", y = "Observed (log)") +
+  theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
+
+
+# Panel B: Training - mu_fixed_pred
+p2 <- ggplot(training_df, aes(x = log(mu_fixed_pred), y = log(Fecundity), color = Type)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Train: mu_fixed_pred", x = "Predicted (log)", y = "Observed (log)") +
+  theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
+
+# Panel C: Training - mu_noise_pred
+p3 <- ggplot(training_df, aes(x = log(mu_noise_pred), y = log(Fecundity), color = Type)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Train: mu_noise_pred", x = "Predicted (log)", y = "Observed (log)") +
+  theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
+
+# Panel D: Testing - mu_pred
+p4 <- ggplot(testing_df, aes(x = log(mu_pred), y = log(Fecundity), color = Type)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Test: mu_pred", x = "Predicted (log)", y = "Observed (log)") +
+  theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
+
+# Panel E: Testing - mu_fixed_pred
+p5 <- ggplot(testing_df, aes(x = log(mu_fixed_pred), y = log(Fecundity), color = Type)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Test: mu_fixed_pred", x = "Predicted (log)", y = "Observed (log)") +
+  theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
+
+# Combine plots into a 2x3 layout
+(p1 | p2 | p3) / (p4 | p5 | plot_spacer())
+
+
+ggsave("Predicted_vs_Observed_Fecundity.png",
+       plot = (p1 | p2 | p3) / (p4 | p5 | plot_spacer()),
+       dpi = 300,
+       width = 12, height = 8, units = "in", bg = "white")
 
 library(pROC)
 roc_obj <- roc(testing_df_rep$r_test, p_test_mean)

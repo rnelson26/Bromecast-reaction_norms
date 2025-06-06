@@ -169,11 +169,15 @@ beta_shrub ~ normal(0, 1);
 
 generated quantities {
   vector[n_test] mu_test;
+  vector[n_test] mu_test_fixed;
   vector[n_train] mu_train;
   vector[n_train] mu_train_fixed;
+   vector[n_train] mu_train_noise;
   array[n_train] int y_train_pred;
   array[n_train] int y_train_fixed_pred;
+    array[n_train] int y_train_noise_pred;
   array[n_test] int y_test_pred;
+  array[n_test] int y_test_fixed_pred;
 
   // Compute mu_train
   for (i in 1:n_train) {
@@ -191,6 +195,25 @@ generated quantities {
       mu_train[i] = exp(mu_base);
     else
       mu_train[i] = exp(mu_base + eta_plot[plot_index_train[i]]);
+  }
+
+  // Compute mu_train_noise
+  for (i in 1:n_train) {
+    int idx = idx_plant_train[i];
+    int idx_site = idx_plant_train_site[i];
+    int idx_genotype = genotype_plant_train[i];
+    real site_year_noise = normal_rng(0, sigma_site_year);
+    real mu_base = dot_product(W[idx, ], beta[idx_genotype, ])+  dot_product(W_soil[idx_site, ], beta[idx_genotype, ])+ beta_0[idx_genotype] +
+                   site_year_noise +
+                   beta_neighbors * neighbors_train[i] +
+                   beta_annual * annual_train[i] +
+                   beta_perennial * perennial_train[i] +
+                   beta_shrub * shrub_train[i];
+
+    if (plot_index_train[i] == 0)
+      mu_train_noise[i] = exp(mu_base);
+    else
+      mu_train_noise[i] = exp(mu_base + eta_plot[plot_index_train[i]]);
   }
 
   // Compute mu_test
@@ -227,29 +250,59 @@ generated quantities {
     mu_train_fixed[i] = exp(mu_fixed_base);  // no site-year or plot effects
   }
 
-  // Generate posterior predictive samples for y_train_pred and y_train_fixed_pred
-  for (i in 1:n_train) {
-    int y_sample;
-    y_sample = neg_binomial_2_rng(mu_train[i], theta);
-    while (y_sample == 0) {
-      y_sample = neg_binomial_2_rng(mu_train[i], theta);
-    }
-    y_train_pred[i] = y_sample;
-
-    y_sample = neg_binomial_2_rng(mu_train_fixed[i], theta);
-    while (y_sample == 0) {
-      y_sample = neg_binomial_2_rng(mu_train_fixed[i], theta);
-    }
-    y_train_fixed_pred[i] = y_sample;
-  }
-
-  // Generate posterior predictive samples for y_test_pred
+    // Compute mu_test_fixed
   for (i in 1:n_test) {
-    int y_sample;
-    y_sample = neg_binomial_2_rng(mu_test[i], theta);
-    while (y_sample == 0) {
-      y_sample = neg_binomial_2_rng(mu_test[i], theta);
-    }
-    y_test_pred[i] = y_sample;
+    int idx = idx_plant_test[i];
+    int idx_site = idx_plant_test_site[i];
+    int idx_genotype = genotype_plant_test[i];
+    real mu_fixed_base = dot_product(W[idx, ], beta[idx_genotype, ]) +  dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
+                         beta_0[idx_genotype] +
+                         beta_neighbors * neighbors_test[i] +
+                         beta_annual * annual_test[i] +
+                         beta_perennial * perennial_test[i] +
+                         beta_shrub * shrub_test[i];
+
+    mu_test_fixed[i] = exp(mu_fixed_base);  // no site-year or plot effects
   }
+
+// Generate posterior predictive samples for y_train_pred and y_train_fixed_pred and y_train_noise_pred
+for (i in 1:n_train) {
+  int y_sample;
+
+  y_sample = neg_binomial_2_rng(mu_train[i], theta);
+  while (y_sample == 0) {
+    y_sample = neg_binomial_2_rng(mu_train[i], theta);
+  }
+  y_train_pred[i] = y_sample;
+
+  y_sample = neg_binomial_2_rng(mu_train_fixed[i], theta);
+  while (y_sample == 0) {
+    y_sample = neg_binomial_2_rng(mu_train_fixed[i], theta);
+  }
+  y_train_fixed_pred[i] = y_sample;
+
+  y_sample = neg_binomial_2_rng(mu_train_noise[i], theta);
+  while (y_sample == 0) {
+    y_sample = neg_binomial_2_rng(mu_train_noise[i], theta);
+  }
+  y_train_noise_pred[i] = y_sample;
+}
+
+// Generate posterior predictive samples for y_test_pred and y_test_fixed_pred
+for (i in 1:n_test) {
+  int y_sample;
+
+  y_sample = neg_binomial_2_rng(mu_test[i], theta);
+  while (y_sample == 0) {
+    y_sample = neg_binomial_2_rng(mu_test[i], theta);
+  }
+  y_test_pred[i] = y_sample;
+
+  y_sample = neg_binomial_2_rng(mu_test_fixed[i], theta);
+  while (y_sample == 0) {
+    y_sample = neg_binomial_2_rng(mu_test_fixed[i], theta);
+  }
+  y_test_fixed_pred[i] = y_sample;
+}
+
 }
