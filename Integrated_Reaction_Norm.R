@@ -1311,7 +1311,95 @@ p + facet_text(size = 15)
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior_emg_fall,  pars = c("p_test[199]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
-### explore parameters
+
+###### posterior means of random effects #######
+library(posterior)
+#posterior <- fit$draws(variables = c("theta","beta", "sigma", "W", "zeta", "mu_test", "mu_train", "W_soil"))
+draws <- fit$draws()
+draws_df <- as_draws_df(draws)
+
+## genotype random intercept
+beta_0_raw <- draws_df %>%
+  dplyr::select(starts_with("beta_0_raw"))
+
+zeta_0 <- draws_df$zeta_0
+
+beta_0_scaled <- beta_0_raw * zeta_0
+
+beta_0_means <- beta_0_scaled %>%
+  summarise(across(everything(), list(
+    mean = ~mean(.),
+    q5 = ~quantile(., 0.05),
+    q95 = ~quantile(., 0.95)
+  ))) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = c("Genotype", "stat"),
+    names_pattern = "(.*)_(mean|q5|q95)"
+  ) %>%
+  pivot_wider(
+    names_from = stat,
+    values_from = value
+  )
+
+##site-year random effects
+
+site_year_raw <- draws_df %>%
+  dplyr::select(starts_with("site_year_effect_train_raw"))
+
+sigma_sy <- draws_df$sigma_site_year
+
+# Multiply each draw's raw effect by sigma_site_year
+site_year_scaled <- site_year_raw * sigma_sy
+
+site_year_means <- site_year_scaled %>%
+  summarise(across(everything(), list(
+    mean = ~mean(.),
+    q5 = ~quantile(., 0.05),
+    q95 = ~quantile(., 0.95)
+  ))) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = c("SiteYear", "stat"),
+    names_pattern = "(.*)_(mean|q5|q95)"
+  ) %>%
+  pivot_wider(
+    names_from = stat,
+    values_from = value
+  )
+
+
+## plot random effects
+eta_plot_raw <- draws_df %>%
+  dplyr::select(starts_with("eta_plot_raw"))
+
+sigma_plot <- draws_df$sigma_plot
+
+eta_plot_scaled <- eta_plot_raw * sigma_plot
+
+eta_plot_means <- eta_plot_scaled %>%
+  summarise(across(everything(), list(
+    mean = ~mean(.),
+    q5 = ~quantile(., 0.05),
+    q95 = ~quantile(., 0.95)
+  ))) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = c("Plot", "stat"),
+    names_pattern = "(.*)_(mean|q5|q95)"
+  ) %>%
+  pivot_wider(
+    names_from = stat,
+    values_from = value
+  )
+
+#summarise(across(everything(), list(mean = mean, sd = sd, q25 = ~quantile(.x, 0.25))))
+
+
+##
+
+
+### explore parameters ##############
 library(posterior)
 posterior_df <- as_draws_df(posterior)
 names(posterior_df)
