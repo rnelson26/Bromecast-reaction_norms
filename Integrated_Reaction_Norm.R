@@ -1396,8 +1396,32 @@ eta_plot_means <- eta_plot_scaled %>%
 #summarise(across(everything(), list(mean = mean, sd = sd, q25 = ~quantile(.x, 0.25))))
 
 
-##
+## visualize random effect means
 
+beta_0_means %>%
+  ggplot(aes(x = reorder(Genotype, mean), y = mean)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = q5, ymax = q95), width = 0.2) +
+  theme_classic() +
+  labs(x = "Genotype", y = "Genotype Intercept (mean ± 90% CI)") +
+  coord_flip()
+
+site_year_means %>%
+  ggplot(aes(x = reorder(SiteYear, mean), y = mean)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = q5, ymax = q95), width = 0.2) +
+  theme_classic() +
+  labs(x = "Site-Year", y = "Site-Year Effect (mean ± 90% CI)") +
+  coord_flip()
+
+
+eta_plot_means %>%
+  ggplot(aes(x = reorder(Plot, mean), y = mean)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = q5, ymax = q95), width = 0.2) +
+  theme_classic() +
+  labs(x = "Plot", y = "Plot Effect (mean ± 90% CI)") +
+  coord_flip()
 
 ### explore parameters ##############
 library(posterior)
