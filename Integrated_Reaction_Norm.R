@@ -1,7 +1,7 @@
 #### Integrated Reaction Norm Model #######
 ######## code by Becca Nelson and Justin Van Ee ###############################
 ############# created 3-25-25 ######################
-############# Last modified: 6-6-25 ##########################
+############# Last modified: 6-10-25 ##########################
 ######## modifies RMD file to pull from one integrated df ########
 
 rm(list = ls())
@@ -218,6 +218,7 @@ df <- df %>%
 
 
 df_rep <- data %>%
+  dplyr::filter(Emerged %in% c("Y")) %>%  ## comment out if you don't reproduced to be conditional on Emerged 
   dplyr::filter(Reproduced %in% c("Y", "N")) %>% 
   mutate(
     site_numeric = as.numeric(as.factor(site)),
@@ -317,8 +318,10 @@ SOS_vars <- c(
   "prcp.Spr", "tmean.Spr",  "prcp.Sum", "tmean.Sum", 
   "prcp.Win", "tmean.Win", "swe_mean.Win", "prcp.Fall", 
   "tmean.Fall", "swe_mean.Fall", "MAT", 
-  "total_precip", "seasonality", "prcp_before30d_sum",   
-   "tmin_before30d_avg", "tmax_before30d_avg", "tavg_before30d_avg", "prcp_after30d_sum", "tmin_after30d_avg",     "tmax_after30d_avg", "tavg_after30d_avg" 
+  "total_precip", "seasonality", "prcp_center30d_mean",  
+"tmin_center30d_mean",   "tmax_center30d_mean",  
+"tavg_center30d_mean",   "tmin_center30d_min",   
+"tmax_center30d_max"   
 )
 
 #fall_vars <- c(
@@ -1104,7 +1107,7 @@ fit <- mod$sample(
   init = init_list
 )
 
-### Reproduced
+        ### Reproduced
 fit_rep <- mod_rep$sample(
   data = stan_data_reproduced,
   chains = 3,
@@ -1232,6 +1235,7 @@ color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = c("W[1,1]","W[1,2]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 
+
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior_rep,  pars = c("W[1,1]","W[1,2]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
@@ -1342,6 +1346,14 @@ beta_0_means <- beta_0_scaled %>%
     values_from = value
   )
 
+hist(beta_0_means$mean, main = "Distribution of Genotype Means",
+     xlab = "Mean", breaks = 20)
+
+
+range(beta_0_means$mean)
+
+sum(abs(beta_0_means$mean) > 0.05)  
+
 ##site-year random effects
 
 site_year_raw <- draws_df %>%
@@ -1368,6 +1380,16 @@ site_year_means <- site_year_scaled %>%
     values_from = value
   )
 
+summary(site_year_means$mean)
+
+
+hist(site_year_means$mean, main = "Distribution of Site-Year Means",
+     xlab = "Mean", breaks = 20)
+
+
+range(site_year_means$mean)
+
+sum(abs(site_year_means$mean) > 0.05)  
 
 ## plot random effects
 eta_plot_raw <- draws_df %>%
@@ -1392,6 +1414,15 @@ eta_plot_means <- eta_plot_scaled %>%
     names_from = stat,
     values_from = value
   )
+
+
+hist(eta_plot_means$mean, main = "Distribution of Genotype Means",
+     xlab = "Mean", breaks = 20)
+
+
+range(eta_plot_means$mean)
+
+sum(abs(eta_plot_means$mean) > 0.05)  
 
 #summarise(across(everything(), list(mean = mean, sd = sd, q25 = ~quantile(.x, 0.25))))
 
@@ -1422,6 +1453,11 @@ eta_plot_means %>%
   theme_classic() +
   labs(x = "Plot", y = "Plot Effect (mean ± 90% CI)") +
   coord_flip()
+
+##### what we would expect from the prior
+rnorm(1000, 0, 1) * sigma_sy  
+
+
 
 ### explore parameters ##############
 library(posterior)
@@ -1815,12 +1851,6 @@ mu_test_mean <- apply(mu_test_post, 2, mean)
 p_test_post  <- fit_rep$draws("p_test", format = "draws_matrix") 
 p_test_mean <- apply(p_test_post, 2, mean)
 
-## test fixed
-mu_test_post_fixed  <- fit$draws("mu_test_fixed", format = "draws_matrix")  
-mu_test_mean_fixed <- apply(mu_test_post_fixed, 2, mean)
-
-p_test_post_fixed  <- fit_rep$draws("p_test_fixed", format = "draws_matrix") 
-p_test_mean_fixed <- apply(p_test_post_fixed, 2, mean)
 
 ## train
 mu_train_post  <- fit$draws("mu_train", format = "draws_matrix")
@@ -1829,20 +1859,6 @@ mu_train_mean <- apply(mu_train_post, 2, mean)
 p_train_post  <- fit_rep$draws("p_train", format = "draws_matrix")
 p_train_mean <- apply(p_train_post, 2, mean)
 
-
-## train fixed 
-mu_train_fixed_post  <- fit$draws("mu_train_fixed", format = "draws_matrix")  
-mu_train_fixed_mean <- apply(mu_train_fixed_post, 2, mean)
-
-p_train_fixed_post  <- fit_rep$draws("mu_train_fixed", format = "draws_matrix")  
-p_train_fixed_mean <- apply(p_train_fixed_post, 2, mean)
-
-## train noise
-mu_train_post_noise  <- fit$draws("mu_train_noise", format = "draws_matrix")  
-mu_train_mean_noise <- apply(mu_train_post_noise, 2, mean)
-
-p_train_fixed_post  <- fit_rep$draws("mu_train_noise", format = "draws_matrix")  
-p_train_fixed_mean <- apply(p_train_fixed_post, 2, mean)
 
 mu_test_lower <- apply(mu_test_post, 2, quantile, probs = 0.025)
 mu_test_upper <- apply(mu_test_post, 2, quantile, probs = 0.975)
@@ -1873,24 +1889,24 @@ mae <- function(pred, obs) mean(abs(pred - obs)) #mean absolute error
 rsq <- function(pred, obs) cor(pred, obs)^2 #R2
 
 
-rmse(mu_test_mean, testing_df$Fecundity) #2190.301
-rmse(mu_train_mean, training_df$Fecundity) #436.0987
-rmse(mu_train_fixed_mean, training_df$Fecundity) # 502.9432
+rmse(mu_test_mean, testing_df$Fecundity) #1970.286
+rmse(mu_train_mean, training_df$Fecundity) #422.0078
+##upping mcmc sampling slightly reduces error
 
 rmse(p_test_mean, testing_df_rep$r_test)
 rmse(p_train_mean, training_df_rep$r_train)
 rmse(p_train_fixed_mean, training_df_rep$r_train)
 
-mae(mu_test_mean, testing_df$Fecundity) #628.5293
-mae(mu_train_mean, training_df$Fecundity) #122.954
+mae(mu_test_mean, testing_df$Fecundity) #484.9957
+mae(mu_train_mean, training_df$Fecundity) #122.6011
 mae(mu_train_fixed_mean, training_df$Fecundity) #158.4605
 
 mae(p_test_mean, testing_df_rep$r_test)
 mae(p_train_mean, training_df_rep$r_train)
 mae(p_train_fixed_mean, training_df_rep$r_train)
 
-rsq(mu_test_mean, testing_df$Fecundity) #0.0003164908
-rsq(mu_train_mean, training_df$Fecundity) #0.4914322
+rsq(mu_test_mean, testing_df$Fecundity) #0.001890305
+rsq(mu_train_mean, training_df$Fecundity) #0.4934311
 rsq(mu_train_fixed_mean, training_df$Fecundity) #0.09938216
 
 rsq(p_test_mean, testing_df_rep$r_test)
@@ -1898,10 +1914,8 @@ rsq(p_train_mean, training_df_rep$r_train)
 rsq(p_train_fixed_mean, training_df_rep$r_train)
 
 testing_df$mu_pred <- mu_test_mean
-testing_df$mu_fixed_pred <- mu_test_mean_fixed
 training_df$mu_pred <- mu_train_mean
-training_df$mu_fixed_pred <- mu_train_fixed_mean
-training_df$mu_noise_pred <- mu_train_mean_noise 
+
 
 testing_df_rep$mu_pred <- p_test_mean
 training_df_rep$mu_pred <- p_train_mean
@@ -2046,6 +2060,7 @@ p5 <- ggplot(testing_df, aes(x = log(mu_fixed_pred), y = log(Fecundity), color =
 # Combine plots into a 2x3 layout
 (p1 | p2 | p3) / (p4 | p5 | plot_spacer())
 
+(p1 | p4 )
 
 ggsave("Predicted_vs_Observed_Fecundity.png",
        plot = (p1 | p2 | p3) / (p4 | p5 | plot_spacer()),

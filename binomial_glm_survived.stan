@@ -63,6 +63,7 @@ vector[n_site_year_train] site_year_effect_train_raw;
 real<lower=0> sigma_site_year;
 vector[n_plot] eta_plot_raw;
 real<lower=0> sigma_plot;
+real alpha; // Global intercept
 // Random intercepts for genotype  
  vector[n_g] beta_0_raw; //genotype_intercept
  real<lower=0, upper=pi()/2> u_zeta_0; //sigma_genotype_intercept
@@ -111,7 +112,7 @@ model {
     int idx_site = idx_plant_train_site[i];  
     int idx_genotype = genotype_plant_train[i];
     
-    real logit_p = dot_product(W[idx, ], beta[idx_genotype, ]) + 
+    real logit_p = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) + 
                    dot_product(W_soil[idx, ], beta[idx_genotype, ]) + dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
                    site_year_effect_train_scaled[site_year_id_train[i]] + 
                    beta_neighbors * neighbors_train[i] +
@@ -132,7 +133,7 @@ sigma_site_year ~ normal(0, 1);
 eta_plot_raw ~ normal(0, 1);
 sigma_plot ~ normal(0, 1); 
 beta_0_raw ~ normal(0, 1); 
-
+alpha ~ normal(0, 1);
 
 
 // Priors for competition
@@ -169,7 +170,7 @@ array[n_train] int e_train_pred_fixed;
        int idx_site = idx_plant_train_site[i];
       int idx_genotype = genotype_plant_train[i];
       
-      real logit_p = dot_product(W[idx, ], beta[idx_genotype, ]) + dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
+      real logit_p = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) + dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
                      site_year_effect_train_scaled[site_year_id_train[i]] +
                      beta_neighbors * neighbors_train[i] +
                      beta_annual * annual_train[i] +
@@ -190,7 +191,7 @@ array[n_train] int e_train_pred_fixed;
       int idx_genotype = genotype_plant_test[i];
       real site_year_noise = normal_rng(0, sigma_site_year);
     
-      real logit_p = dot_product(W[idx, ], beta[idx_genotype, ]) + dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
+      real logit_p = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) + dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
                      site_year_noise +
                      beta_neighbors * neighbors_test[i] +
                      beta_annual * annual_test[i] +
@@ -209,7 +210,7 @@ array[n_train] int e_train_pred_fixed;
          int idx_site = idx_plant_train_site[i];
         int idx_genotype = genotype_plant_train[i];
         
-        real mu_fixed_base = dot_product(W[idx, ], beta[idx_genotype, ]) + dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
+        real mu_fixed_base = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) + dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
                              beta_0[idx_genotype] +
                              beta_neighbors * neighbors_train[i] +
                              beta_annual * annual_train[i] +

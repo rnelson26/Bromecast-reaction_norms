@@ -3,7 +3,7 @@
 ######## for bromecast reaction norm paper ########
 ######## R. Nelson, M. Vahsen, & P. Adler ######
 ########### code created on 1/28/25 #######
-############ last modified: 6/3/25 ########################
+############ last modified: 6/10/25 ########################
 
 ### outstanding questions ##########
 ## whether approach to zero neighbors makes sense 
@@ -602,8 +602,39 @@ climate_summaries <- pmap_dfr(
 sos_with_climate <- bind_cols(sos, climate_summaries)
 ### gives climate info 15,30, and 60 days before after SOS
 ### sos_climate gives climate info on SOS date
-combined_clean_climate_SOS <- left_join(data, sos_with_climate, by = c("site_old", "year"))
+#combined_clean_climate_SOS <- left_join(data, sos_with_climate, by = c("site_old", "year"))
 
+#### updated SOS variables
+
+extract_centered_window_stats <- function(site_old, year, SOS_doy) {
+  climD_window <- climD %>%
+    filter(
+      SiteCode == site_old,
+      climYr == year,
+      yday >= SOS_doy - 15,
+      yday <= SOS_doy + 15
+    )
+  
+
+  tibble(
+    site_old = site_old,
+    year = year,
+    prcp_center30d_mean = mean(climD_window$prcp, na.rm = TRUE),
+    tmin_center30d_mean = mean(climD_window$tmin, na.rm = TRUE),
+    tmax_center30d_mean = mean(climD_window$tmax, na.rm = TRUE),
+    tavg_center30d_mean = mean(climD_window$tavg, na.rm = TRUE),
+    tmin_center30d_min = min(climD_window$tmin, na.rm = TRUE),
+    tmax_center30d_max = max(climD_window$tmax, na.rm = TRUE)
+  )
+}
+
+centered_climate_summaries <- pmap_dfr(
+  list(site_old = sos$site_old, year = sos$year, SOS_doy = sos$SOS_doy),
+  extract_centered_window_stats
+)
+
+
+combined_clean_climate_SOS <- left_join(data, centered_climate_summaries, by = c("site_old", "year"))
 
 ### save as new file
 write.csv(combined_clean_climate_SOS, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate_SOS.csv", row.names = FALSE)
