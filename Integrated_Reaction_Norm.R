@@ -1322,15 +1322,22 @@ library(posterior)
 draws <- fit$draws()
 draws_df <- as_draws_df(draws)
 
-## genotype random intercept
+
+
+### Genotype random intercepts: scaled and centered
 beta_0_raw <- draws_df %>%
   dplyr::select(starts_with("beta_0_raw"))
 
 zeta_0 <- draws_df$zeta_0
 
+# Scale
 beta_0_scaled <- beta_0_raw * zeta_0
 
-beta_0_means <- beta_0_scaled %>%
+# Center across genotypes *within each draw*
+beta_0_centered <- beta_0_scaled - rowMeans(beta_0_scaled)
+
+# Summarize
+beta_0_means <- beta_0_centered %>%
   summarise(across(everything(), list(
     mean = ~mean(.),
     q5 = ~quantile(., 0.05),
@@ -1348,23 +1355,21 @@ beta_0_means <- beta_0_scaled %>%
 
 hist(beta_0_means$mean, main = "Distribution of Genotype Means",
      xlab = "Mean", breaks = 20)
-
-
+mean(beta_0_means$mean)
 range(beta_0_means$mean)
+sum(abs(beta_0_means$mean) > 0.05)
 
-sum(abs(beta_0_means$mean) > 0.05)  
 
-##site-year random effects
-
+### Site-year random effects: scaled and centered
 site_year_raw <- draws_df %>%
   dplyr::select(starts_with("site_year_effect_train_raw"))
 
 sigma_sy <- draws_df$sigma_site_year
 
-# Multiply each draw's raw effect by sigma_site_year
 site_year_scaled <- site_year_raw * sigma_sy
+site_year_centered <- site_year_scaled - rowMeans(site_year_scaled)
 
-site_year_means <- site_year_scaled %>%
+site_year_means <- site_year_centered %>%
   summarise(across(everything(), list(
     mean = ~mean(.),
     q5 = ~quantile(., 0.05),
@@ -1380,26 +1385,23 @@ site_year_means <- site_year_scaled %>%
     values_from = value
   )
 
-summary(site_year_means$mean)
-
-
 hist(site_year_means$mean, main = "Distribution of Site-Year Means",
      xlab = "Mean", breaks = 20)
-
-
+mean(site_year_means$mean)
 range(site_year_means$mean)
+sum(abs(site_year_means$mean) > 0.05)
 
-sum(abs(site_year_means$mean) > 0.05)  
 
-## plot random effects
+### Plot random effects: scaled and centered
 eta_plot_raw <- draws_df %>%
   dplyr::select(starts_with("eta_plot_raw"))
 
 sigma_plot <- draws_df$sigma_plot
 
 eta_plot_scaled <- eta_plot_raw * sigma_plot
+eta_plot_centered <- eta_plot_scaled - rowMeans(eta_plot_scaled)
 
-eta_plot_means <- eta_plot_scaled %>%
+eta_plot_means <- eta_plot_centered %>%
   summarise(across(everything(), list(
     mean = ~mean(.),
     q5 = ~quantile(., 0.05),
@@ -1415,16 +1417,13 @@ eta_plot_means <- eta_plot_scaled %>%
     values_from = value
   )
 
-
-hist(eta_plot_means$mean, main = "Distribution of Genotype Means",
+hist(eta_plot_means$mean, main = "Distribution of Plot Means",
      xlab = "Mean", breaks = 20)
-
-
 range(eta_plot_means$mean)
+sum(abs(eta_plot_means$mean) > 0.05)
 
-sum(abs(eta_plot_means$mean) > 0.05)  
+mean(eta_plot_means$mean)
 
-#summarise(across(everything(), list(mean = mean, sd = sd, q25 = ~quantile(.x, 0.25))))
 
 
 ## visualize random effect means
@@ -1846,18 +1845,18 @@ par(mfrow = c(1, 1))
 ###### Evaluate Prediction ######
 ## test 
 mu_test_post  <- fit$draws("mu_test", format = "draws_matrix")  
-mu_test_mean <- apply(mu_test_post, 2, mean)
+
+ mu_test_mean <- apply(log(mu_test_post), 2, mean) 
 
 p_test_post  <- fit_rep$draws("p_test", format = "draws_matrix") 
-p_test_mean <- apply(p_test_post, 2, mean)
+p_test_mean <- apply(log(p_test_post), 2, mean)
 
 
 ## train
 mu_train_post  <- fit$draws("mu_train", format = "draws_matrix")
-mu_train_mean <- apply(mu_train_post, 2, mean)
-
+mu_train_mean <- apply(log(mu_train_post), 2, mean) 
 p_train_post  <- fit_rep$draws("p_train", format = "draws_matrix")
-p_train_mean <- apply(p_train_post, 2, mean)
+p_train_mean <- apply(log(p_train_post), 2, mean)
 
 
 mu_test_lower <- apply(mu_test_post, 2, quantile, probs = 0.025)
@@ -1866,7 +1865,7 @@ mu_test_upper <- apply(mu_test_post, 2, quantile, probs = 0.975)
 mu_train_lower <- apply(mu_train_post, 2, quantile, probs = 0.025)
 mu_train_upper <- apply(mu_train_post, 2, quantile, probs = 0.975)
 
-plot(log(mu_test_mean), log(testing_df$Fecundity), main = "Test: Predicted vs Observed",
+plot(mu_test_mean, log(testing_df$Fecundity), main = "Test: Predicted vs Observed",
      xlab = "Predicted", ylab = "Observed")
 abline(0, 1, col = "red")
 
@@ -2022,7 +2021,7 @@ library(ggplot2)
 library(patchwork)  
 
 # Panel A: Training - mu_pred
-p1 <- ggplot(training_df, aes(x = log(mu_pred), y = log(Fecundity), color = Type)) +
+p1 <- ggplot(training_df, aes(x = mu_pred, y = log(Fecundity), color = Type)) +
   geom_point(alpha = 0.6) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
   labs(title = "Train: mu_pred", x = "Predicted (log)", y = "Observed (log)") +
@@ -2044,10 +2043,10 @@ p3 <- ggplot(training_df, aes(x = log(mu_noise_pred), y = log(Fecundity), color 
   theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
 
 # Panel D: Testing - mu_pred
-p4 <- ggplot(testing_df, aes(x = log(mu_pred), y = log(Fecundity), color = Type)) +
+p4 <- ggplot(testing_df, aes(x = mu_pred, y = log(Fecundity), color = Type)) +
   geom_point(alpha = 0.6) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
-  labs(title = "Test: mu_pred", x = "Predicted (log)", y = "Observed (log)") +
+
   theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
 
 # Panel E: Testing - mu_fixed_pred
