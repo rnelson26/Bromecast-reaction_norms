@@ -1904,9 +1904,9 @@ mae(p_test_mean, testing_df_rep$r_test)
 mae(p_train_mean, training_df_rep$r_train)
 mae(p_train_fixed_mean, training_df_rep$r_train)
 
-rsq(mu_test_mean, testing_df$Fecundity) #0.001890305
-rsq(mu_train_mean, training_df$Fecundity) #0.4934311
-rsq(mu_train_fixed_mean, training_df$Fecundity) #0.09938216
+rsq(mu_test_mean, testing_df$Fecundity) 
+rsq(mu_train_mean, training_df$Fecundity) 
+rsq(mu_train_fixed_mean, training_df$Fecundity) 
 
 rsq(p_test_mean, testing_df_rep$r_test)
 rsq(p_train_mean, training_df_rep$r_train)
@@ -2020,7 +2020,7 @@ abline(h = 0:1, lty = 1, col = "black")
 library(ggplot2)
 library(patchwork)  
 
-# Panel A: Training - mu_pred
+# Panel A-B: Training - mu_pred
 p1 <- ggplot(training_df, aes(x = mu_pred, y = log(Fecundity), color = Type)) +
   geom_point(alpha = 0.6) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
@@ -2028,19 +2028,19 @@ p1 <- ggplot(training_df, aes(x = mu_pred, y = log(Fecundity), color = Type)) +
   theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
 
 
-# Panel B: Training - mu_fixed_pred
-p2 <- ggplot(training_df, aes(x = log(mu_fixed_pred), y = log(Fecundity), color = Type)) +
+p2 <- ggplot(training_df, aes(x = mu_pred, y = log(Fecundity), color = site_year)) +
   geom_point(alpha = 0.6) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
-  labs(title = "Train: mu_fixed_pred", x = "Predicted (log)", y = "Observed (log)") +
-  theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
+  labs(title = "Train: mu_pred", x = "Predicted (log)", y = "Observed (log)") +
+  theme_minimal() 
 
-# Panel C: Training - mu_noise_pred
-p3 <- ggplot(training_df, aes(x = log(mu_noise_pred), y = log(Fecundity), color = Type)) +
+p3 <- ggplot(training_df, aes(x = mu_pred, y = log(Fecundity), color = seasonality)) +
   geom_point(alpha = 0.6) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
-  labs(title = "Train: mu_noise_pred", x = "Predicted (log)", y = "Observed (log)") +
-  theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
+  labs(title = "Train: mu_pred", x = "Predicted (log)", y = "Observed (log)") +
+  theme_minimal() 
+
+
 
 # Panel D: Testing - mu_pred
 p4 <- ggplot(testing_df, aes(x = mu_pred, y = log(Fecundity), color = Type)) +
@@ -2049,17 +2049,55 @@ p4 <- ggplot(testing_df, aes(x = mu_pred, y = log(Fecundity), color = Type)) +
 
   theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
 
-# Panel E: Testing - mu_fixed_pred
-p5 <- ggplot(testing_df, aes(x = log(mu_fixed_pred), y = log(Fecundity), color = Type)) +
+
+p5 <- ggplot(testing_df, aes(x = mu_pred, y = log(Fecundity), color = site_year)) +
   geom_point(alpha = 0.6) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
   labs(title = "Test: mu_fixed_pred", x = "Predicted (log)", y = "Observed (log)") +
-  theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
+  theme_minimal() 
+
+p6 <- ggplot(testing_df, aes(x = mu_pred, y = log(Fecundity), color = seasonality)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() 
+
+ ggplot(testing_df, aes(x = mu_pred, y = log(Fecundity), color = as.factor(genotype))) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() + facet_wrap(~site_year)
+ 
+ ggplot(training_df, aes(x = mu_pred, y = log(Fecundity), color = as.factor(genotype))) +
+   geom_point(alpha = 0.6) +
+   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+   theme_minimal() + facet_wrap(~site_year)
+ 
+ ggplot(testing_df, aes(x = mu_pred, y = log(Fecundity), color = seasonality)) +
+   geom_point(alpha = 0.6) +
+   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+   theme_minimal() + facet_wrap(~site_year)
+ 
+ ggplot(testing_df, aes(x = mu_pred, y = log(Fecundity), color = pH)) +
+   geom_point(alpha = 0.6) +
+   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+   theme_minimal() + facet_wrap(~site_year)
+ 
+ ggplot(testing_df, aes(x = mu_pred, y = log(Fecundity), color = genotype)) +
+   geom_point(alpha = 0.6) +
+   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+   theme_minimal() + facet_wrap(~genotype)
+ 
+ ggplot(training_df, aes(x = mu_pred, y = log(Fecundity), color = site_year)) +
+   geom_point(alpha = 0.6) +
+   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+   theme_minimal() + facet_wrap(~genotype)
+
 
 # Combine plots into a 2x3 layout
 (p1 | p2 | p3) / (p4 | p5 | plot_spacer())
 
 (p1 | p4 )
+(p2 | p5 )
+(p3 | p6 )
 
 ggsave("Predicted_vs_Observed_Fecundity.png",
        plot = (p1 | p2 | p3) / (p4 | p5 | plot_spacer()),
@@ -2110,7 +2148,7 @@ e_test_pred_full <- draws_e_full[, grep("^e_test_pred\\[", names(draws_e_full))]
 rhat_y_train <- rhat(as.matrix(y_train_pred))
 rhat_y_train_fixed <- rhat(as.matrix(y_train_fixed_pred))
 rhat_y_test <- rhat(as.matrix(y_test_pred))
-## rhat above 1.05 with SOS model 
+## rhat above 1.05 with SOS model for train only
 
 # Reproduction Rhat values
 rhat_r_train <- rhat(as.matrix(r_train_pred))
@@ -2149,7 +2187,6 @@ get_crps <- function(obs, pred_df) {
 # Fecundity
 crps_y <- list(
   train = get_crps(y_train_obs, y_train_pred),
-  train_fixed = get_crps(y_train_obs, y_train_fixed_pred),
   test = get_crps(y_test_obs, y_test_pred)
 )
 
@@ -2183,7 +2220,7 @@ mean_crps_summary <- list(
 )
 
 y = sapply(crps_y, mean)
-print(mean_crps_summary)
+
 # train train_fixed        test 
 #84.95748   152.60931   197.37399 with SOS variables 
 
