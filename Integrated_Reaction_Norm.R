@@ -1,7 +1,7 @@
 #### Integrated Reaction Norm Model #######
 ######## code by Becca Nelson and Justin Van Ee ###############################
 ############# created 3-25-25 ######################
-############# Last modified: 6-10-25 ##########################
+############# Last modified: 6-12-25 ##########################
 ######## modifies RMD file to pull from one integrated df ########
 
 rm(list = ls())
@@ -1083,12 +1083,12 @@ init_list <- pathfinder_fit$draws(format = "list")
 
 
 ###### Emerged fall climate var only
-pathfinder_fit <- mod_emg$pathfinder(
-  data = stan_data_emerged_fall,          # your named list of data
-  init = 0,                  # or a list of reasonable inits
-  num_paths = 1              # usually equal to number of chains
-)
-init_list <- pathfinder_fit$draws(format = "list")
+#pathfinder_fit <- mod_emg$pathfinder(
+ # data = stan_data_emerged_fall,          # your named list of data
+  #init = 0,                  # or a list of reasonable inits
+  #num_paths = 1              # usually equal to number of chains
+#)
+#init_list <- pathfinder_fit$draws(format = "list")
 
 
 # Warmup and iterations 
@@ -1847,6 +1847,10 @@ par(mfrow = c(1, 1))
 mu_test_post  <- fit$draws("mu_test", format = "draws_matrix")  
 
  mu_test_mean <- apply(log(mu_test_post), 2, mean) 
+ 
+ mu_test_post_fixed  <- fit$draws("mu_test_fixed", format = "draws_matrix")  
+ 
+ mu_test_mean_fixed <- apply(log(mu_test_post_fixed), 2, mean) 
 
 p_test_post  <- fit_rep$draws("p_test", format = "draws_matrix") 
 p_test_mean <- apply(log(p_test_post), 2, mean)
@@ -1855,6 +1859,15 @@ p_test_mean <- apply(log(p_test_post), 2, mean)
 ## train
 mu_train_post  <- fit$draws("mu_train", format = "draws_matrix")
 mu_train_mean <- apply(log(mu_train_post), 2, mean) 
+
+mu_train_post_fixed  <- fit$draws("mu_train_fixed", format = "draws_matrix")
+mu_train_mean_fixed <- apply(log(mu_train_post_fixed), 2, mean) 
+
+testing_df$mu_pred <- mu_test_mean
+training_df$mu_pred <- mu_train_mean
+#testing_df$mu_pred_fixed <- mu_test_mean_fixed
+training_df$mu_pred_fixed <- mu_train_mean_fixed
+
 p_train_post  <- fit_rep$draws("p_train", format = "draws_matrix")
 p_train_mean <- apply(log(p_train_post), 2, mean)
 
@@ -1912,8 +1925,6 @@ rsq(p_test_mean, testing_df_rep$r_test)
 rsq(p_train_mean, training_df_rep$r_train)
 rsq(p_train_fixed_mean, training_df_rep$r_train)
 
-testing_df$mu_pred <- mu_test_mean
-training_df$mu_pred <- mu_train_mean
 
 
 testing_df_rep$mu_pred <- p_test_mean
@@ -2020,6 +2031,18 @@ abline(h = 0:1, lty = 1, col = "black")
 library(ggplot2)
 library(patchwork)  
 
+ggplot(training_df, aes(x = mu_pred_fixed, y = log(Fecundity), color = Type)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Train: mu_pred", x = "Predicted (log)", y = "Observed (log)") +
+  theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
+
+ggplot(training_df, aes(x = mu_pred_fixed, y = log(Fecundity), color = as.factor(genotype))) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Train: mu_pred", x = "Predicted (log)", y = "Observed (log)") +
+  theme_minimal() + facet_wrap(~site_year) + theme(legend.position = "none")
+
 # Panel A-B: Training - mu_pred
 p1 <- ggplot(training_df, aes(x = mu_pred, y = log(Fecundity), color = Type)) +
   geom_point(alpha = 0.6) +
@@ -2103,6 +2126,76 @@ ggsave("Predicted_vs_Observed_Fecundity.png",
        plot = (p1 | p2 | p3) / (p4 | p5 | plot_spacer()),
        dpi = 300,
        width = 12, height = 8, units = "in", bg = "white")
+
+####### Mean Fecundity by site-year ##########
+agg_train <- training_df %>%
+  group_by(site_year, Type, seasonality, pH, MAT, prcp.Fall, tmean.Sum, total_precip, tavg_center30d_mean) %>%
+  summarise(
+    mean_log_fecundity = mean(log(Fecundity), na.rm = TRUE),
+    mean_mu_pred_fixed = mean(mu_pred_fixed, na.rm = TRUE),
+    mean_mu_pred = mean(mu_pred, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+agg_test <- testing_df %>%
+  group_by(site_year, Type, seasonality, pH, MAT, prcp.Fall, tmean.Sum, total_precip, tavg_center30d_mean) %>%
+  summarise(
+    mean_log_fecundity = mean(log(Fecundity), na.rm = TRUE),
+    #mean_mu_pred_fixed = mean(mu_pred_fixed, na.rm = TRUE),
+    mean_mu_pred = mean(mu_pred, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+
+ggplot(agg_train, aes(x = mean_mu_pred_fixed, y = mean_log_fecundity, color = Type, seasonality)) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Train: mu_pred (aggregated by site_year)", 
+       x = "Predicted (log mean)", 
+       y = "Observed (log mean)") +
+  theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
+
+ggplot(agg_train, aes(x = mean_mu_pred, y = mean_log_fecundity, color = Type)) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Train: mu_pred (aggregated by site_year)", 
+       x = "Predicted (log mean)", 
+       y = "Observed (log mean)") +
+  theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
+
+ggplot(agg_test, aes(x = mean_mu_pred, y = mean_log_fecundity, color = Type)) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Train: mu_pred (aggregated by site_year)", 
+       x = "Predicted (log mean)", 
+       y = "Observed (log mean)") +
+  theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
+
+##### climate
+ggplot(agg_train, aes(x = mean_mu_pred_fixed, y = mean_log_fecundity, color = seasonality)) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Train: mu_pred (aggregated by site_year)", 
+       x = "Predicted (log mean)", 
+       y = "Observed (log mean)") +
+  theme_minimal() 
+
+ggplot(agg_train, aes(x = mean_mu_pred, y = mean_log_fecundity, color = seasonality)) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Train: mu_pred (aggregated by site_year)", 
+       x = "Predicted (log mean)", 
+       y = "Observed (log mean)") +
+  theme_minimal() 
+
+ggplot(agg_test, aes(x = mean_mu_pred, y = mean_log_fecundity, color = tavg_center30d_mean)) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Test: mu_pred (aggregated by site_year)", 
+       x = "Predicted (log mean)", 
+       y = "Observed (log mean)") +
+  theme_minimal() 
+
 
 library(pROC)
 roc_obj <- roc(testing_df_rep$r_test, p_test_mean)
@@ -2518,21 +2611,11 @@ df %>% filter(Type == "Common_Garden") %>% ggplot(aes(x = neighbors, y = Fecundi
 df %>% filter(Type == "Common_Garden") %>% select(neighbors) %>% distinct()
 
 ########## Predict Fitness ########################
-## extract posterior predictive distributions 
-fecundity_pred_train <- posterior::as_draws_matrix(fit$draws("y_train_pred"))  
-fecundity_pred_test <- posterior::as_draws_matrix(fit$draws("y_test_pred"))  
-fecundity_pred_train_fixed <- posterior::as_draws_matrix(fit$draws("y_train_fixed_pred")) 
-
-rep_pred_train <- posterior::as_draws_matrix(fit_rep$draws("r_train_pred"))  
-rep_pred_test <- posterior::as_draws_matrix(fit_rep$draws("r_test_pred"))  
-rep_pred_train_fixed <- posterior::as_draws_matrix(fit_rep$draws("r_train_pred_fixed"))  
+## calculate observed fitness 
+testing_df_emg <- testing_df_emg %>% mutate(Obs_Fitness == e_test * r_test * Fecundity)
+training_df_emg <- training_df_emg %>% mutate(Obs_Fitness == e_test * r_test * Fecundity)
 
 
-emg_pred_train <- posterior::as_draws_matrix(fit_emg_full$draws("e_train_pred"))  
-emg_pred_test <- posterior::as_draws_matrix(fit_emg_full$draws("e_test_pred"))  
-emg_pred_train_fixed <- posterior::as_draws_matrix(fit_emg_full$draws("e_train_pred_fixed"))  
 
-##Error: vector memory limit of 16.0 Gb reached, see mem.maxVSize() problem 
 
-fitness_pred_test <- y_test_pred_emergence * y_test_pred_reproduction * y_test_pred_fecundity
-# dims: n_draws x n_test
+

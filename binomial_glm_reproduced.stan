@@ -77,8 +77,10 @@ transformed parameters {
    vector<lower=0>[s_X] sigma_soil;
   matrix[n_g, q_X] beta;
 vector[n_site_year_train] site_year_effect_train_scaled = sigma_site_year * site_year_effect_train_raw;
+  vector[n_site_year_train] site_year_effect_train_scaled_centered = site_year_effect_train_scaled - mean(site_year_effect_train_scaled);
   vector[n_plot] eta_plot;
 eta_plot = sigma_plot * eta_plot_raw;
+vector[n_plot] eta_plot_centered = eta_plot - mean(eta_plot);
 vector[n_g] beta_0;
 
   for (j in 1:p_X)
@@ -94,6 +96,7 @@ vector[n_g] beta_0;
     beta[, l] = cholesky_decompose(K) * (sqrt(zeta[l]) * beta_raw[, l]);
   }
    beta_0 = zeta_0 * (cholesky_decompose(K) * beta_0_raw);  
+   vector[n_g] beta_0_centered = beta_0 - mean(beta_0);
 }
 
  //use same structure for genotype random intercepts, start normal 0,1 and then get decomposed here with K and square root of variance parameter 
@@ -115,15 +118,15 @@ model {
     
     real logit_p = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) + 
                    dot_product(W_soil[idx, ], beta[idx_genotype, ]) + dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
-                   site_year_effect_train_scaled[site_year_id_train[i]] + 
+                   site_year_effect_train_scaled_centered[site_year_id_train[i]] + 
                    beta_neighbors * neighbors_train[i] +
                    beta_annual * annual_train[i] +
                    beta_perennial * perennial_train[i] +
                    beta_shrub * shrub_train[i] +
-                   beta_0[idx_genotype];
+                   beta_0_centered[idx_genotype];
   
     if (plot_index_train[i] != 0)
-      logit_p += eta_plot[plot_index_train[i]];
+      logit_p += eta_plot_centered[plot_index_train[i]];
       r_train[i] ~ bernoulli_logit(logit_p);
 }
 
@@ -163,7 +166,7 @@ generated quantities {
     vector[n_train] p_train;
     array[n_train] int r_train_pred;
     array[n_test] int r_test_pred;
-    vector[n_train] mu_train_fixed;
+    vector[n_train] p_train_fixed;
 array[n_train] int r_train_pred_fixed; 
     
     for (i in 1:n_train) {
@@ -172,15 +175,15 @@ array[n_train] int r_train_pred_fixed;
       int idx_genotype = genotype_plant_train[i];
       
       real logit_p = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) + dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
-                     site_year_effect_train_scaled[site_year_id_train[i]] +
+                     site_year_effect_train_scaled_centered[site_year_id_train[i]] +
                      beta_neighbors * neighbors_train[i] +
                      beta_annual * annual_train[i] +
                      beta_perennial * perennial_train[i] +
                      beta_shrub * shrub_train[i] +
-                     beta_0[idx_genotype];
+                     beta_0_centered[idx_genotype];
       
       if (plot_index_train[i] != 0)
-        logit_p += eta_plot[plot_index_train[i]];
+        logit_p += eta_plot_centered[plot_index_train[i]];
       
       p_train[i] = inv_logit(logit_p);
       r_train_pred[i] = bernoulli_logit_rng(logit_p);
@@ -198,10 +201,10 @@ array[n_train] int r_train_pred_fixed;
                      beta_annual * annual_test[i] +
                      beta_perennial * perennial_test[i] +
                      beta_shrub * shrub_test[i] +
-                     beta_0[idx_genotype];
+                     beta_0_centered[idx_genotype];
       
       if (plot_index_test[i] != 0)
-        logit_p += eta_plot[plot_index_test[i]];
+        logit_p += eta_plot_centered[plot_index_test[i]];
       
       p_test[i] = inv_logit(logit_p);
       r_test_pred[i] = bernoulli_logit_rng(logit_p);
@@ -212,13 +215,12 @@ array[n_train] int r_train_pred_fixed;
         int idx_genotype = genotype_plant_train[i];
         
         real mu_fixed_base = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) + dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
-                             beta_0[idx_genotype] +
                              beta_neighbors * neighbors_train[i] +
                              beta_annual * annual_train[i] +
                              beta_perennial * perennial_train[i] +
                              beta_shrub * shrub_train[i];
       
-        mu_train_fixed[i] = inv_logit(mu_fixed_base);  // Probability with fixed effects only
+        p_train_fixed[i] = inv_logit(mu_fixed_base);  // Probability with fixed effects only
         r_train_pred_fixed[i] = bernoulli_logit_rng(mu_fixed_base);
       }
     

@@ -176,8 +176,12 @@ beta_shrub ~ normal(0, 1);
 generated quantities {
   vector[n_test] mu_test;
   vector[n_train] mu_train;
+  vector[n_train] mu_train_fixed;
+   vector[n_train] mu_test_fixed;
   array[n_train] int y_train_pred;
   array[n_test] int y_test_pred;
+   array[n_train] int y_train_pred_fixed;
+  array[n_test] int y_test_pred_fixed;
 
   // Compute mu_train
   for (i in 1:n_train) {
@@ -236,5 +240,49 @@ for (i in 1:n_test) {
     while (y_sample == 0)
       y_sample = neg_binomial_2_rng(mu_test[i], theta);
     y_test_pred[i] = y_sample;
+  }
+  // Compute mu_train_fixed
+  for (i in 1:n_train) {
+    int idx = idx_plant_train[i];
+    int idx_site = idx_plant_train_site[i];
+    int idx_genotype = genotype_plant_train[i];
+    real mu_base = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) +
+                   dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
+                   beta_neighbors * neighbors_train[i] +
+                   beta_annual * annual_train[i] +
+                   beta_perennial * perennial_train[i] +
+                   beta_shrub * shrub_train[i];
+      mu_train_fixed[i] = exp(mu_base);
+  }
+
+//Mu test fixed
+for (i in 1:n_test) {
+  int idx = idx_plant_test[i];
+  int idx_site = idx_plant_test_site[i];
+  int idx_genotype = genotype_plant_test[i];
+
+  real mu_base = alpha +
+                 dot_product(W[idx, ], beta[idx_genotype, ]) +
+                 dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
+                 beta_neighbors * neighbors_test[i] +
+                 beta_annual * annual_test[i] +
+                 beta_perennial * perennial_test[i] +
+                 beta_shrub * shrub_test[i];
+    mu_test_fixed[i] = exp(mu_base);
+}
+
+    // Posterior predictions: fixed
+  for (i in 1:n_train) {
+    int y_sample = neg_binomial_2_rng(mu_train_fixed[i], theta);
+    while (y_sample == 0)
+      y_sample = neg_binomial_2_rng(mu_train_fixed[i], theta);
+    y_train_pred_fixed[i] = y_sample;
+  }
+
+  for (i in 1:n_test) {
+    int y_sample = neg_binomial_2_rng(mu_test_fixed[i], theta);
+    while (y_sample == 0)
+      y_sample = neg_binomial_2_rng(mu_test_fixed[i], theta);
+    y_test_pred_fixed[i] = y_sample;
   }
 }
