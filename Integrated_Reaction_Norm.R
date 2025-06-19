@@ -1,7 +1,7 @@
 #### Integrated Reaction Norm Model #######
 ######## code by Becca Nelson and Justin Van Ee ###############################
 ############# created 3-25-25 ######################
-############# Last modified: 6-12-25 ##########################
+############# Last modified: 6-17-25 ##########################
 ######## modifies RMD file to pull from one integrated df ########
 
 rm(list = ls())
@@ -1128,14 +1128,14 @@ fit_emg_full <- mod_emg$sample(
 )
 
 ##### Emerged Fall Climate Vars only
-fit_emg_fall <- mod_emg$sample(
-  data = stan_data_emerged_fall,
-  chains = 3,
-  parallel_chains = 3,
-  iter_warmup = iter_warmup,
-  iter_sampling = iter_sampling,
-  init = init_list
-)
+#fit_emg_fall <- mod_emg$sample(
+ # data = stan_data_emerged_fall,
+  #chains = 3,
+  #parallel_chains = 3,
+  #iter_warmup = iter_warmup,
+ # iter_sampling = iter_sampling,
+#  init = init_list
+#)
 
 ## notes: Warning: 2 of 3 chains had an E-BFMI less than 0. on fall only emergence model but not one with full PCA.
 #this means that two of the Stan chains are having trouble exploring the posterior efficiently due to an issue with energy-based sampling efficiency. Might be worthwhile to calculate BFMI directly based on past bugs with stan.
@@ -2615,7 +2615,112 @@ df %>% filter(Type == "Common_Garden") %>% select(neighbors) %>% distinct()
 testing_df_emg <- testing_df_emg %>% mutate(Obs_Fitness == e_test * r_test * Fecundity)
 training_df_emg <- training_df_emg %>% mutate(Obs_Fitness == e_test * r_test * Fecundity)
 
+##### fecundity model 
+
+mu_test_post  <- fit$draws("mu_test", format = "draws_matrix")  
+
+mu_test_mean <- apply(log(mu_test_post), 2, mean) 
+ 
+
+## train
+mu_train_post  <- fit$draws("mu_train", format = "draws_matrix")
+mu_train_mean <- apply(log(mu_train_post), 2, mean) 
+
+mu_train_post_fixed  <- fit$draws("mu_train_fixed", format = "draws_matrix")
+mu_train_mean_fixed <- apply(log(mu_train_post_fixed), 2, mean) 
+
+
+rm(mu_test_post, mu_test_post, mu_train_post_fixed)
+
+testing_df$mu_pred <- mu_test_mean
+training_df$mu_pred <- mu_train_mean
+training_df$mu_pred_fixed <- mu_train_mean_fixed
+
+
+draws_y <- fit$draws(format = "df")
+y_train_pred <- draws_y[, grep("^y_train_pred\\[", names(draws_y))]
+y_train_fixed_pred <- draws_y[, grep("^y_train_fixed_pred\\[", names(draws_y))]
+y_test_pred <- draws_y[, grep("^y_test_pred\\[", names(draws_y))]
+
+#testing_df$y_test_pred <- y_test_pred
+#training_df$y_train_fixed_pred <- y_train_fixed_pred
+#training_df$y_train_pred <- y_train_pred
+rm(fit)
 
 
 
+####### Reproduction model
+# Extract posterior draws
+p_test_post <- fit_rep$draws("p_test", format = "draws_matrix")
+p_train_post <- fit_rep$draws("p_train", format = "draws_matrix")
+p_train_fixed_post <- fit_rep$draws("p_train_fixed", format = "draws_matrix")
 
+
+p_test_mean <- apply(p_test_post, 2, mean)
+p_train_mean <- apply(p_train_post, 2, mean)
+p_train_fixed_mean <- apply(p_train_fixed_post, 2, mean)
+
+rm(p_test_post, p_train_post, p_train_fixed_post)
+
+
+testing_df_rep$p_pred <- p_test_mean
+training_df_rep$p_pred <- p_train_mean
+training_df_rep$p_pred_fixed <- p_train_fixed_mean
+
+# For predicted outcomes (r_test_pred, r_train_pred, r_train_pred_fixed)
+# These are integers, so you might want either the mean predicted count or the mode,
+
+r_test_pred_post <- fit_rep$draws("r_test_pred", format = "draws_matrix")
+r_train_pred_post <- fit_rep$draws("r_train_pred", format = "draws_matrix")
+r_train_pred_fixed_post <- fit_rep$draws("r_train_pred_fixed", format = "draws_matrix")
+
+
+r_test_pred_mean <- apply(r_test_pred_post, 2, mean)
+r_train_pred_mean <- apply(r_train_pred_post, 2, mean)
+r_train_pred_fixed_mean <- apply(r_train_pred_fixed_post, 2, mean)
+
+rm(r_test_pred_post, r_train_pred_post, r_train_pred_fixed_post)
+
+
+testing_df_rep$r_pred <- r_test_pred_mean
+training_df_rep$r_pred <- r_train_pred_mean
+training_df_rep$r_pred_fixed <- r_train_pred_fixed_mean
+
+
+rm(fit_rep)
+
+##### Emergence model
+# Extract posterior draws
+p_test_post <- fit_emg_full$draws("p_test", format = "draws_matrix")
+p_train_post <- fit_emg_full$draws("p_train", format = "draws_matrix")
+p_train_fixed_post <- fit_emg_full$draws("p_train_fixed", format = "draws_matrix")
+
+
+p_test_mean <- apply(p_test_post, 2, mean)
+p_train_mean <- apply(p_train_post, 2, mean)
+p_train_fixed_mean <- apply(p_train_fixed_post, 2, mean)
+
+rm(p_test_pred_post, p_train_pred_post, p_train_pred_fixed_post)
+
+testing_df_emg$p_pred <- p_test_mean
+training_df_emg$p_pred <- p_train_mean
+training_df_emg$p_pred_fixed <- p_train_fixed_mean
+
+# For predicted outcomes (r_test_pred, r_train_pred, r_train_pred_fixed)
+# These are integers, so you might want either the mean predicted count or the mode,
+
+e_test_pred_post <- fit_emg_full$draws("e_test_pred", format = "draws_matrix")
+e_train_pred_post <- fit_emg_full$draws("e_train_pred", format = "draws_matrix")
+e_train_pred_fixed_post <- fit_emg_full$draws("e_train_pred_fixed", format = "draws_matrix")
+
+
+e_test_pred_mean <- apply(e_test_pred_post, 2, mean)
+e_train_pred_mean <- apply(e_train_pred_post, 2, mean)
+e_train_pred_fixed_mean <- apply(e_train_pred_fixed_post, 2, mean)
+rm(e_test_pred_post, e_train_pred_post, e_train_pred_fixed_post)
+
+testing_df_emg$e_pred <- e_test_pred_mean
+training_df_emg$e_pred <- e_train_pred_mean
+training_df_emg$e_pred_fixed <- e_train_pred_fixed_mean
+
+rm(fit_emg_full)
