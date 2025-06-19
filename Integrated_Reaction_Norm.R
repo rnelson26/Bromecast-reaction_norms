@@ -2611,40 +2611,61 @@ df %>% filter(Type == "Common_Garden") %>% ggplot(aes(x = neighbors, y = Fecundi
 df %>% filter(Type == "Common_Garden") %>% select(neighbors) %>% distinct()
 
 ########## Predict Fitness ########################
+training_df_emg$r_train <- ifelse(training_df_emg$Reproduced == "Y", 1L, 0L)
+testing_df_emg$r_test <- ifelse(testing_df_emg$Reproduced == "Y", 1L, 0L)
+
 ## calculate observed fitness 
-testing_df_emg <- testing_df_emg %>% mutate(Obs_Fitness == e_test * r_test * Fecundity)
-training_df_emg <- training_df_emg %>% mutate(Obs_Fitness == e_test * r_test * Fecundity)
+testing_df_emg <- testing_df_emg %>% dplyr::mutate(Obs_Fitness = e_test * r_test * Fecundity)
+training_df_emg <- training_df_emg %>% mutate(Obs_Fitness = e_train * r_train * Fecundity)
 
 ##### fecundity model 
 
 mu_test_post  <- fit$draws("mu_test", format = "draws_matrix")  
-
 mu_test_mean <- apply(log(mu_test_post), 2, mean) 
- 
+rm(mu_test_post)
 
 ## train
 mu_train_post  <- fit$draws("mu_train", format = "draws_matrix")
 mu_train_mean <- apply(log(mu_train_post), 2, mean) 
+rm(mu_train_post)
 
 mu_train_post_fixed  <- fit$draws("mu_train_fixed", format = "draws_matrix")
 mu_train_mean_fixed <- apply(log(mu_train_post_fixed), 2, mean) 
+rm(mu_train_post_fixed)
 
-
-rm(mu_test_post, mu_test_post, mu_train_post_fixed)
 
 testing_df$mu_pred <- mu_test_mean
+rm(mu_test_mean)
 training_df$mu_pred <- mu_train_mean
+rm(mu_train_mean)
 training_df$mu_pred_fixed <- mu_train_mean_fixed
+rm(mu_train_mean_fixed)
+
+### posterior predictive
+y_test_post  <- fit$draws("y_test_pred", format = "draws_matrix")
+y_test_mean <- apply(log(y_test_post), 2, mean) 
+rm(y_test_post)
+
+## train
+y_train_post  <- fit$draws("y_train_pred", format = "draws_matrix")
+y_train_mean <- apply(log(y_train_post), 2, mean) 
+rm(y_train_post)
+
+y_train_post_fixed  <- fit$draws("y_train_pred_fixed", format = "draws_matrix")
+y_train_mean_fixed <- apply(log(y_train_post_fixed), 2, mean) 
+rm(y_train_post_fixed)
 
 
-draws_y <- fit$draws(format = "df")
-y_train_pred <- draws_y[, grep("^y_train_pred\\[", names(draws_y))]
-y_train_fixed_pred <- draws_y[, grep("^y_train_fixed_pred\\[", names(draws_y))]
-y_test_pred <- draws_y[, grep("^y_test_pred\\[", names(draws_y))]
+testing_df$y_pred <- y_test_mean
+rm(y_test_mean)
+training_df$y_pred <- y_train_mean
+rm(y_train_mean)
+training_df$y_pred_fixed <- y_train_mean_fixed
+rm(y_train_mean_fixed)
 
-#testing_df$y_test_pred <- y_test_pred
-#training_df$y_train_fixed_pred <- y_train_fixed_pred
-#training_df$y_train_pred <- y_train_pred
+
+
+
 rm(fit)
 
 
@@ -2692,35 +2713,183 @@ rm(fit_rep)
 ##### Emergence model
 # Extract posterior draws
 p_test_post <- fit_emg_full$draws("p_test", format = "draws_matrix")
+p_test_emg_mean <- apply(p_test_post, 2, mean)
+rm(p_test_post)
+
 p_train_post <- fit_emg_full$draws("p_train", format = "draws_matrix")
+p_train_emg_mean <- apply(p_train_post, 2, mean)
+rm(p_train_post)
+
 p_train_fixed_post <- fit_emg_full$draws("p_train_fixed", format = "draws_matrix")
+p_train_fixed_emg_mean <- apply(p_train_fixed_post, 2, mean)
+rm(p_train_fixed_post)
 
 
-p_test_mean <- apply(p_test_post, 2, mean)
-p_train_mean <- apply(p_train_post, 2, mean)
-p_train_fixed_mean <- apply(p_train_fixed_post, 2, mean)
+testing_df_emg$emg_posterior <- p_test_emg_mean
+rm(p_test_emg_mean)
 
-rm(p_test_pred_post, p_train_pred_post, p_train_pred_fixed_post)
+training_df_emg$emg_posterior <- p_train_emg_mean
+rm(p_train_emg_mean)
 
-testing_df_emg$p_pred <- p_test_mean
-training_df_emg$p_pred <- p_train_mean
-training_df_emg$p_pred_fixed <- p_train_fixed_mean
+training_df_emg$emg_posterior_fixed <- p_train_fixed_emg_mean
+rm(p_train_fixed_emg_mean)
+
+colnames(training_df_emg)
+colnames(testing_df_emg)
 
 # For predicted outcomes (r_test_pred, r_train_pred, r_train_pred_fixed)
 # These are integers, so you might want either the mean predicted count or the mode,
 
 e_test_pred_post <- fit_emg_full$draws("e_test_pred", format = "draws_matrix")
-e_train_pred_post <- fit_emg_full$draws("e_train_pred", format = "draws_matrix")
-e_train_pred_fixed_post <- fit_emg_full$draws("e_train_pred_fixed", format = "draws_matrix")
-
-
 e_test_pred_mean <- apply(e_test_pred_post, 2, mean)
+rm(e_test_pred_post)
+
+e_train_pred_post <- fit_emg_full$draws("e_train_pred", format = "draws_matrix")
 e_train_pred_mean <- apply(e_train_pred_post, 2, mean)
+rm(e_train_pred_post)
+
+e_train_pred_fixed_post <- fit_emg_full$draws("e_train_pred_fixed", format = "draws_matrix")
 e_train_pred_fixed_mean <- apply(e_train_pred_fixed_post, 2, mean)
-rm(e_test_pred_post, e_train_pred_post, e_train_pred_fixed_post)
+rm(e_train_pred_fixed_post)
 
 testing_df_emg$e_pred <- e_test_pred_mean
+rm(e_test_pred_mean)
+
 training_df_emg$e_pred <- e_train_pred_mean
+rm(e_train_pred_mean)
+
 training_df_emg$e_pred_fixed <- e_train_pred_fixed_mean
+rm(e_train_pred_fixed_mean)
 
 rm(fit_emg_full)
+
+###### Calculate Predicted Fitness ########
+### Fecundity merge
+
+fec_preds <- testing_df %>%
+  dplyr::select(plantID, mu_pred, y_pred)
+
+testing_df_emg <- testing_df_emg %>%
+  left_join(fec_preds, by = "plantID") %>%
+  mutate(
+    mu_pred = ifelse(is.na(mu_pred), 0, mu_pred),
+    y_pred = ifelse(is.na(y_pred), 0, y_pred)
+  )
+
+fec_preds <- training_df %>%
+  dplyr::select(plantID, mu_pred, y_pred, mu_pred_fixed, y_pred_fixed)
+
+
+training_df_emg <- training_df_emg %>%
+  left_join(fec_preds, by = "plantID") %>%
+  mutate(
+    mu_pred = ifelse(is.na(mu_pred), 0, mu_pred),
+    mu_pred_fixed = ifelse(is.na(mu_pred_fixed), 0, mu_pred_fixed),
+    y_pred = ifelse(is.na(y_pred), 0, y_pred),
+    y_pred_fixed = ifelse(is.na(y_pred_fixed), 0, y_pred_fixed)
+  )
+### reproduced merge
+rep_preds <- testing_df_rep %>%
+  dplyr::select(plantID, p_pred, r_pred)
+
+
+testing_df_emg <- testing_df_emg %>%
+  left_join(rep_preds, by = "plantID") %>%
+  mutate(
+  p_pred = ifelse(is.na(p_pred), 0, p_pred),
+    r_pred = ifelse(is.na(r_pred), 0, r_pred)
+  )
+
+rep_preds <- training_df_rep %>%
+  dplyr::select(plantID, p_pred, r_pred, p_pred_fixed, r_pred_fixed)
+
+
+training_df_emg <- training_df_emg %>%
+  left_join(rep_preds, by = "plantID") %>%
+  mutate(
+    p_pred = ifelse(is.na(p_pred), 0, p_pred),
+    p_pred_fixed = ifelse(is.na(p_pred), 0, p_pred_fixed),
+    r_pred = ifelse(is.na(r_pred), 0, r_pred),
+    r_pred_fixed = ifelse(is.na(r_pred_fixed), 0, r_pred_fixed)
+  )
+
+## mean posterior 
+testing_df_emg <- testing_df_emg %>% dplyr::mutate(Posterior_Fitness = emg_posterior * p_pred * mu_pred)
+training_df_emg <- training_df_emg %>% mutate(Posterior_Fitness = emg_posterior * p_pred * mu_pred)
+
+## mean postestior predictive 
+testing_df_emg <- testing_df_emg %>% dplyr::mutate(PosteriorPred_Fitness = e_pred * r_pred * y_pred)
+training_df_emg <- training_df_emg %>% mutate(PosteriorPred_Fitness = e_pred * r_pred * y_pred)
+
+### save .csv with model predictions
+#write.csv(training_df_emg, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/training_fitness.csv", row.names = FALSE)
+#write.csv(testing_df_emg, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/testing_fitness.csv", row.names = FALSE)
+###### Fitness Graphs ######
+training_fitness <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/training_fitness.csv")
+testing_fitness <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/testing_fitness.csv")
+
+
+ggplot(training_fitness, aes(x = Posterior_Fitness, y = log(Obs_Fitness), color = Type)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
+
+ggplot(training_fitness, aes(x = PosteriorPred_Fitness, y = log(Obs_Fitness), color = Type)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
+
+
+ggplot(testing_fitness, aes(x = Posterior_Fitness, y = log(Obs_Fitness), color = Type)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
+
+ggplot(testing_fitness, aes(x = PosteriorPred_Fitness, y = log(Obs_Fitness), color = Type)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
+
+
+ggplot(training_fitness, aes(x = Posterior_Fitness, y = log(Obs_Fitness), color = as.factor(genotype))) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() + facet_wrap(~site_year) +   theme(legend.position = "none")
+
+ggplot(testing_fitness, aes(x = Posterior_Fitness, y = log(Obs_Fitness), color = as.factor(genotype))) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() + facet_wrap(~site_year) + theme(legend.position = "none")
+
+####### Fitness by site year #####
+agg_train <- training_fitness %>%
+  group_by(site_year, Type, seasonality, pH, MAT, prcp.Fall, tmean.Sum, total_precip, tavg_center30d_mean) %>%
+  summarise(
+    mean_obs_fitness = log(mean(Obs_Fitness, na.rm = TRUE)), 
+    mean_pred_fitness = mean(Posterior_Fitness, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+agg_test <- testing_fitness %>%
+  group_by(site_year, Type, seasonality, pH, MAT, prcp.Fall, tmean.Sum, total_precip, tavg_center30d_mean) %>%
+  summarise(
+    mean_obs_fitness = log(mean(Obs_Fitness, na.rm = TRUE)),
+    mean_pred_fitness = mean(Posterior_Fitness, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+ggplot(agg_train, aes(x = mean_pred_fitness, y = mean_obs_fitness, color = seasonality)) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") + theme_minimal()
+
+ggplot(agg_test, aes(x = mean_pred_fitness, y = mean_obs_fitness, color = seasonality)) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") + theme_minimal()
+#prcp
+ggplot(agg_train, aes(x = mean_pred_fitness, y = mean_obs_fitness, color = tmean.Sum)) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") + theme_minimal()
+
+ggplot(agg_test, aes(x = mean_pred_fitness, y = mean_obs_fitness, color = tmean.Sum)) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") + theme_minimal()
