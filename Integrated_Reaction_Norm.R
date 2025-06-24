@@ -2925,6 +2925,57 @@ training_df_emg <- training_df_emg %>% mutate(PosteriorPred_Fitness = e_pred * r
 ### save .csv with model predictions
 #write.csv(training_df_emg, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/training_fitness.csv", row.names = FALSE)
 #write.csv(testing_df_emg, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/testing_fitness.csv", row.names = FALSE)
+
+##### with draws
+p_emg <- fit_emg_full$draws("p_test", format = "draws_matrix")         # Pr(emerge)
+p_rep <- fit_rep$draws("p_test", format = "draws_matrix")              # Pr(reproduce | emerged)
+mu     <- fit$draws("mu_test", format = "draws_matrix")                # E[fecundity | emerged, reproduced]
+
+
+fitness_draws <- p_emg * p_rep * mu  
+
+posterior_fitness_mean <- colMeans(fitness_draws)  
+
+### accounting for zeros
+# Define full list of plantIDs in testing set (or training set)
+plant_ids <- testing_df_emg$plantID
+n_ind <- length(plant_ids)
+
+# Number of posterior draws
+n_draws <- posterior::niterations(fit)  # Or use dim(mu_test)[1]
+
+# Create empty draw matrices filled with zeros
+draws_mu    <- matrix(0, nrow = n_draws, ncol = n_ind)
+draws_p_rep <- matrix(0, nrow = n_draws, ncol = n_ind)
+draws_p_emg <- matrix(0, nrow = n_draws, ncol = n_ind)
+
+# Map plantIDs to columns
+id_map <- match(colnames(mu), plant_ids)
+draws_mu[, !is.na(id_map)] <- mu[, which(!is.na(id_map))]
+
+id_map <- match(colnames(p_rep), plant_ids)
+draws_p_rep[, !is.na(id_map)] <- p_rep[, which(!is.na(id_map))]
+
+id_map <- match(colnames(p_emg), plant_ids)
+draws_p_emg[, !is.na(id_map)] <- p_emg[, which(!is.na(id_map))]
+
+## apply transformation first before summary
+fitness_draws <- draws_mu * draws_p_rep * draws_p_emg  # dim: [n_draws x n_ind]
+log_fitness_draws =log(draw_mu) + log(draws_p_rep) + log(draws_p_emg) #transform each realization to take e off, either fitness or log draws lines good --> plot this
+apply(log_fitness_draws, 2, mean) ## posterior mean of log fitness by ind plant
+## could get individual plant variance/CI here but won't work for site-year subsets
+
+## mean by individuals in site-year
+#mean(of individual mean from apply) --> okay for visualization
+## would still be inference on a log scale 
+## could messier with non-mean things like variance which is special derived quantity, would have to first make additional derived quantities from which to subset 
+
+testing_df_emg$PosteriorFitness_drawAvg <- fitness_mean
+#testing_df_emg$PosteriorFitness_log <- log(fitness_mean)  # avoids -Inf for 0s
+
+## discrete distribution
+
+
 ###### Fitness Graphs ######
 training_fitness <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/training_fitness.csv")
 testing_fitness <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/testing_fitness.csv")
