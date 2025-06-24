@@ -3,7 +3,7 @@
 ######## for bromecast reaction norm paper ########
 ######## R. Nelson, M. Vahsen, & P. Adler ######
 ########### code created on 1/28/25 #######
-############ last modified: 6/10/25 ########################
+############ last modified: 6/23/25 ########################
 
 ### outstanding questions ##########
 ## whether approach to zero neighbors makes sense 
@@ -638,4 +638,151 @@ combined_clean_climate_SOS <- left_join(data, centered_climate_summaries, by = c
 
 ### save as new file
 write.csv(combined_clean_climate_SOS, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate_SOS.csv", row.names = FALSE)
+
+######## Common Garden Biomass-Seed Count #########
+### Adapting code by Megan Vahsen
+
+library(tidyverse); library(ggpubr)
+
+theme_set(theme_bw(base_size = 16))
+
+
+# Create %notin% operator
+`%notin%` <- Negate(`%in%`) 
+
+cg %>% 
+  filter(note_standard_phen %notin% c("seed_drop", "smut")) %>%
+  filter(note_standard_harvest %notin% c("seed_drop", "smut")) %>%
+  filter(year == 2022 & seed_count_total > 0 & inflor_mass > 0) %>% 
+  ggplot(aes(x = inflor_mass, y = seed_count_total)) + 
+  geom_point() 
+
+cg %>% 
+  filter(year == 2022 & seed_count_total > 0 & inflor_mass > 0) %>%
+  filter(note_standard_phen %notin% c("seed_drop", "smut")) %>%
+  filter(note_standard_harvest %notin% c("seed_drop", "smut")) -> cg_clean
+
+# Add logs
+cg_clean$ln_seed_count <- log(cg_clean$seed_count_total)
+cg_clean$ln_inflor_mass <- log(cg_clean$inflor_mass)
+
+# Model with no treatments
+null_mod <- lm(ln_seed_count ~ ln_inflor_mass, data = cg_clean)
+summary(null_mod) # R2 = 0.9403
+
+cg_clean %>% 
+  ggplot(aes(x = ln_inflor_mass, y = ln_seed_count)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+# Create unique ID for treatment
+cg_clean$trt <- paste(cg_clean$albedo, cg_clean$density, sep = "_")
+
+trt_mod <- lm(ln_seed_count ~ ln_inflor_mass * trt, data = cg_clean)
+summary(trt_mod) # R2 = 0.9446
+
+#png("~/Git/Bromecast-cg_demography/figs/FigS1_seedcount_informass.png", height = 5.3, width = 7, res = 300, units = "in")
+cg_clean %>% 
+  ggplot(aes(x = ln_inflor_mass, y = ln_seed_count, color = albedo,
+             shape = density, linetype = density)) +
+  geom_point(alpha = 0.5, size = 2) +
+  geom_smooth(method = "lm", aes(linetype = density), linewidth = 2) +
+  xlab("ln(inflorescence mass)") +
+  ylab("ln(seed count)") +
+  labs(color = "gravel") +
+  scale_shape_manual(values = c(16, 21)) +
+  scale_color_manual(values = c("black", "goldenrod")) +
+  guides(shape = guide_legend(override.aes = list(size = 6,
+                                                  fill = NA,
+                                                  color = "black",
+                                                  linewidth = 0.8)),
+         color = guide_legend(override.aes = list(size = 6,
+                                                  fill = NA)))
+dev.off()
+
+# Get regression coefficients
+coef(null_mod)
+# (Intercept) ln_inflor_mass 
+# 5.9266903      0.9227253
+
+
+###### make estimates for 2023
+
+cg_2023 <- cg %>% 
+  filter(year == 2023, inflor_mass > 0) %>%
+  filter(note_standard_phen %notin% c("seed_drop", "smut")) %>%
+  filter(note_standard_harvest %notin% c("seed_drop", "smut")) -> cg_clean
+
+#cg$ln_seed_count <- log(cg_clean$seed_count_total)
+cg_2023$ln_inflor_mass <- log(cg_clean$inflor_mass)
+
+cg_2023$trt <- paste(cg_2023$albedo, cg_2023$density, sep = "_")
+
+cg_2023$ln_seed_count_est <- predict(trt_mod, newdata = cg_2023)
+
+cg_2023$Fecundity <- exp(cg_2023$ln_seed_count_est)
+
+preds <- predict(trt_mod, newdata = cg_2023, interval = "prediction")
+
+cg_2023 <- cg_2023 %>%
+  mutate(ln_seed_count_est = preds[, "fit"],
+         seed_count_est = exp(preds[, "fit"]),
+         seed_count_lwr = exp(preds[, "lwr"]),
+         seed_count_upr = exp(preds[, "upr"]))
+
+
+cg_2023 %>%
+  ggplot(aes(x = ln_inflor_mass, y = Fecundity, color = trt)) +
+  geom_point() +
+  geom_ribbon(aes(ymin = seed_count_lwr, ymax = seed_count_upr), alpha = 0.2) +
+  ylab("Estimated seed count") +
+  xlab("ln(inflorescence mass)")
+
+cg_2023_summary <- cg_2023 %>% dplyr::select(Fecundity, plantID)
+
+
+### read in merged data
+combined_clean_climate_SOS <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate_SOS.csv")
+
+cg_2023_zeros <- cg %>%
+  filter(year == 2023, inflor_mass == 0) %>%
+  mutate(Fecundity = 0) %>%
+  dplyr::select(plantID, Fecundity)
+
+cg_2023_summary <- bind_rows(
+  cg_2023 %>% dplyr::select(plantID, Fecundity),   
+  cg_2023_zeros                             
+)
+
+
+combined_clean_climate_SOS_updated <- combined_clean_climate_SOS %>%
+  left_join(cg_2023_summary, by = "plantID", suffix = c("", "_from_summary")) %>%
+  mutate(Fecundity = ifelse(is.na(Fecundity), Fecundity_from_summary, Fecundity)) %>%
+  select(-Fecundity_from_summary)
+
+combined_clean_climate_SOS_updated <- combined_clean_climate_SOS_updated %>%
+  left_join(cg_2023_zeros, by = "plantID", suffix = c("", "_zero")) %>%
+  mutate(Fecundity = ifelse(is.na(Fecundity), Fecundity_zero, Fecundity)) %>%
+  dplyr::select(-Fecundity_zero)
+
+
+## check that the merge worked! 
+combined_clean_climate_SOS_updated %>% dplyr::filter(Type == "Common_Garden") %>% dplyr::filter(year == 2023) %>% dplyr::select(Fecundity) %>% distinct()
+
+combined_clean_climate_SOS_updated %>% dplyr::filter(Type == "Common_Garden") %>% dplyr::filter(year == 2023) %>% dplyr::select(Fecundity) %>% filter(Fecundity == 0)
+
+cg %>%
+  group_by(year) %>%
+  summarise(
+    n_NA = sum(is.na(inflor_mass)),
+    n_total = n()
+  )
+
+
+cg %>%
+  group_by(year) %>%
+  dplyr::summarise(n_zero = sum(inflor_mass == 0, na.rm = TRUE))
+
+## update .csv file
+write.csv(combined_clean_climate_SOS_updated, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate_SOS.csv", row.names = FALSE)
 

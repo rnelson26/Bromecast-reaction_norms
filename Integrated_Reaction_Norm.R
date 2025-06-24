@@ -1,7 +1,7 @@
 #### Integrated Reaction Norm Model #######
 ######## code by Becca Nelson and Justin Van Ee ###############################
 ############# created 3-25-25 ######################
-############# Last modified: 6-17-25 ##########################
+############# Last modified: 6-23-25 ##########################
 ######## modifies RMD file to pull from one integrated df ########
 
 rm(list = ls())
@@ -120,7 +120,9 @@ image.plot(legend.only = TRUE, zlim = range(soil_var, na.rm = TRUE),
 
 
 data <- data %>%
-  mutate(across(c(tmean.Fall, tmean.Sum, tmean.Spr, tmean.Win, MAT), 
+  mutate(across(c(tmean.Fall, tmean.Sum, tmean.Spr, tmean.Win, MAT, tmin_center30d_mean,   tmax_center30d_mean,
+                  tavg_center30d_mean,   tmin_center30d_min,
+                  tmax_center30d_max), 
                 ~ case_when(
                   albedo == "black" ~ . + 1,  
                   albedo == "white" ~ . - 1,  
@@ -180,6 +182,14 @@ data$site <- as.factor(data$site)
 data$year <- as.factor(data$year)
 data <- data %>%
   mutate(site_year = paste(site, year))
+
+data %>%
+  group_by(Type) %>%
+  summarise(n_NA = sum(is.na(Reproduced)))
+
+data %>%
+  group_by(Type, year) %>%
+  summarise(n_NA = sum(is.na(Fecundity)))
 
 df <- data %>%
   dplyr::filter(Emerged == "Y", Reproduced == "Y") %>%
@@ -865,21 +875,38 @@ idx_plant_train_site_emg <- as.numeric(training_df_emg$site)
 idx_plant_test_site_emg  <- as.numeric(testing_df_emg$site)
 
 ####### Fit stan model #########
+
 stan_data <- list(
   # General inputs for the model
   n_X = nrow(X_SOS),  ##X for without SOS
-  n_X_soil = n_X_soil,
+  n_X_soil = nrow(X_soil),
   p_X = ncol(X_SOS),   
   s_X = ncol(X_soil),
   q_X = ncol(Lambda_SOS),      
   X = X_SOS,  
   X_soil = X_soil, 
-  Lambda = Lambda_SOS,  ##Lambda for without SOS variables
+  Lambda = Lambda_SOS,##Lambda for without SOS variables
   Lambda_soil = Lambda_soil,  
   n_g = length(unique(genotype_plant_train)),  
   K = K_common_garden,    
   n_plot = max(training_df$plot_index),
   n_site_year = length(unique(c(training_df$site_year, testing_df$site_year))),
+
+  
+  ## full data 
+  n_X_full = nrow(X_emg_SOS),
+  n_X_soil_full = nrow(X_soil_emg),
+  p_X_full = ncol(X_emg_SOS),  
+  s_X_full = ncol(X_soil_emg),
+  q_X_full = ncol(Lambda_emg_SOS),
+  X_full = X_emg_SOS, 
+  X_soil_full = X_soil_emg,
+  Lambda_full = Lambda_emg_SOS,
+  n_g_full = length(unique(genotype_plant_train_emg)),
+  Lambda_soil_full = Lambda_soil_emg, 
+  n_plot_full = max(training_df_emg$plot_index),
+  n_site_year_full = length(unique(c(training_df_emg$site_year, testing_df_emg$site_year))),
+  
   
   # Training data specifics
   n_train = nrow(training_df),
@@ -895,6 +922,21 @@ stan_data <- list(
   n_site_year_train = length(unique(as.integer(as.factor(training_df$site_year)))),
   site_year_id_train = training_df$idx,
   
+  ## training data full
+  n_train_full = nrow(training_df_emg),
+  idx_plant_train_full = idx_plant_train_emg,
+  idx_plant_train_site_full = idx_plant_train_site_emg,
+  genotype_plant_train_full = genotype_plant_train_emg,
+  neighbors_train_full = training_df_emg$neighbors.s,
+  annual_train_full = training_df_emg$annual.s,
+  perennial_train_full = training_df_emg$perennial.s,
+  shrub_train_full = training_df_emg$shrub.s,
+  plot_index_train_full = training_df_emg$plot_index,
+  n_site_year_train_full = length(unique(as.integer(as.factor(training_df_emg$site_year)))),
+  site_year_id_train_full = training_df_emg$idx,
+  
+  
+  
   # Testing data specifics
   n_test = nrow(testing_df),
   idx_plant_test = idx_plant_test,
@@ -906,8 +948,25 @@ stan_data <- list(
   shrub_test = testing_df$shrub.s,
   site_year_id_test = testing_df$idx,
   plot_index_test = rep(0, nrow(testing_df)),
-  n_site_year_test = length(unique(as.integer(as.factor(testing_df$site_year))))
+  n_site_year_test = length(unique(as.integer(as.factor(testing_df$site_year)))),
+
+### testing df full 
+  n_test_full = nrow(testing_df_emg),
+  idx_plant_test_full = idx_plant_test_emg,
+  idx_plant_test_site_full = idx_plant_test_site_emg,
+  genotype_plant_test_full = genotype_plant_test_emg,
+  neighbors_test_full = testing_df_emg$neighbors.s,
+  annual_test_full = testing_df_emg$annual.s,
+  perennial_test_full = testing_df_emg$perennial.s,
+  shrub_test_full = testing_df_emg$shrub.s,
+  site_year_id_test_full = testing_df_emg$idx,
+  plot_index_test_full = rep(0, nrow(testing_df_emg)),
+  n_site_year_test_full = length(unique(as.integer(as.factor(testing_df_emg$site_year))))
 )
+
+
+training_df_emg$r_train <- ifelse(training_df_emg$Reproduced == "Y", 1L, 0L)
+testing_df_emg$r_test <- ifelse(testing_df_emg$Reproduced == "Y", 1L, 0L)
 
 
 training_df_rep$r_train <- ifelse(training_df_rep$Reproduced == "Y", 1L, 0L)
@@ -929,6 +988,20 @@ stan_data_reproduced <- list(
   n_plot = max(training_df_rep$plot_index),
   n_site_year = length(unique(c(training_df_rep$site_year, testing_df_rep$site_year))),
   
+  ## full data 
+  n_X_full = nrow(X_emg_SOS),
+  n_X_soil_full = nrow(X_soil_emg),
+  p_X_full = ncol(X_emg_SOS),  
+  s_X_full = ncol(X_soil_emg),
+  q_X_full = ncol(Lambda_emg_SOS),
+  X_full = X_emg_SOS, 
+  X_soil_full = X_soil_emg,
+  Lambda_full = Lambda_emg_SOS,
+  n_g_full = length(unique(genotype_plant_train_emg)),
+  Lambda_soil_full = Lambda_soil_emg, 
+  n_plot_full = max(training_df_emg$plot_index),
+  n_site_year_full = length(unique(c(training_df_emg$site_year, testing_df_emg$site_year))),
+  
   # Training data specifics
   n_train = nrow(training_df_rep),
   r_train = training_df_rep$r_train,
@@ -943,6 +1016,19 @@ stan_data_reproduced <- list(
   n_site_year_train = length(unique(as.integer(as.factor(training_df_rep$site_year)))),
   site_year_id_train = training_df_rep$idx,
   
+  ## training data full
+  n_train_full = nrow(training_df_emg),
+  idx_plant_train_full = idx_plant_train_emg,
+  idx_plant_train_site_full = idx_plant_train_site_emg,
+  genotype_plant_train_full = genotype_plant_train_emg,
+  neighbors_train_full = training_df_emg$neighbors.s,
+  annual_train_full = training_df_emg$annual.s,
+  perennial_train_full = training_df_emg$perennial.s,
+  shrub_train_full = training_df_emg$shrub.s,
+  plot_index_train_full = training_df_emg$plot_index,
+  n_site_year_train_full = length(unique(as.integer(as.factor(training_df_emg$site_year)))),
+  site_year_id_train_full = training_df_emg$idx,
+  
   # Testing data specifics
   n_test = nrow(testing_df_rep),
   idx_plant_test = idx_plant_test_rep,
@@ -954,7 +1040,20 @@ stan_data_reproduced <- list(
   shrub_test = testing_df_rep$shrub.s,
   site_year_id_test = testing_df_rep$idx,
   plot_index_test = rep(0, nrow(testing_df_rep)),
-  n_site_year_test = length(unique(as.integer(as.factor(testing_df_rep$site_year))))
+  n_site_year_test = length(unique(as.integer(as.factor(testing_df_rep$site_year)))),
+  
+  ## testing data full
+  n_test_full = nrow(testing_df_emg),
+  idx_plant_test_full = idx_plant_test_emg,
+  idx_plant_test_site_full = idx_plant_test_site_emg,
+  genotype_plant_test_full = genotype_plant_test_emg,
+  neighbors_test_full = testing_df_emg$neighbors.s,
+  annual_test_full = testing_df_emg$annual.s,
+  perennial_test_full = testing_df_emg$perennial.s,
+  shrub_test_full = testing_df_emg$shrub.s,
+  site_year_id_test_full = testing_df_emg$idx,
+  plot_index_test_full = rep(0, nrow(testing_df_emg)),
+  n_site_year_test_full = length(unique(as.integer(as.factor(testing_df_emg$site_year))))
 )
 
 ### emerged
@@ -1058,6 +1157,8 @@ mod_emg <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norm
 
 #### Find good starting values ####
 ### Fecundity 
+
+
 pathfinder_fit <- mod$pathfinder(
   data = stan_data,          # your named list of data
   init = 0,                  # or a list of reasonable inits
