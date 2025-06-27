@@ -194,6 +194,14 @@ data %>%
 ### filter censored data, seed drop and smut:  
 data <- data %>% filter(Emerged != "missing") %>% filter(Reproduced != "missing") %>%  filter(!notesFlag %in% c("smut", "seeddrop")) %>% filter(!note_standard_harvest %in% c("smut", "seed_drop", "missing")) %>% filter(!note_standard_phen %in% c("resurrection", "smut", "missing", "seed_drop","smut_physical_damage", "smut_herbivory" )) %>% filter(is.na(fecundityflag) | fecundityflag == 0)
 
+## make 2023 estimates count data 
+data <- data %>%
+  mutate(Fecundity = if_else(year == 2023 & Type == "Common_Garden",
+                             pmax(round(Fecundity), 1),
+                             Fecundity))
+
+data$Fecundity <- as.integer(data$Fecundity)
+
 
 df <- data %>%
   dplyr::filter(Emerged == "Y", Reproduced == "Y") %>%
@@ -1198,7 +1206,7 @@ stan_data_emerged_full <- list(
 
 # Fit using cmdrstan 
 mod <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/ztnb_glm.random.predict.stan")
-mod_fit <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/ztnb_glm.random.predict.stan.fit")
+mod_fit <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/ztnb_glm.random.predict.fit.stan")
 mod_rep <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/binomial_glm_reproduced.stan")
 mod_emg <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/binomial_glm_survived.stan")
 
@@ -1210,6 +1218,15 @@ mod_emg <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norm
 #stan_data_reproduced_full <- stan_data_reproduced
 #stan_data_reproduced_fit <- stan_data_reproduced_full[!grepl("_full$", names(stan_data_reproduced_full))]
 ### Fecundity 
+
+#pathfinder_fit <- mod_fit$pathfinder(
+ # data = stan_data_fit,
+  #init = 0,
+  #num_paths = 1
+#)
+#init_list <- pathfinder_fit$draws(format = "list")
+
+## with full
 pathfinder_fit <- mod$pathfinder(
   data = stan_data,
   init = 0,
@@ -2773,15 +2790,13 @@ df %>% filter(Type == "Common_Garden") %>% select(neighbors) %>% distinct()
 testing_df_emg <- testing_df_emg %>% dplyr::mutate(Obs_Fitness = e_test * r_test * Fecundity)
 training_df_emg <- training_df_emg %>% mutate(Obs_Fitness = e_train * r_train * Fecundity)
 
+testing_df_emg$Obs_Fitness_log <- log(testing_df_emg$Obs_Fitness)
+training_df_emg$Obs_Fitness_log <- log(training_df_emg$Obs_Fitness)
 
-### save .csv with model predictions
-#write.csv(training_df_emg, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/training_fitness.csv", row.names = FALSE)
-#write.csv(testing_df_emg, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/testing_fitness.csv", row.names = FALSE)
 
 ##### with draws
-p_emg <- fit_emg_full$draws("p_test", format = "draws_matrix")         # Pr(emerge)
-#p_rep <- fit_rep$draws("p_test", format = "draws_matrix")              # Pr(reproduce | emerged)
-mu     <- fit$draws("mu_test", format = "draws_matrix")                # E[fecundity | emerged, reproduced]
+p_emg_test <- fit_emg_full$draws("p_test", format = "draws_matrix")  
+p_emg_train <- fit_emg_full$draws("p_train", format = "draws_matrix") 
 
 p_rep_test <- fit_rep$draws("p_test_full", format = "draws_matrix")  
 p_rep_train <- fit_rep$draws("p_train_full", format = "draws_matrix") 
@@ -2789,35 +2804,25 @@ p_rep_train <- fit_rep$draws("p_train_full", format = "draws_matrix")
 p_fec_test <- fit$draws("mu_test_full", format = "draws_matrix")  
 p_fec_train <- fit$draws("mu_train_full", format = "draws_matrix")
 
-r_rep_test <- fit_rep$draws("r_test_full", format = "draws_matrix")  
-r_rep_train <- fit_rep$draws("r_train_full", format = "draws_matrix")  
+ 
 
-fitness_draws <- p_emg * p_rep * mu  
+fitness_draws_test <- p_emg_test * p_rep_test * p_fec_test
+fitness_draws_train <- p_emg_train * p_rep_train * p_fec_train
 
-posterior_fitness_mean <- colMeans(fitness_draws)  
+log_fitness_draws_test =log(p_emg_test) + log(p_rep_test) + log(p_fec_test)
+log_fitness_draws_train =log(p_emg_train) + log(p_rep_train) + log(p_fec_train)
+#transform each realization to take e off, either fitness or log draws lines good --> plot this
 
-### accounting for zeros
-# Define full list of plantIDs in testing set (or training set)
-#plant_ids <- testing_df_emg$plantID
-#n_ind <- length(plant_ids)
+mean_fitness_test <- apply(fitness_draws_test, 2, mean)
+mean_fitness_train <- apply(fitness_draws_train, 2, mean)
+mean_fitness_test_log <- apply(log_fitness_draws_test, 2, mean)
+mean_fitness_train_log <- apply(log_fitness_draws_train, 2, mean)
 
-# Number of posterior draws
-#n_draws <- posterior::niterations(fit)  # Or use dim(mu_test)[1]
+testing_df_emg$Predicted_Fitness <- mean_fitness_test
+training_df_emg$Predicted_Fitness <- mean_fitness_train
 
-# Create empty draw matrices filled with zeros
-#draws_mu    <- matrix(0, nrow = n_draws, ncol = n_ind)
-#draws_p_rep <- matrix(0, nrow = n_draws, ncol = n_ind)
-#draws_p_emg <- matrix(0, nrow = n_draws, ncol = n_ind)
-
-# Map plantIDs to columns
-#id_map <- match(colnames(mu), plant_ids)
-#draws_mu[, !is.na(id_map)] <- mu[, which(!is.na(id_map))]
-
-#id_map <- match(colnames(p_rep), plant_ids)
-#draws_p_rep[, !is.na(id_map)] <- p_rep[, which(!is.na(id_map))]
-
-#id_map <- match(colnames(p_emg), plant_ids)
-#draws_p_emg[, !is.na(id_map)] <- p_emg[, which(!is.na(id_map))]
+testing_df_emg$Predicted_Fitness_log <- mean_fitness_test_log
+training_df_emg$Predicted_Fitness_log <- mean_fitness_train_log
 
 ### from Mevin
 ## apply transformation first before summary
@@ -2836,40 +2841,43 @@ testing_df_emg$PosteriorFitness_drawAvg <- fitness_mean
 
 ## discrete distribution
 
+### save .csv with model predictions
+#write.csv(training_df_emg, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/training_fitness.csv", row.names = FALSE)
+#write.csv(testing_df_emg, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/testing_fitness.csv", row.names = FALSE)
 
 ###### Fitness Graphs ######
 training_fitness <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/training_fitness.csv")
 testing_fitness <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/testing_fitness.csv")
 
 
-ggplot(training_fitness, aes(x = Posterior_Fitness, y = log(Obs_Fitness), color = Type)) +
+ggplot(training_fitness, aes(x = Predicted_Fitness_log, y = Obs_Fitness_log, color = Type)) +
   geom_point(alpha = 0.6) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
   theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
 
-ggplot(training_fitness, aes(x = PosteriorPred_Fitness, y = log(Obs_Fitness), color = Type)) +
-  geom_point(alpha = 0.6) +
-  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
-  theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
-
-
-ggplot(testing_fitness, aes(x = Posterior_Fitness, y = log(Obs_Fitness), color = Type)) +
-  geom_point(alpha = 0.6) +
-  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
-  theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
-
-ggplot(testing_fitness, aes(x = PosteriorPred_Fitness, y = log(Obs_Fitness), color = Type)) +
+ggplot(testing_fitness, aes(x = Predicted_Fitness_log, y = Obs_Fitness_log, color = Type)) +
   geom_point(alpha = 0.6) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
   theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
 
 
-ggplot(training_fitness, aes(x = Posterior_Fitness, y = log(Obs_Fitness), color = as.factor(genotype))) +
+ggplot(training_fitness, aes(x = Predicted_Fitness_log, y = Obs_Fitness_log, color = seasonality)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() 
+
+ggplot(testing_fitness, aes(x = Predicted_Fitness_log, y = Obs_Fitness_log, color = seasonality)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() 
+
+
+ggplot(training_fitness, aes(x = Predicted_Fitness_log, y = Obs_Fitness_log, color = as.factor(genotype))) +
   geom_point(alpha = 0.6) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
   theme_minimal() + facet_wrap(~site_year) +   theme(legend.position = "none")
 
-ggplot(testing_fitness, aes(x = Posterior_Fitness, y = log(Obs_Fitness), color = as.factor(genotype))) +
+ggplot(testing_fitness, aes(x = Predicted_Fitness_log, y = Obs_Fitness_log, color = as.factor(genotype))) +
   geom_point(alpha = 0.6) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
   theme_minimal() + facet_wrap(~site_year) + theme(legend.position = "none")
@@ -2878,22 +2886,24 @@ ggplot(testing_fitness, aes(x = Posterior_Fitness, y = log(Obs_Fitness), color =
 agg_train <- training_fitness %>%
   group_by(site_year, Type, seasonality, pH, MAT, prcp.Fall, tmean.Sum, total_precip, tavg_center30d_mean) %>%
   summarise(
-    mean_obs_fitness = log(mean(Obs_Fitness, na.rm = TRUE)), 
-    mean_pred_fitness = mean(Posterior_Fitness, na.rm = TRUE),
+    mean_obs_fitness = mean(Obs_Fitness_log, na.rm = TRUE), 
+    mean_pred_fitness = mean(Predicted_Fitness_log, na.rm = TRUE),
     .groups = "drop"
   )
 
 agg_test <- testing_fitness %>%
   group_by(site_year, Type, seasonality, pH, MAT, prcp.Fall, tmean.Sum, total_precip, tavg_center30d_mean) %>%
   summarise(
-    mean_obs_fitness = log(mean(Obs_Fitness, na.rm = TRUE)),
-    mean_pred_fitness = mean(Posterior_Fitness, na.rm = TRUE),
+    mean_obs_fitness = mean(Obs_Fitness_log, na.rm = TRUE), 
+    mean_pred_fitness = mean(Predicted_Fitness_log, na.rm = TRUE),
     .groups = "drop"
   )
 
 ggplot(agg_train, aes(x = mean_pred_fitness, y = mean_obs_fitness, color = seasonality)) +
   geom_point(size = 3, alpha = 0.8) +
-  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") + theme_minimal()
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") + theme_minimal()  +
+  xlim(0, 6) +
+  ylim(0, 6)
 
 ggplot(agg_test, aes(x = mean_pred_fitness, y = mean_obs_fitness, color = seasonality)) +
   geom_point(size = 3, alpha = 0.8) +
@@ -2906,3 +2916,4 @@ ggplot(agg_train, aes(x = mean_pred_fitness, y = mean_obs_fitness, color = tmean
 ggplot(agg_test, aes(x = mean_pred_fitness, y = mean_obs_fitness, color = tmean.Sum)) +
   geom_point(size = 3, alpha = 0.8) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") + theme_minimal()
+
