@@ -4,15 +4,6 @@ functions {
     return neg_binomial_2_lpmf(y | mu, theta) - log1m_exp(neg_binomial_2_lpmf(0 | mu, theta));
   }
 
-  // RNG for zero-truncated Negative Binomial helper function
-  int zt_nb_rng(real mu_raw, real theta) {
-    real mu_safe = exp(fmin(mu_raw, 10));  // prevent overflow
-    int y = neg_binomial_2_rng(mu_safe, theta);
-    while (y == 0) {
-      y = neg_binomial_2_rng(mu_safe, theta);
-    }
-    return y;
-  }
 }
 
 data {
@@ -63,39 +54,6 @@ array[n_test] int<lower=n_site_year_train + 1, upper=n_site_year> site_year_id_t
   matrix[n_X_soil, s_X] X_soil;
   matrix[n_g, n_g] K;
   
-  // === Full training data ===
-  int<lower=1> n_X_full;
-int<lower=1> p_X_full;
-int<lower=1> q_X_full;
-matrix[n_X_full, p_X_full] X_full;
-matrix[p_X_full, q_X_full] Lambda_full;
-
-int<lower=1> n_X_soil_full;
-int<lower=1> s_X_full;
-matrix[n_X_soil_full, s_X_full] X_soil_full;
-matrix[s_X_full, q_X_full] Lambda_soil_full;
-int<lower=1> n_train_full;
-array[n_train_full] int<lower=1> idx_plant_train_full;
-array[n_train_full] int<lower=1> idx_plant_train_site_full;
-array[n_train_full] int<lower=1> genotype_plant_train_full;
-array[n_train_full] int<lower=1, upper=n_site_year_train> site_year_id_train_full;
-vector[n_train_full] neighbors_train_full;
-vector[n_train_full] annual_train_full;
-vector[n_train_full] perennial_train_full;
-vector[n_train_full] shrub_train_full;
-array[n_train_full] int<lower=0> plot_index_train_full;
-
-// === Full testing data ===
-int<lower=1> n_test_full;
-array[n_test_full] int<lower=1> idx_plant_test_full;
-array[n_test_full] int<lower=1> idx_plant_test_site_full;
-array[n_test_full] int<lower=1> genotype_plant_test_full;
-vector[n_test_full] neighbors_test_full;
-vector[n_test_full] annual_test_full;
-vector[n_test_full] perennial_test_full;
-vector[n_test_full] shrub_test_full;
-array[n_test_full] int<lower=0> plot_index_test_full;
-
 }
 
 
@@ -228,12 +186,6 @@ generated quantities {
   array[n_train] int y_train_pred_fixed;
   array[n_test] int y_test_pred_fixed;
 
-  // NEW full predictions
-  vector[n_train_full] mu_train_full;
-  vector[n_test_full] mu_test_full;
- vector[n_train_full] y_train_pred_full;
-vector[n_test_full] y_test_pred_full;
-
 
   // Training predictions
   for (i in 1:n_train) {
@@ -309,53 +261,6 @@ vector[n_test_full] y_test_pred_full;
     mu_test_fixed[i] = exp(fmin(mu_base, 20));
     y_test_pred_fixed[i] = zt_nb_rng(mu_base, theta);
   }
-
-  // Full training predictions
-for (i in 1:n_train_full) {
-  int idx = idx_plant_train_full[i];
-  int idx_site = idx_plant_train_site_full[i];
-  int idx_genotype = genotype_plant_train_full[i];
-
-  real mu_base = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) +
-                 dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
-                 beta_0_centered[idx_genotype] +
-                 site_year_effect_train_scaled_centered[site_year_id_train_full[i]] +
-                 beta_neighbors * neighbors_train_full[i] +
-                 beta_annual * annual_train_full[i] +
-                 beta_perennial * perennial_train_full[i] +
-                 beta_shrub * shrub_train_full[i];
-
-  real mu_final = mu_base + (plot_index_train_full[i] == 0 ? 0 : eta_plot_centered[plot_index_train_full[i]]);
-  mu_train_full[i] = exp(fmin(mu_final, 20));
-
-  // Instead of zero-truncated RNG, just return expected mean fecundity:
-  y_train_pred_full[i] = mu_train_full[i];
-}
-
-// Full test predictions
-for (i in 1:n_test_full) {
-  int idx = idx_plant_test_full[i];
-  int idx_site = idx_plant_test_site_full[i];
-  int idx_genotype = genotype_plant_test_full[i];
-
-  real site_year_noise = normal_rng(0, sigma_site_year);
-
-  real mu_base = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) +
-                 dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
-                 beta_0_centered[idx_genotype] +
-                 site_year_noise +
-                 beta_neighbors * neighbors_test_full[i] +
-                 beta_annual * annual_test_full[i] +
-                 beta_perennial * perennial_test_full[i] +
-                 beta_shrub * shrub_test_full[i];
-
-  real mu_final = mu_base + (plot_index_test_full[i] == 0 ? 0 : eta_plot_centered[plot_index_test_full[i]]);
-  mu_test_full[i] = exp(fmin(mu_final, 20));
-
-  // Use expected mean fecundity here too:
-  y_test_pred_full[i] = mu_test_full[i];
-  
-  //Use exp(mu_final) (expected fecundity) as your prediction for all plants in the full datasets, including those with zero observed seeds.Do not use zt_nb_rng() in the full data predictions because it cannot generate zeros.This gives a biologically meaningful latent fecundity expectation for plants with observed zero seeds. You can multiply these expected fecundities with emergence and reproduction probabilities to get predicted fitness.
 
   }
 }

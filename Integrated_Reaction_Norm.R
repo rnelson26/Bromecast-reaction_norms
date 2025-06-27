@@ -1001,6 +1001,53 @@ stan_data <- list(
   n_site_year_test_full = length(unique(as.integer(as.factor(testing_df_emg$site_year))))
 )
 
+stan_data_fit <- list(
+  # General inputs for the model
+  n_X = nrow(X_SOS),  ##X for without SOS
+  n_X_soil = nrow(X_soil),
+  p_X = ncol(X_SOS),   
+  s_X = ncol(X_soil),
+  q_X = ncol(Lambda_SOS),      
+  X = X_SOS,  
+  X_soil = X_soil, 
+  Lambda = Lambda_SOS,##Lambda for without SOS variables
+  Lambda_soil = Lambda_soil,  
+  n_g = length(unique(genotype_plant_train)),  
+  K = K_common_garden,    
+  n_plot = max(training_df$plot_index),
+  n_site_year = length(unique(c(training_df$site_year, testing_df$site_year))),
+  
+  
+  
+  
+  # Training data specifics
+  n_train = nrow(training_df),
+  y_train = y,
+  idx_plant_train = idx_plant_train,
+  idx_plant_train_site = idx_plant_train_site,
+  genotype_plant_train = genotype_plant_train,
+  neighbors_train = training_df$neighbors.s,
+  annual_train = training_df$annual.s,
+  perennial_train = training_df$perennial.s,
+  shrub_train = training_df$shrub.s,
+  plot_index_train = training_df$plot_index,
+  n_site_year_train = length(unique(as.integer(as.factor(training_df$site_year)))),
+  site_year_id_train = training_df$idx,
+  
+  # Testing data specifics
+  n_test = nrow(testing_df),
+  idx_plant_test = idx_plant_test,
+  idx_plant_test_site = idx_plant_test_site,
+  genotype_plant_test = genotype_plant_test,
+  neighbors_test = testing_df$neighbors.s,
+  annual_test = testing_df$annual.s,
+  perennial_test = testing_df$perennial.s,
+  shrub_test = testing_df$shrub.s,
+  site_year_id_test = testing_df$idx,
+  plot_index_test = rep(0, nrow(testing_df)),
+  n_site_year_test = length(unique(as.integer(as.factor(testing_df$site_year))))
+)
+
 
 
 training_df_emg$r_train <- ifelse(training_df_emg$Reproduced == "Y", 1L, 0L)
@@ -1151,6 +1198,7 @@ stan_data_emerged_full <- list(
 
 # Fit using cmdrstan 
 mod <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/ztnb_glm.random.predict.stan")
+mod_fit <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/ztnb_glm.random.predict.stan.fit")
 mod_rep <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/binomial_glm_reproduced.stan")
 mod_emg <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/binomial_glm_survived.stan")
 
@@ -1211,8 +1259,7 @@ fit <- mod$sample(
   parallel_chains = 3,
   iter_warmup = iter_warmup,
   iter_sampling = iter_sampling,
-  init = 0
-  #init = init_list -- turn off for now b/c of overflow issues when full data is added
+  init = init_list 
 )
 
   ### Reproduced
@@ -2738,6 +2785,9 @@ mu     <- fit$draws("mu_test", format = "draws_matrix")                # E[fecun
 
 p_rep_test <- fit_rep$draws("p_test_full", format = "draws_matrix")  
 p_rep_train <- fit_rep$draws("p_train_full", format = "draws_matrix") 
+
+p_fec_test <- fit$draws("mu_test_full", format = "draws_matrix")  
+p_fec_train <- fit$draws("mu_train_full", format = "draws_matrix")
 
 r_rep_test <- fit_rep$draws("r_test_full", format = "draws_matrix")  
 r_rep_train <- fit_rep$draws("r_train_full", format = "draws_matrix")  
