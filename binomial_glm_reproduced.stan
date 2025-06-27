@@ -58,8 +58,9 @@ data {
   matrix[p_X_full, q_X_full] Lambda_full;
   matrix[s_X_full, q_X_full] Lambda_soil_full;
 
-  array[n_train_full] int<lower=1> genotype_plant_train_full;
+  array[n_train_full] int<lower=1> idx_plant_train_full;     
   array[n_train_full] int<lower=1> idx_plant_train_site_full;
+  array[n_train_full] int<lower=1> genotype_plant_train_full;
   array[n_train_full] int<lower=1> site_year_id_train_full;
   vector[n_train_full] neighbors_train_full;
   vector[n_train_full] annual_train_full;
@@ -69,6 +70,7 @@ data {
 
   // Full testing (emergence) data for prediction
   int<lower=0> n_test_full;
+  array[n_test_full] int<lower=1> idx_plant_test_full;  
   array[n_test_full] int<lower=1> genotype_plant_test_full;
   array[n_test_full] int<lower=1> idx_plant_test_site_full;
   array[n_test_full] int<lower=1> site_year_id_test_full;
@@ -217,15 +219,17 @@ array[n_test_full] int r_test_full;
   matrix[n_test_full, q_X_full] W_soil_test_full;
 
   // Project predictors for full training and test sets
-for (i in 1:n_train_full) {
-  W_train_full[i] = X_full[i] * Lambda_full;
-  W_soil_train_full[i] = X_soil_full[i] * Lambda_soil_full;
+matrix[n_X_full, q_X_full] W_full;
+matrix[n_X_soil_full, q_X_full] W_soil_full;
+
+for (i in 1:n_X_full) {
+  W_full[i] = X_full[i] * Lambda_full;
 }
 
-for (i in 1:n_test_full) {
-  W_test_full[i] = X_full[i + n_train_full] * Lambda_full;
-  W_soil_test_full[i] = X_soil_full[i + n_train_full] * Lambda_soil_full;
+for (i in 1:n_X_soil_full) {
+  W_soil_full[i] = X_soil_full[i] * Lambda_soil_full;
 }
+
 
 
 
@@ -290,34 +294,43 @@ for (i in 1:n_test_full) {
 
   // Full training data predictions
   for (i in 1:n_train_full) {
-    int g = genotype_plant_train_full[i];
-    int s = site_year_id_train_full[i];
-
-    real logit_p = alpha
-                 + dot_product(W_train_full[i], beta[g])
-                 + dot_product(W_soil_train_full[i], beta[g])
-                 + site_year_effect_train_scaled_centered[s]
+  int idx = idx_plant_train_full[i];       // index into W_full
+  int idx_site = idx_plant_train_site_full[i]; // index into W_soil_full
+  int g = genotype_plant_train_full[i];
+  int s = site_year_id_train_full[i];
+  
+  real site_year_effect = s <= n_site_year_train
+                         ? site_year_effect_train_scaled_centered[s]
+                         : normal_rng(0, sigma_site_year);
+  
+  real logit_p = alpha
+                 + dot_product(W_full[idx], beta[g])
+                 + dot_product(W_soil_full[idx_site], beta[g])
+                 + site_year_effect
                  + beta_neighbors * neighbors_train_full[i]
                  + beta_annual * annual_train_full[i]
                  + beta_perennial * perennial_train_full[i]
                  + beta_shrub * shrub_train_full[i]
                  + beta_0_centered[g];
 
-    if (plot_index_train_full[i] != 0)
-      logit_p += eta_plot_centered[plot_index_train_full[i]];
+  if (plot_index_train_full[i] != 0)
+    logit_p += eta_plot_centered[plot_index_train_full[i]];
 
-    p_train_full[i] = inv_logit(logit_p);
-    r_train_full[i] = bernoulli_logit_rng(logit_p);
-  }
+  p_train_full[i] = inv_logit(logit_p);
+  r_train_full[i] = bernoulli_logit_rng(logit_p);
+}
+
 
   // Full test data predictions (site-year is random)
   for (i in 1:n_test_full) {
-    int g = genotype_plant_test_full[i];
-    real site_year_noise = normal_rng(0, sigma_site_year);
+  int idx = idx_plant_test_full[i];
+  int idx_site = idx_plant_test_site_full[i];
+  int g = genotype_plant_test_full[i];
+  real site_year_noise = normal_rng(0, sigma_site_year);
 
-    real logit_p = alpha
-                 + dot_product(W_test_full[i], beta[g])
-                 + dot_product(W_soil_test_full[i], beta[g])
+  real logit_p = alpha
+                 + dot_product(W_full[idx], beta[g])
+                 + dot_product(W_soil_full[idx_site], beta[g])
                  + site_year_noise
                  + beta_neighbors * neighbors_test_full[i]
                  + beta_annual * annual_test_full[i]
@@ -325,12 +338,12 @@ for (i in 1:n_test_full) {
                  + beta_shrub * shrub_test_full[i]
                  + beta_0_centered[g];
 
-    if (plot_index_test_full[i] != 0)
-      logit_p += eta_plot_centered[plot_index_test_full[i]];
+  if (plot_index_test_full[i] != 0)
+    logit_p += eta_plot_centered[plot_index_test_full[i]];
 
-    p_test_full[i] = inv_logit(logit_p);
-    r_test_full[i] = bernoulli_logit_rng(logit_p);
-  }
+  p_test_full[i] = inv_logit(logit_p);
+  r_test_full[i] = bernoulli_logit_rng(logit_p);
 }
+ }
 
 

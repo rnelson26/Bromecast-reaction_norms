@@ -1,7 +1,7 @@
 #### Integrated Reaction Norm Model #######
 ######## code by Becca Nelson and Justin Van Ee ###############################
 ############# created 3-25-25 ######################
-############# Last modified: 6-25-25 ##########################
+############# Last modified: 6-26-25 ##########################
 ######## modifies RMD file to pull from one integrated df ########
 
 rm(list = ls())
@@ -27,7 +27,7 @@ library(hypergeo)
 ##### Load Data #########
 #data <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate.csv", header = TRUE) 
 
-data <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate_SOS.csv", header = TRUE) 
+data <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate_SOS_updated.csv", header = TRUE) 
 
 kinshipIDs <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/common_gardens/93cg_genotypes.csv")
 
@@ -191,6 +191,10 @@ data %>%
   group_by(Type, year) %>%
   summarise(n_NA = sum(is.na(Fecundity)))
 
+### filter censored data, seed drop and smut:  
+data <- data %>% filter(Emerged != "missing") %>% filter(Reproduced != "missing") %>%  filter(!notesFlag %in% c("smut", "seeddrop")) %>% filter(!note_standard_harvest %in% c("smut", "seed_drop", "missing")) %>% filter(!note_standard_phen %in% c("resurrection", "smut", "missing", "seed_drop","smut_physical_damage", "smut_herbivory" )) %>% filter(is.na(fecundityflag) | fecundityflag == 0)
+
+
 df <- data %>%
   dplyr::filter(Emerged == "Y", Reproduced == "Y") %>%
   mutate(
@@ -314,6 +318,39 @@ valid_genotypes <- rownames(K_common_garden)
 df <- df %>% filter(genotype %in% valid_genotypes)
 df_rep <- df_rep %>% filter(genotype %in% valid_genotypes)
 df_emg <- df_emg %>% filter(genotype %in% valid_genotypes)
+
+### reassign NAs to zero in emerged
+df_emg$Reproduced <- ifelse(df_emg$Emerged == "N", "N", df_emg$Reproduced)
+df_emg$Fecundity <- ifelse(df_emg$Emerged == "N", 0L, df_emg$Fecundity)
+
+df_emg$Fecundity <- ifelse(df_emg$Reproduced == "N", 0L, df_emg$Fecundity)
+
+
+na_fecundity <- df_emg %>%
+  filter(is.na(Fecundity))
+
+
+table(df_emg$Emerged[is.na(df_emg$Fecundity)])
+## all of the NAs emerged
+table(df_emg$Reproduced[is.na(df_emg$Fecundity)])
+## 120 have missing data for reproduced and 486 have yes 
+
+table(df_emg$Type[is.na(df_emg$Fecundity)])
+## from both
+
+#NA_summary <- na_fecundity %>% group_by(site_year, Type, Reproduced, Emerged, fecundityflag, notesFlag) %>% summarise(n = n())
+
+#sat_nas <- df_emg %>%
+ # filter(is.na(Fecundity)) %>%
+  #filter(Type == "Satellite") 
+
+#cg_nas <- df_emg %>%
+ # filter(is.na(Fecundity)) %>%
+  #filter(Type == "Common_Garden") 
+
+#write.csv(sat_nas, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/sat_sites/sat_nas.csv", row.names = FALSE)
+
+
 
 
 ###### Climate PCA #########
@@ -891,7 +928,7 @@ stan_data <- list(
   K = K_common_garden,    
   n_plot = max(training_df$plot_index),
   n_site_year = length(unique(c(training_df$site_year, testing_df$site_year))),
-
+  
   
   ## full data 
   n_X_full = nrow(X_emg_SOS),
@@ -949,8 +986,8 @@ stan_data <- list(
   site_year_id_test = testing_df$idx,
   plot_index_test = rep(0, nrow(testing_df)),
   n_site_year_test = length(unique(as.integer(as.factor(testing_df$site_year)))),
-
-### testing df full 
+  
+  ### testing df full 
   n_test_full = nrow(testing_df_emg),
   idx_plant_test_full = idx_plant_test_emg,
   idx_plant_test_site_full = idx_plant_test_site_emg,
@@ -963,6 +1000,7 @@ stan_data <- list(
   plot_index_test_full = rep(0, nrow(testing_df_emg)),
   n_site_year_test_full = length(unique(as.integer(as.factor(testing_df_emg$site_year))))
 )
+
 
 
 training_df_emg$r_train <- ifelse(training_df_emg$Reproduced == "Y", 1L, 0L)
@@ -1060,6 +1098,10 @@ stan_data_reproduced <- list(
 training_df_emg$e_train <- ifelse(training_df_emg$Emerged == "Y", 1L, 0L)
 testing_df_emg$e_test <- ifelse(testing_df_emg$Emerged == "Y", 1L, 0L)
 
+
+
+
+
 stan_data_emerged_full <- list(
   # General inputs for the model
   n_X = nrow(X_emg_SOS),  
@@ -1105,49 +1147,6 @@ stan_data_emerged_full <- list(
 )
 
 
-#stan_data_emerged_fall <- list(
-  # General inputs for the model
- # n_X = nrow(X_emg_fall),  
-  #n_X_soil = nrow(X_soil_emg),
-#  p_X = ncol(X_emg_fall),   
- # s_X = ncol(X_soil_emg),
-  #q_X = ncol(Lambda_emg_fall),      
-  #X = X_emg_fall,    
-  #X_soil = X_soil_emg, 
-  #Lambda = Lambda_emg_fall,  
-  #Lambda_soil = Lambda_soil_emg,  
-  #n_g = length(unique(genotype_plant_train_emg)),  
-  #K = K_common_garden,    
-  #n_plot = max(training_df_emg$plot_index),
-  #n_site_year = length(unique(c(training_df_emg$site_year, testing_df_emg$site_year))),
-  
-  # Training data specifics
- # n_train = nrow(training_df_emg),
-  #e_train = training_df_emg$e_train,
-  #idx_plant_train = idx_plant_train_emg,
-  #idx_plant_train_site = idx_plant_train_site_emg,
-  #genotype_plant_train = genotype_plant_train_emg,
-  #neighbors_train = training_df_emg$neighbors.s,
-  #annual_train = training_df_emg$annual.s,
-  #perennial_train = training_df_emg$perennial.s,
-  #shrub_train = training_df_emg$shrub.s,
-  #plot_index_train = training_df_emg$plot_index,
-  #n_site_year_train = length(unique(as.integer(as.factor(training_df_emg$site_year)))),
-  #site_year_id_train = training_df_emg$idx,
-  
-  # Testing data specifics
-  #n_test = nrow(testing_df_emg),
-  #idx_plant_test = idx_plant_test_emg,
-  #idx_plant_test_site = idx_plant_test_site_emg,
-  #genotype_plant_test = genotype_plant_test_emg,
-  #neighbors_test = testing_df_emg$neighbors.s,
-  #annual_test = testing_df_emg$annual.s,
-  #perennial_test = testing_df_emg$perennial.s,
-  #shrub_test = testing_df_emg$shrub.s,
-  #site_year_id_test = testing_df_emg$idx,
-  #plot_index_test = rep(0, nrow(testing_df_emg)),
-  #n_site_year_test = length(unique(as.integer(as.factor(testing_df_emg$site_year))))
-#)
 
 
 # Fit using cmdrstan 
@@ -1156,15 +1155,20 @@ mod_rep <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norm
 mod_emg <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/binomial_glm_survived.stan")
 
 #### Find good starting values ####
+### distinguish between data that gets fit in model vs full dataset only used for generated quanities (predictions) to help pathfinder fit
+#stan_data_full <- stan_data
+#stan_data_fit <- stan_data_full[!grepl("_full$", names(stan_data_full))]
+
+#stan_data_reproduced_full <- stan_data_reproduced
+#stan_data_reproduced_fit <- stan_data_reproduced_full[!grepl("_full$", names(stan_data_reproduced_full))]
 ### Fecundity 
-
-
 pathfinder_fit <- mod$pathfinder(
-  data = stan_data,          # your named list of data
-  init = 0,                  # or a list of reasonable inits
-  num_paths = 1              # usually equal to number of chains
+  data = stan_data,
+  init = 0,
+  num_paths = 1
 )
 init_list <- pathfinder_fit$draws(format = "list")
+
 
 ### Reproduced 
 pathfinder_fit <- mod_rep$pathfinder(
@@ -1197,6 +1201,8 @@ iter_warmup = 100
 iter_sampling = 1000 ## run for 10,000 and look at overall diff in scores
 
 # Compile and fit the model
+
+
 ### Fecundity 
 fit <- mod$sample(
   data = stan_data,
@@ -1205,10 +1211,11 @@ fit <- mod$sample(
   parallel_chains = 3,
   iter_warmup = iter_warmup,
   iter_sampling = iter_sampling,
-  init = init_list
+  init = 0
+  #init = init_list -- turn off for now b/c of overflow issues when full data is added
 )
 
-        ### Reproduced
+  ### Reproduced
 fit_rep <- mod_rep$sample(
   data = stan_data_reproduced,
   chains = 3,
@@ -2712,215 +2719,13 @@ df %>% filter(Type == "Common_Garden") %>% ggplot(aes(x = neighbors, y = Fecundi
 df %>% filter(Type == "Common_Garden") %>% select(neighbors) %>% distinct()
 
 ########## Predict Fitness ########################
-training_df_emg$r_train <- ifelse(training_df_emg$Reproduced == "Y", 1L, 0L)
-testing_df_emg$r_test <- ifelse(testing_df_emg$Reproduced == "Y", 1L, 0L)
+#training_df_emg$r_train <- ifelse(training_df_emg$Reproduced == "Y", 1L, 0L)
+#testing_df_emg$r_test <- ifelse(testing_df_emg$Reproduced == "Y", 1L, 0L)
 
 ## calculate observed fitness 
 testing_df_emg <- testing_df_emg %>% dplyr::mutate(Obs_Fitness = e_test * r_test * Fecundity)
 training_df_emg <- training_df_emg %>% mutate(Obs_Fitness = e_train * r_train * Fecundity)
 
-##### fecundity model 
-
-mu_test_post  <- fit$draws("mu_test", format = "draws_matrix")  
-mu_test_mean <- apply(log(mu_test_post), 2, mean) 
-rm(mu_test_post)
-
-## train
-mu_train_post  <- fit$draws("mu_train", format = "draws_matrix")
-mu_train_mean <- apply(log(mu_train_post), 2, mean) 
-rm(mu_train_post)
-
-mu_train_post_fixed  <- fit$draws("mu_train_fixed", format = "draws_matrix")
-mu_train_mean_fixed <- apply(log(mu_train_post_fixed), 2, mean) 
-rm(mu_train_post_fixed)
-
-
-testing_df$mu_pred <- mu_test_mean
-rm(mu_test_mean)
-training_df$mu_pred <- mu_train_mean
-rm(mu_train_mean)
-training_df$mu_pred_fixed <- mu_train_mean_fixed
-rm(mu_train_mean_fixed)
-
-### posterior predictive
-y_test_post  <- fit$draws("y_test_pred", format = "draws_matrix")
-y_test_mean <- apply(log(y_test_post), 2, mean) 
-rm(y_test_post)
-
-## train
-y_train_post  <- fit$draws("y_train_pred", format = "draws_matrix")
-y_train_mean <- apply(log(y_train_post), 2, mean) 
-rm(y_train_post)
-
-y_train_post_fixed  <- fit$draws("y_train_pred_fixed", format = "draws_matrix")
-y_train_mean_fixed <- apply(log(y_train_post_fixed), 2, mean) 
-rm(y_train_post_fixed)
-
-
-testing_df$y_pred <- y_test_mean
-rm(y_test_mean)
-training_df$y_pred <- y_train_mean
-rm(y_train_mean)
-training_df$y_pred_fixed <- y_train_mean_fixed
-rm(y_train_mean_fixed)
-
-
-
-
-rm(fit)
-
-
-
-####### Reproduction model
-# Extract posterior draws
-p_test_post <- fit_rep$draws("p_test", format = "draws_matrix")
-p_train_post <- fit_rep$draws("p_train", format = "draws_matrix")
-p_train_fixed_post <- fit_rep$draws("p_train_fixed", format = "draws_matrix")
-
-
-p_test_mean <- apply(p_test_post, 2, mean)
-p_train_mean <- apply(p_train_post, 2, mean)
-p_train_fixed_mean <- apply(p_train_fixed_post, 2, mean)
-
-rm(p_test_post, p_train_post, p_train_fixed_post)
-
-
-testing_df_rep$p_pred <- p_test_mean
-training_df_rep$p_pred <- p_train_mean
-training_df_rep$p_pred_fixed <- p_train_fixed_mean
-
-# For predicted outcomes (r_test_pred, r_train_pred, r_train_pred_fixed)
-# These are integers, so you might want either the mean predicted count or the mode,
-
-r_test_pred_post <- fit_rep$draws("r_test_pred", format = "draws_matrix")
-r_train_pred_post <- fit_rep$draws("r_train_pred", format = "draws_matrix")
-r_train_pred_fixed_post <- fit_rep$draws("r_train_pred_fixed", format = "draws_matrix")
-
-
-r_test_pred_mean <- apply(r_test_pred_post, 2, mean)
-r_train_pred_mean <- apply(r_train_pred_post, 2, mean)
-r_train_pred_fixed_mean <- apply(r_train_pred_fixed_post, 2, mean)
-
-rm(r_test_pred_post, r_train_pred_post, r_train_pred_fixed_post)
-
-
-testing_df_rep$r_pred <- r_test_pred_mean
-training_df_rep$r_pred <- r_train_pred_mean
-training_df_rep$r_pred_fixed <- r_train_pred_fixed_mean
-
-
-rm(fit_rep)
-
-##### Emergence model
-# Extract posterior draws
-p_test_post <- fit_emg_full$draws("p_test", format = "draws_matrix")
-p_test_emg_mean <- apply(p_test_post, 2, mean)
-rm(p_test_post)
-
-p_train_post <- fit_emg_full$draws("p_train", format = "draws_matrix")
-p_train_emg_mean <- apply(p_train_post, 2, mean)
-rm(p_train_post)
-
-p_train_fixed_post <- fit_emg_full$draws("p_train_fixed", format = "draws_matrix")
-p_train_fixed_emg_mean <- apply(p_train_fixed_post, 2, mean)
-rm(p_train_fixed_post)
-
-
-testing_df_emg$emg_posterior <- p_test_emg_mean
-rm(p_test_emg_mean)
-
-training_df_emg$emg_posterior <- p_train_emg_mean
-rm(p_train_emg_mean)
-
-training_df_emg$emg_posterior_fixed <- p_train_fixed_emg_mean
-rm(p_train_fixed_emg_mean)
-
-colnames(training_df_emg)
-colnames(testing_df_emg)
-
-# For predicted outcomes (r_test_pred, r_train_pred, r_train_pred_fixed)
-# These are integers, so you might want either the mean predicted count or the mode,
-
-e_test_pred_post <- fit_emg_full$draws("e_test_pred", format = "draws_matrix")
-e_test_pred_mean <- apply(e_test_pred_post, 2, mean)
-rm(e_test_pred_post)
-
-e_train_pred_post <- fit_emg_full$draws("e_train_pred", format = "draws_matrix")
-e_train_pred_mean <- apply(e_train_pred_post, 2, mean)
-rm(e_train_pred_post)
-
-e_train_pred_fixed_post <- fit_emg_full$draws("e_train_pred_fixed", format = "draws_matrix")
-e_train_pred_fixed_mean <- apply(e_train_pred_fixed_post, 2, mean)
-rm(e_train_pred_fixed_post)
-
-testing_df_emg$e_pred <- e_test_pred_mean
-rm(e_test_pred_mean)
-
-training_df_emg$e_pred <- e_train_pred_mean
-rm(e_train_pred_mean)
-
-training_df_emg$e_pred_fixed <- e_train_pred_fixed_mean
-rm(e_train_pred_fixed_mean)
-
-rm(fit_emg_full)
-
-###### Calculate Predicted Fitness ########
-### Fecundity merge
-
-fec_preds <- testing_df %>%
-  dplyr::select(plantID, mu_pred, y_pred)
-
-testing_df_emg <- testing_df_emg %>%
-  left_join(fec_preds, by = "plantID") %>%
-  mutate(
-    mu_pred = ifelse(is.na(mu_pred), 0, mu_pred),
-    y_pred = ifelse(is.na(y_pred), 0, y_pred)
-  )
-
-fec_preds <- training_df %>%
-  dplyr::select(plantID, mu_pred, y_pred, mu_pred_fixed, y_pred_fixed)
-
-
-training_df_emg <- training_df_emg %>%
-  left_join(fec_preds, by = "plantID") %>%
-  mutate(
-    mu_pred = ifelse(is.na(mu_pred), 0, mu_pred),
-    mu_pred_fixed = ifelse(is.na(mu_pred_fixed), 0, mu_pred_fixed),
-    y_pred = ifelse(is.na(y_pred), 0, y_pred),
-    y_pred_fixed = ifelse(is.na(y_pred_fixed), 0, y_pred_fixed)
-  )
-### reproduced merge
-rep_preds <- testing_df_rep %>%
-  dplyr::select(plantID, p_pred, r_pred)
-
-
-testing_df_emg <- testing_df_emg %>%
-  left_join(rep_preds, by = "plantID") %>%
-  mutate(
-  p_pred = ifelse(is.na(p_pred), 0, p_pred),
-    r_pred = ifelse(is.na(r_pred), 0, r_pred)
-  )
-
-rep_preds <- training_df_rep %>%
-  dplyr::select(plantID, p_pred, r_pred, p_pred_fixed, r_pred_fixed)
-
-
-training_df_emg <- training_df_emg %>%
-  left_join(rep_preds, by = "plantID") %>%
-  mutate(
-    p_pred = ifelse(is.na(p_pred), 0, p_pred),
-    p_pred_fixed = ifelse(is.na(p_pred), 0, p_pred_fixed),
-    r_pred = ifelse(is.na(r_pred), 0, r_pred),
-    r_pred_fixed = ifelse(is.na(r_pred_fixed), 0, r_pred_fixed)
-  )
-
-## mean posterior 
-testing_df_emg <- testing_df_emg %>% dplyr::mutate(Posterior_Fitness = emg_posterior * p_pred * mu_pred)
-training_df_emg <- training_df_emg %>% mutate(Posterior_Fitness = emg_posterior * p_pred * mu_pred)
-
-## mean postestior predictive 
-testing_df_emg <- testing_df_emg %>% dplyr::mutate(PosteriorPred_Fitness = e_pred * r_pred * y_pred)
-training_df_emg <- training_df_emg %>% mutate(PosteriorPred_Fitness = e_pred * r_pred * y_pred)
 
 ### save .csv with model predictions
 #write.csv(training_df_emg, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/training_fitness.csv", row.names = FALSE)
@@ -2928,9 +2733,14 @@ training_df_emg <- training_df_emg %>% mutate(PosteriorPred_Fitness = e_pred * r
 
 ##### with draws
 p_emg <- fit_emg_full$draws("p_test", format = "draws_matrix")         # Pr(emerge)
-p_rep <- fit_rep$draws("p_test", format = "draws_matrix")              # Pr(reproduce | emerged)
+#p_rep <- fit_rep$draws("p_test", format = "draws_matrix")              # Pr(reproduce | emerged)
 mu     <- fit$draws("mu_test", format = "draws_matrix")                # E[fecundity | emerged, reproduced]
 
+p_rep_test <- fit_rep$draws("p_test_full", format = "draws_matrix")  
+p_rep_train <- fit_rep$draws("p_train_full", format = "draws_matrix") 
+
+r_rep_test <- fit_rep$draws("r_test_full", format = "draws_matrix")  
+r_rep_train <- fit_rep$draws("r_train_full", format = "draws_matrix")  
 
 fitness_draws <- p_emg * p_rep * mu  
 
@@ -2938,27 +2748,28 @@ posterior_fitness_mean <- colMeans(fitness_draws)
 
 ### accounting for zeros
 # Define full list of plantIDs in testing set (or training set)
-plant_ids <- testing_df_emg$plantID
-n_ind <- length(plant_ids)
+#plant_ids <- testing_df_emg$plantID
+#n_ind <- length(plant_ids)
 
 # Number of posterior draws
-n_draws <- posterior::niterations(fit)  # Or use dim(mu_test)[1]
+#n_draws <- posterior::niterations(fit)  # Or use dim(mu_test)[1]
 
 # Create empty draw matrices filled with zeros
-draws_mu    <- matrix(0, nrow = n_draws, ncol = n_ind)
-draws_p_rep <- matrix(0, nrow = n_draws, ncol = n_ind)
-draws_p_emg <- matrix(0, nrow = n_draws, ncol = n_ind)
+#draws_mu    <- matrix(0, nrow = n_draws, ncol = n_ind)
+#draws_p_rep <- matrix(0, nrow = n_draws, ncol = n_ind)
+#draws_p_emg <- matrix(0, nrow = n_draws, ncol = n_ind)
 
 # Map plantIDs to columns
-id_map <- match(colnames(mu), plant_ids)
-draws_mu[, !is.na(id_map)] <- mu[, which(!is.na(id_map))]
+#id_map <- match(colnames(mu), plant_ids)
+#draws_mu[, !is.na(id_map)] <- mu[, which(!is.na(id_map))]
 
-id_map <- match(colnames(p_rep), plant_ids)
-draws_p_rep[, !is.na(id_map)] <- p_rep[, which(!is.na(id_map))]
+#id_map <- match(colnames(p_rep), plant_ids)
+#draws_p_rep[, !is.na(id_map)] <- p_rep[, which(!is.na(id_map))]
 
-id_map <- match(colnames(p_emg), plant_ids)
-draws_p_emg[, !is.na(id_map)] <- p_emg[, which(!is.na(id_map))]
+#id_map <- match(colnames(p_emg), plant_ids)
+#draws_p_emg[, !is.na(id_map)] <- p_emg[, which(!is.na(id_map))]
 
+### from Mevin
 ## apply transformation first before summary
 fitness_draws <- draws_mu * draws_p_rep * draws_p_emg  # dim: [n_draws x n_ind]
 log_fitness_draws =log(draw_mu) + log(draws_p_rep) + log(draws_p_emg) #transform each realization to take e off, either fitness or log draws lines good --> plot this

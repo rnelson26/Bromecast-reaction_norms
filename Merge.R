@@ -3,7 +3,7 @@
 ######## for bromecast reaction norm paper ########
 ######## R. Nelson, M. Vahsen, & P. Adler ######
 ########### code created on 1/28/25 #######
-############ last modified: 6/23/25 ########################
+############ last modified: 6/26/25 ########################
 
 ### outstanding questions ##########
 ## whether approach to zero neighbors makes sense 
@@ -37,8 +37,8 @@ cg <- cg %>%
 
 cg <- cg %>%
   mutate(Reproduced = case_when(
-    is.na(first_flower) ~ "N",
-    TRUE ~ "Y"
+    inflor_mass > 0 ~ "Y",
+    TRUE ~ "N"
   ))
 
 
@@ -280,7 +280,7 @@ write.csv(combined_clean, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_nor
 
 #state_map <- map_data("state")
 #state_map_filtered <- state_map[state_map$long >= -128 & state_map$long <= -95 &
-                                  state_map$lat >= 30 & state_map$lat <= 52, ]
+#                                  state_map$lat >= 30 & state_map$lat <= 52, ]
 # ggplot() +
  # geom_polygon(data=state_map_filtered, aes(x=long, y=lat, group=group), fill="gray100", color="black") +
   #geom_point(data=summary, aes(x=Lon, y=Lat, color=MAP)) +
@@ -351,7 +351,7 @@ write.csv(combined_clean, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_nor
  
 
  
-site_list <- combined_clean %>% select(site_old, Lat, Lon) %>% distinct()
+site_list <- combined_clean %>% dplyr::select(site_old, Lat, Lon) %>% distinct()
 site_list$SiteCode <- site_list$site
 
 name_mapping <- data.frame(
@@ -641,6 +641,7 @@ write.csv(combined_clean_climate_SOS, "/Users/Becca/Desktop/Adler Lab/Bromecast-
 
 ######## Common Garden Biomass-Seed Count #########
 ### Adapting code by Megan Vahsen
+cg <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/common_gardens/cg_fullData_withFlags.csv", header = TRUE)
 
 library(tidyverse); library(ggpubr)
 
@@ -758,12 +759,12 @@ cg_2023_summary <- bind_rows(
 combined_clean_climate_SOS_updated <- combined_clean_climate_SOS %>%
   left_join(cg_2023_summary, by = "plantID", suffix = c("", "_from_summary")) %>%
   mutate(Fecundity = ifelse(is.na(Fecundity), Fecundity_from_summary, Fecundity)) %>%
-  select(-Fecundity_from_summary)
+  dplyr::select(-Fecundity_from_summary)
 
-combined_clean_climate_SOS_updated <- combined_clean_climate_SOS_updated %>%
-  left_join(cg_2023_zeros, by = "plantID", suffix = c("", "_zero")) %>%
-  mutate(Fecundity = ifelse(is.na(Fecundity), Fecundity_zero, Fecundity)) %>%
-  dplyr::select(-Fecundity_zero)
+#combined_clean_climate_SOS_updated <- combined_clean_climate_SOS_updated %>%
+ # left_join(cg_2023_zeros, by = "plantID", suffix = c("", "_zero")) %>%
+#  mutate(Fecundity = ifelse(is.na(Fecundity), Fecundity_zero, Fecundity)) %>%
+ # dplyr::select(-Fecundity_zero)
 
 
 ## check that the merge worked! 
@@ -779,10 +780,13 @@ cg %>%
   )
 
 
-cg %>%
-  group_by(year) %>%
-  dplyr::summarise(n_zero = sum(inflor_mass == 0, na.rm = TRUE))
+
+combined_clean_climate_SOS %>%
+  filter(Type == "Common_Garden", year == 2023, is.na(Fecundity)) %>%
+  group_by(Emerged, Reproduced) %>%
+  dplyr::summarise(n = n(), .groups = "drop")
+
 
 ## update .csv file
-write.csv(combined_clean_climate_SOS_updated, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate_SOS.csv", row.names = FALSE)
+write.csv(combined_clean_climate_SOS_updated, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/combined_clean_climate_SOS_updated.csv", row.names = FALSE)
 
