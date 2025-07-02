@@ -214,23 +214,20 @@ generated quantities {
   vector[n_train] mu_train_fixed;
   vector[n_test] mu_test_fixed;
 
-  // Posterior predictive samples (commented out)
-  /*
+  // Posterior predictive samples
   array[n_train] int y_train_pred;
   array[n_test] int y_test_pred;
   array[n_train] int y_train_pred_fixed;
   array[n_test] int y_test_pred_fixed;
-  */
 
-  // NEW full predictions
+  // Full dataset predictions
   vector[n_train_full] mu_train_full;
   vector[n_test_full] mu_test_full;
 
-  // Posterior predictive for full datasets (commented out)
-  /*
-  vector[n_train_full] y_train_pred_full;
-  vector[n_test_full] y_test_pred_full;
-  */
+  array[n_train_full] int y_train_pred_full;
+  array[n_test_full] int y_test_pred_full;
+
+  real mu_cap = 10; // cap log(mu) at 10 (~22,000)
 
   // Training predictions
   for (i in 1:n_train) {
@@ -248,7 +245,13 @@ generated quantities {
                    beta_shrub * shrub_train[i];
 
     real mu_final = mu_base + (plot_index_train[i] == 0 ? 0 : eta_plot_centered[plot_index_train[i]]);
-    mu_train[i] = exp(fmin(mu_final, 20));
+    mu_train[i] = exp(fmin(mu_final, mu_cap));
+
+    // Posterior predictive
+    int y_sim = 0;
+    while (y_sim == 0)
+      y_sim = neg_binomial_2_rng(mu_train[i], theta);
+    y_train_pred[i] = y_sim;
   }
 
   // Test predictions
@@ -269,7 +272,13 @@ generated quantities {
                    beta_shrub * shrub_test[i];
 
     real mu_final = mu_base + (plot_index_test[i] == 0 ? 0 : eta_plot_centered[plot_index_test[i]]);
-    mu_test[i] = exp(fmin(mu_final, 20));
+    mu_test[i] = exp(fmin(mu_final, mu_cap));
+
+    // Posterior predictive
+    int y_sim = 0;
+    while (y_sim == 0)
+      y_sim = neg_binomial_2_rng(mu_test[i], theta);
+    y_test_pred[i] = y_sim;
   }
 
   // Fixed effects predictions (no site-year or plot noise)
@@ -285,7 +294,13 @@ generated quantities {
                    beta_perennial * perennial_train[i] +
                    beta_shrub * shrub_train[i];
 
-    mu_train_fixed[i] = exp(fmin(mu_base, 20));
+    mu_train_fixed[i] = exp(fmin(mu_base, mu_cap));
+
+    // Posterior predictive
+    int y_sim = 0;
+    while (y_sim == 0)
+      y_sim = neg_binomial_2_rng(mu_train_fixed[i], theta);
+    y_train_pred_fixed[i] = y_sim;
   }
 
   for (i in 1:n_test) {
@@ -300,10 +315,16 @@ generated quantities {
                    beta_perennial * perennial_test[i] +
                    beta_shrub * shrub_test[i];
 
-    mu_test_fixed[i] = exp(fmin(mu_base, 20));
+    mu_test_fixed[i] = exp(fmin(mu_base, mu_cap));
+
+    // Posterior predictive
+    int y_sim = 0;
+    while (y_sim == 0)
+      y_sim = neg_binomial_2_rng(mu_test_fixed[i], theta);
+    y_test_pred_fixed[i] = y_sim;
   }
 
-  // Full training predictions (expected fecundity only)
+  // Full training predictions
   for (i in 1:n_train_full) {
     int idx = idx_plant_train_full[i];
     int idx_site = idx_plant_train_site_full[i];
@@ -319,10 +340,16 @@ generated quantities {
                    beta_shrub * shrub_train_full[i];
 
     real mu_final = mu_base + (plot_index_train_full[i] == 0 ? 0 : eta_plot_centered[plot_index_train_full[i]]);
-    mu_train_full[i] = exp(fmin(mu_final, 20));
+    mu_train_full[i] = exp(fmin(mu_final, mu_cap));
+
+    // Posterior predictive
+    int y_sim = 0;
+    while (y_sim == 0)
+      y_sim = neg_binomial_2_rng(mu_train_full[i], theta);
+    y_train_pred_full[i] = y_sim;
   }
 
-  // Full test predictions (expected fecundity only)
+  // Full test predictions
   for (i in 1:n_test_full) {
     int idx = idx_plant_test_full[i];
     int idx_site = idx_plant_test_site_full[i];
@@ -340,7 +367,13 @@ generated quantities {
                    beta_shrub * shrub_test_full[i];
 
     real mu_final = mu_base + (plot_index_test_full[i] == 0 ? 0 : eta_plot_centered[plot_index_test_full[i]]);
-    mu_test_full[i] = exp(fmin(mu_final, 20));
+    mu_test_full[i] = exp(fmin(mu_final, mu_cap));
+
+    // Posterior predictive
+    int y_sim = 0;
+    while (y_sim == 0)
+      y_sim = neg_binomial_2_rng(mu_test_full[i], theta);
+    y_test_pred_full[i] = y_sim;
   }
 }
 

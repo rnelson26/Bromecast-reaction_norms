@@ -278,3 +278,140 @@ for (i in 1:n_test) {
      // y_sample = neg_binomial_2_rng(mu_train_fixed[i], theta);
     //y_train_pred_fixed[i] = y_sample;
 }
+
+// version for full dataset that worked
+generated quantities {
+  vector[n_test] mu_test;
+  vector[n_train] mu_train;
+  vector[n_train] mu_train_fixed;
+  vector[n_test] mu_test_fixed;
+
+  // Posterior predictive samples (commented out)
+  /*
+  array[n_train] int y_train_pred;
+  array[n_test] int y_test_pred;
+  array[n_train] int y_train_pred_fixed;
+  array[n_test] int y_test_pred_fixed;
+  */
+
+  // NEW full predictions
+  vector[n_train_full] mu_train_full;
+  vector[n_test_full] mu_test_full;
+
+  // Posterior predictive for full datasets (commented out)
+  /*
+  vector[n_train_full] y_train_pred_full;
+  vector[n_test_full] y_test_pred_full;
+  */
+
+  // Training predictions
+  for (i in 1:n_train) {
+    int idx = idx_plant_train[i];
+    int idx_site = idx_plant_train_site[i];
+    int idx_genotype = genotype_plant_train[i];
+
+    real mu_base = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) +
+                   dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
+                   beta_0_centered[idx_genotype] +
+                   site_year_effect_train_scaled_centered[site_year_id_train[i]] +
+                   beta_neighbors * neighbors_train[i] +
+                   beta_annual * annual_train[i] +
+                   beta_perennial * perennial_train[i] +
+                   beta_shrub * shrub_train[i];
+
+    real mu_final = mu_base + (plot_index_train[i] == 0 ? 0 : eta_plot_centered[plot_index_train[i]]);
+    mu_train[i] = exp(fmin(mu_final, 20));
+  }
+
+  // Test predictions
+  for (i in 1:n_test) {
+    int idx = idx_plant_test[i];
+    int idx_site = idx_plant_test_site[i];
+    int idx_genotype = genotype_plant_test[i];
+
+    real site_year_sample = normal_rng(0, sigma_site_year);
+
+    real mu_base = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) +
+                   dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
+                   beta_0_centered[idx_genotype] +
+                   site_year_sample +
+                   beta_neighbors * neighbors_test[i] +
+                   beta_annual * annual_test[i] +
+                   beta_perennial * perennial_test[i] +
+                   beta_shrub * shrub_test[i];
+
+    real mu_final = mu_base + (plot_index_test[i] == 0 ? 0 : eta_plot_centered[plot_index_test[i]]);
+    mu_test[i] = exp(fmin(mu_final, 20));
+  }
+
+  // Fixed effects predictions (no site-year or plot noise)
+  for (i in 1:n_train) {
+    int idx = idx_plant_train[i];
+    int idx_site = idx_plant_train_site[i];
+    int idx_genotype = genotype_plant_train[i];
+
+    real mu_base = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) +
+                   dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
+                   beta_neighbors * neighbors_train[i] +
+                   beta_annual * annual_train[i] +
+                   beta_perennial * perennial_train[i] +
+                   beta_shrub * shrub_train[i];
+
+    mu_train_fixed[i] = exp(fmin(mu_base, 20));
+  }
+
+  for (i in 1:n_test) {
+    int idx = idx_plant_test[i];
+    int idx_site = idx_plant_test_site[i];
+    int idx_genotype = genotype_plant_test[i];
+
+    real mu_base = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) +
+                   dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
+                   beta_neighbors * neighbors_test[i] +
+                   beta_annual * annual_test[i] +
+                   beta_perennial * perennial_test[i] +
+                   beta_shrub * shrub_test[i];
+
+    mu_test_fixed[i] = exp(fmin(mu_base, 20));
+  }
+
+  // Full training predictions (expected fecundity only)
+  for (i in 1:n_train_full) {
+    int idx = idx_plant_train_full[i];
+    int idx_site = idx_plant_train_site_full[i];
+    int idx_genotype = genotype_plant_train_full[i];
+
+    real mu_base = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) +
+                   dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
+                   beta_0_centered[idx_genotype] +
+                   site_year_effect_train_scaled_centered[site_year_id_train_full[i]] +
+                   beta_neighbors * neighbors_train_full[i] +
+                   beta_annual * annual_train_full[i] +
+                   beta_perennial * perennial_train_full[i] +
+                   beta_shrub * shrub_train_full[i];
+
+    real mu_final = mu_base + (plot_index_train_full[i] == 0 ? 0 : eta_plot_centered[plot_index_train_full[i]]);
+    mu_train_full[i] = exp(fmin(mu_final, 20));
+  }
+
+  // Full test predictions (expected fecundity only)
+  for (i in 1:n_test_full) {
+    int idx = idx_plant_test_full[i];
+    int idx_site = idx_plant_test_site_full[i];
+    int idx_genotype = genotype_plant_test_full[i];
+
+    real site_year_noise = normal_rng(0, sigma_site_year);
+
+    real mu_base = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) +
+                   dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
+                   beta_0_centered[idx_genotype] +
+                   site_year_noise +
+                   beta_neighbors * neighbors_test_full[i] +
+                   beta_annual * annual_test_full[i] +
+                   beta_perennial * perennial_test_full[i] +
+                   beta_shrub * shrub_test_full[i];
+
+    real mu_final = mu_base + (plot_index_test_full[i] == 0 ? 0 : eta_plot_centered[plot_index_test_full[i]]);
+    mu_test_full[i] = exp(fmin(mu_final, 20));
+  }
+}

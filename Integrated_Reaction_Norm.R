@@ -1,7 +1,7 @@
 #### Integrated Reaction Norm Model #######
 ######## code by Becca Nelson and Justin Van Ee ###############################
 ############# created 3-25-25 ######################
-############# Last modified: 6-26-25 ##########################
+############# Last modified: 7-2-25 ##########################
 ######## modifies RMD file to pull from one integrated df ########
 
 rm(list = ls())
@@ -1206,7 +1206,7 @@ stan_data_emerged_full <- list(
 
 # Fit using cmdrstan 
 mod <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/ztnb_glm.random.predict.stan")
-mod_fit <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/ztnb_glm.random.predict.fit.stan")
+#mod_fit <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/ztnb_glm.random.predict.fit.stan")
 mod_rep <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/binomial_glm_reproduced.stan")
 mod_emg <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/binomial_glm_survived.stan")
 
@@ -2916,4 +2916,109 @@ ggplot(agg_train, aes(x = mean_pred_fitness, y = mean_obs_fitness, color = tmean
 ggplot(agg_test, aes(x = mean_pred_fitness, y = mean_obs_fitness, color = tmean.Sum)) +
   geom_point(size = 3, alpha = 0.8) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") + theme_minimal()
+
+###### CRPS ################################
+
+###### CRPS with scoring rules package #######
+library(posterior)
+library(scoringRules)
+
+### Fecundity 
+draws_y <- fit$draws(format = "df")
+y_train_pred <- draws_y[, grep("^y_train_pred\\[", names(draws_y))]
+y_train_fixed_pred <- draws_y[, grep("^y_train_fixed_pred\\[", names(draws_y))]
+y_test_pred <- draws_y[, grep("^y_test_pred\\[", names(draws_y))]
+
+# Reproduction
+draws_r <- fit_rep$draws(format = "df")
+r_train_pred <- draws_r[, grep("^r_train_pred\\[", names(draws_r))]
+r_train_fixed_pred <- draws_r[, grep("^r_train_pred_fixed\\[", names(draws_r))]
+r_test_pred <- draws_r[, grep("^r_test_pred\\[", names(draws_r))]
+
+# Full climate emerged
+draws_e_full <- fit_emg_full$draws(format = "df")
+e_train_pred_full <- draws_e_full[, grep("^e_train_pred\\[", names(draws_e_full))]
+e_train_fixed_pred_full <- draws_e_full[, grep("^e_train_pred_fixed\\[", names(draws_e_full))]
+e_test_pred_full <- draws_e_full[, grep("^e_test_pred\\[", names(draws_e_full))]
+
+# Rhat -- cutoff > 1.05 indicates convergence issues
+
+# Fecundity Rhat values
+rhat_y_train <- rhat(as.matrix(y_train_pred))
+rhat_y_train_fixed <- rhat(as.matrix(y_train_fixed_pred))
+rhat_y_test <- rhat(as.matrix(y_test_pred))
+## rhat above 1.05 with SOS model for train only
+
+# Reproduction Rhat values
+rhat_r_train <- rhat(as.matrix(r_train_pred))
+rhat_r_train_fixed <- rhat(as.matrix(r_train_fixed_pred))
+rhat_r_test <- rhat(as.matrix(r_test_pred))
+
+# Emerged Full Rhat values
+rhat_e_full_train <- rhat(as.matrix(e_train_pred_full))
+rhat_e_full_train_fixed <- rhat(as.matrix(e_train_fixed_pred_full))
+rhat_e_full_test <- rhat(as.matrix(e_test_pred_full))
+
+
+# Observed data 
+y_train_obs <- training_df$Fecundity
+y_test_obs <- testing_df$Fecundity
+r_train_obs <- training_df_rep$r_train
+r_test_obs <- testing_df_rep$r_test
+e_train_obs <- training_df_rep$e_train
+e_test_obs <- testing_df_rep$e_test
+
+# ==== CRPS Computation Helper ====
+get_crps <- function(obs, pred_df) {
+  pred_t <- t(as.matrix(pred_df))
+  crps_sample(y = obs, dat = pred_t)
+}
+
+# ==== CRPS Calculation ====
+
+# Fecundity
+crps_y <- list(
+  train = get_crps(y_train_obs, y_train_pred),
+  test = get_crps(y_test_obs, y_test_pred)
+)
+
+# Reproduction
+crps_r <- list(
+  train = get_crps(r_train_obs, r_train_pred),
+  train_fixed = get_crps(r_train_obs, r_train_fixed_pred),
+  test = get_crps(r_test_obs, r_test_pred)
+)
+
+# E (Full)
+crps_e_full <- list(
+  train = get_crps(training_df_emg$site_year, e_train_pred_full),
+  train_fixed = get_crps(training_df_emg$site_year, e_train_fixed_pred_full),
+  test = get_crps(testing_df_emg$site_year, e_test_pred_full)
+)
+
+# ==== Mean CRPS Summary ====
+mean_crps_summary <- list(
+  y = sapply(crps_y, mean),
+  r = sapply(crps_r, mean),
+  e_full = sapply(crps_e_full, mean)
+)
+
+y_crps = sapply(crps_y, mean)
+r_crps = sapply(crps_r, mean)
+e_full_crps = sapply(crps_e_full, mean)
+
+
+# ==== Optional Histogram ====
+hist(crps_y$train, breaks = 30, main = "CRPS - y_train", col = "skyblue")
+hist(crps_y$train_fixed, breaks = 30, main = "CRPS - y_train_fixed", col = "orange")
+hist(crps_y$test, breaks = 30, main = "CRPS - y_test", col = "purple")
+
+# Single Posterior Predictive Check 
+hist(t(as.matrix(y_train_pred))[1, ],
+     breaks = 30,
+     main = "Posterior Predictive for 1st Training Point (Fecundity)",
+     xlab = "Predicted Value",
+     col = "skyblue", border = "white")
+
+
 
