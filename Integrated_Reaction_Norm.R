@@ -1,7 +1,7 @@
 #### Integrated Reaction Norm Model #######
 ######## code by Becca Nelson and Justin Van Ee ###############################
 ############# created 3-25-25 ######################
-############# Last modified: 7-2-25 ##########################
+############# Last modified: 7-3-25 ##########################
 ######## modifies RMD file to pull from one integrated df ########
 
 rm(list = ls())
@@ -1201,14 +1201,174 @@ stan_data_emerged_full <- list(
   n_site_year_test = length(unique(as.integer(as.factor(testing_df_emg$site_year))))
 )
 
+######## Toggle variables on and off ############
+# === Full model ===
+stan_data$use_genetic <- 1
+stan_data$use_intra_competition <- 1
+stan_data$use_inter_competition <- 1
+stan_data$use_climate <- 1
+
+# === No genetics ===
+stan_data$use_genetic <- 0
+stan_data$use_intra_competition <- 1
+stan_data$use_inter_competition <- 1
+stan_data$use_climate <- 1
+
+stan_data_reproduced$use_genetic <- 0
+stan_data_reproduced$use_intra_competition <- 1
+stan_data_reproduced$use_inter_competition <- 1
+stan_data_reproduced$use_climate <- 1
+
+stan_data_emerged_full$use_genetic <- 0
+stan_data_emerged_full$use_intra_competition <- 1
+stan_data_emerged_full$use_inter_competition <- 1
+stan_data_emerged_full$use_climate <- 1
+
+# === No interspecific competition ===
+stan_data$use_genetic <- 1
+stan_data$use_intra_competition <- 1
+stan_data$use_inter_competition <- 0
+stan_data$use_climate <- 1
+
+stan_data_reproduced$use_genetic <- 1
+stan_data_reproduced$use_intra_competition <- 1
+stan_data_reproduced$use_inter_competition <- 0
+stan_data_reproduced$use_climate <- 1
 
 
+stan_data_emerged_full$use_genetic <- 1
+stan_data_emerged_full$use_intra_competition <- 1
+stan_data_emerged_full$use_inter_competition <- 0
+stan_data_emerged_full$use_climate <- 1
+
+
+# === No intra and inter competition ===
+stan_data$use_genetic <- 1
+stan_data$use_intra_competition <- 0
+stan_data$use_inter_competition <- 0
+stan_data$use_climate <- 1
+
+stan_data_reproduced$use_genetic <- 1
+stan_data_reproduced$use_intra_competition <- 0
+stan_data_reproduced$use_inter_competition <- 0
+stan_data_reproduced$use_climate <- 1
+
+stan_data_emerged_full$use_genetic <- 1
+stan_data_emerged_full$use_intra_competition <- 0
+stan_data_emerged_full$use_inter_competition <- 0
+stan_data_emerged_full$use_climate <- 1
+
+
+# === Climate only ===
+stan_data$use_genetic <- 0
+stan_data$use_intra_competition <- 0
+stan_data$use_inter_competition <- 0
+stan_data$use_climate <- 1
+
+stan_data_reproduced$use_genetic <- 0
+stan_data_reproduced$use_intra_competition <- 0
+stan_data_reproduced$use_inter_competition <- 0
+stan_data_reproduced$use_climate <- 1
+
+stan_data_emerged_full$use_genetic <- 0
+stan_data_emerged_full$use_intra_competition <- 0
+stan_data_emerged_full$use_inter_competition <- 0
+stan_data_emerged_full$use_climate <- 1
+
+###### Helper function for model flags ###########
+set_model_flags <- function(model_version = c("full", "no_genetic", "no_inter", "no_inter_intra", "climate_only")) {
+  version <- match.arg(model_version)
+  
+  switch(version,
+         "full" = list(
+           use_genetic = 1,
+           use_intra_competition = 1,
+           use_inter_competition = 1,
+           use_climate = 1
+         ),
+         "no_genetic" = list(
+           use_genetic = 0,
+           use_intra_competition = 1,
+           use_inter_competition = 1,
+           use_climate = 1
+         ),
+         "no_inter" = list(
+           use_genetic = 1,
+           use_intra_competition = 1,
+           use_inter_competition = 0,
+           use_climate = 1
+         ),
+         "no_inter_intra" = list(
+           use_genetic = 1,
+           use_intra_competition = 0,
+           use_inter_competition = 0,
+           use_climate = 1
+         ),
+         "climate_only" = list(
+           use_genetic = 0,
+           use_intra_competition = 0,
+           use_inter_competition = 0,
+           use_climate = 1
+         )
+  )
+}
+
+# set flag
+flags <- set_model_flags("no_inter_intra")
+
+stan_data <- c(stan_data, flags)
+stan_data_reproduced <- c(stan_data_reproduced, flags)
+stan_data_emerged_full <- c(stan_data_emerged_full, flags)
 
 # Fit using cmdrstan 
 mod <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/ztnb_glm.random.predict.stan")
 #mod_fit <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/ztnb_glm.random.predict.fit.stan")
 mod_rep <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/binomial_glm_reproduced.stan")
 mod_emg <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/binomial_glm_survived.stan")
+
+mod_null_emg <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/null_model_emerged.stan")
+mod_null_rep <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/null_model_reproduced.stan")
+mod_null_fec <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/null_model_fecundity.stan")
+########## Fit Null Models ##########
+fit_null_emg <- mod_null_emg$sample(
+  data = list(
+    n_train = nrow(training_df_emg),
+    n_test = nrow(testing_df_emg),
+    e_train = training_df_emg$e_train
+  ),
+  seed = 123,
+  chains = 4,
+  parallel_chains = 4,
+  iter_sampling = 1000,
+  iter_warmup = 1000
+)
+
+fit_null_rep <- mod_null_rep$sample(
+  data = list(
+    n_train = nrow(training_df_rep),
+    n_test = nrow(testing_df_rep),
+    r_train = training_df_rep$r_train
+  ),
+  seed = 123,
+  chains = 4,
+  parallel_chains = 4,
+  iter_sampling = 1000,
+  iter_warmup = 1000
+)
+
+fit_null_fec <- mod_null_fec$sample(
+  data = list(
+    n_train = nrow(training_df),
+    n_test = nrow(testing_df),
+    y_train = training_df$Fecundity
+  ),
+  seed = 123,
+  chains = 4,
+  parallel_chains = 4,
+  iter_sampling = 1000,
+  iter_warmup = 1000
+)
+
 
 #### Find good starting values ####
 ### distinguish between data that gets fit in model vs full dataset only used for generated quanities (predictions) to help pathfinder fit
@@ -2923,6 +3083,16 @@ ggplot(agg_test, aes(x = mean_pred_fitness, y = mean_obs_fitness, color = tmean.
 library(posterior)
 library(scoringRules)
 
+### null models 
+draws_y <- fit_null_fec$draws(format = "df")
+y_train_pred_null <- draws_y[, grep("^y_train_pred\\[", names(draws_y))]
+
+draws_r <- fit_null_rep$draws(format = "df")
+r_train_pred_null <- draws_r[, grep("^r_train_pred\\[", names(draws_r))]
+
+draws_e_null <- fit_null_emg$draws(format = "df")
+e_train_pred_null <- draws_e_null[, grep("^e_train_pred\\[", names(draws_e_null))]
+
 ### Fecundity 
 draws_y <- fit$draws(format = "df")
 y_train_pred <- draws_y[, grep("^y_train_pred\\[", names(draws_y))]
@@ -2965,8 +3135,36 @@ y_train_obs <- training_df$Fecundity
 y_test_obs <- testing_df$Fecundity
 r_train_obs <- training_df_rep$r_train
 r_test_obs <- testing_df_rep$r_test
-e_train_obs <- training_df_rep$e_train
-e_test_obs <- testing_df_rep$e_test
+e_train_obs <- training_df_emg$e_train
+e_test_obs <- testing_df_emg$e_test
+
+# ====== Null model CRPS ======
+y_train_pred_null_mat <- as.matrix(y_train_pred_null)
+r_train_pred_null_mat <- as.matrix(r_train_pred_null)
+e_train_pred_null_mat <- as.matrix(e_train_pred_null)
+
+
+crps_sample(y = y_train_obs, dat = y_train_pred_null)
+
+# Fecundity null CRPS
+crps_y_null <- crps_sample(y = y_train_obs, dat = t(y_train_pred_null_mat))
+
+# Reproduction null CRPS
+crps_r_null <- crps_sample(y = r_train_obs, dat = t(r_train_pred_null_mat))
+
+# Emergence null CRPS
+crps_e_null <- crps_sample(y = e_train_obs, dat = t(e_train_pred_null_mat))
+
+hist(crps_y_null)
+mean(crps_y_null) #202.9695
+
+hist(crps_r_null)
+mean(crps_r_null) # 0.2500765
+
+hist(crps_e_null)
+mean(crps_e_null) #0.1821024
+
+skill_score_y <- 1 - (mean(crps_y) / mean(crps_y_null))
 
 # ==== CRPS Computation Helper ====
 get_crps <- function(obs, pred_df) {
