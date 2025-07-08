@@ -1,7 +1,7 @@
 #### Integrated Reaction Norm Model #######
 ######## code by Becca Nelson and Justin Van Ee ###############################
 ############# created 3-25-25 ######################
-############# Last modified: 7-3-25 ##########################
+############# Last modified: 7-8-25 ##########################
 ######## modifies RMD file to pull from one integrated df ########
 
 rm(list = ls())
@@ -918,6 +918,138 @@ idx_plant_test_site_rep  <- as.numeric(testing_df_rep$site)
 
 idx_plant_train_site_emg <- as.numeric(training_df_emg$site)
 idx_plant_test_site_emg  <- as.numeric(testing_df_emg$site)
+
+###### Debugging subset #################
+set.seed(123)  # for reproducibility
+
+# Target 10% of rows total
+n_sample <- ceiling(0.1 * nrow(training_df))
+
+# Get site sizes
+site_sizes <- table(training_df$site_year)
+
+# Calculate how many rows to sample per site, proportional to site size
+site_sample_sizes <- round(n_sample * (site_sizes / sum(site_sizes)))
+
+# Sample row indices within each site_year
+train_subset_idx <- unlist(lapply(names(site_sample_sizes), function(site) {
+  site_rows <- which(training_df$site_year == site)
+  sample(site_rows, size = min(site_sample_sizes[site], length(site_rows)))
+}))
+
+training_df_sub <- training_df[train_subset_idx, ]
+
+# Subset associated vectors accordingly
+y_sub <- y[train_subset_idx]
+idx_plant_train_sub <- idx_plant_train[train_subset_idx]
+idx_plant_train_site_sub <- idx_plant_train_site[train_subset_idx]
+genotype_plant_train_sub <- genotype_plant_train[train_subset_idx]
+
+# Similarly for your full training data (emergence) stratified by site_year
+n_sample_emg <- ceiling(0.1 * nrow(training_df_emg))
+site_sizes_emg <- table(training_df_emg$site_year)
+site_sample_sizes_emg <- round(n_sample_emg * (site_sizes_emg / sum(site_sizes_emg)))
+
+train_emg_subset_idx <- unlist(lapply(names(site_sample_sizes_emg), function(site) {
+  site_rows <- which(training_df_emg$site_year == site)
+  sample(site_rows, size = min(site_sample_sizes_emg[site], length(site_rows)))
+}))
+
+training_df_emg_sub <- training_df_emg[train_emg_subset_idx, ]
+
+idx_plant_train_emg_sub <- idx_plant_train_emg[train_emg_subset_idx]
+idx_plant_train_site_emg_sub <- idx_plant_train_site_emg[train_emg_subset_idx]
+genotype_plant_train_emg_sub <- genotype_plant_train_emg[train_emg_subset_idx]
+
+# Now build stan_data_subset with subsetted vectors, but keep big matrices intact
+stan_data_subset <- list(
+  # General inputs — unchanged, full matrices kept
+  n_X = nrow(X_SOS),
+  n_X_soil = nrow(X_soil),
+  p_X = ncol(X_SOS),
+  s_X = ncol(X_soil),
+  q_X = ncol(Lambda_SOS),
+  X = X_SOS,
+  X_soil = X_soil,
+  Lambda = Lambda_SOS,
+  Lambda_soil = Lambda_soil,
+  n_g = length(unique(genotype_plant_train_sub)),
+  K = K_common_garden,
+  n_plot = max(training_df_sub$plot_index),
+  n_site_year = length(unique(c(training_df_sub$site_year, testing_df$site_year))),
+  
+  # Subsetted training data
+  n_train = nrow(training_df_sub),
+  y_train = y_sub,
+  idx_plant_train = idx_plant_train_sub,
+  idx_plant_train_site = idx_plant_train_site_sub,
+  genotype_plant_train = genotype_plant_train_sub,
+  neighbors_train = training_df_sub$neighbors.s,
+  annual_train = training_df_sub$annual.s,
+  perennial_train = training_df_sub$perennial.s,
+  shrub_train = training_df_sub$shrub.s,
+  plot_index_train = training_df_sub$plot_index,
+  n_site_year_train = length(unique(as.integer(as.factor(training_df_sub$site_year)))),
+  site_year_id_train = training_df_sub$idx,
+  
+  # Subsetted full training data (emergence)
+  n_train_full = nrow(training_df_emg_sub),
+  idx_plant_train_full = idx_plant_train_emg_sub,
+  idx_plant_train_site_full = idx_plant_train_site_emg_sub,
+  genotype_plant_train_full = genotype_plant_train_emg_sub,
+  neighbors_train_full = training_df_emg_sub$neighbors.s,
+  annual_train_full = training_df_emg_sub$annual.s,
+  perennial_train_full = training_df_emg_sub$perennial.s,
+  shrub_train_full = training_df_emg_sub$shrub.s,
+  plot_index_train_full = training_df_emg_sub$plot_index,
+  n_site_year_train_full = length(unique(as.integer(as.factor(training_df_emg_sub$site_year)))),
+  site_year_id_train_full = training_df_emg_sub$idx,
+  
+  # Test data unchanged
+  n_test = nrow(testing_df),
+  idx_plant_test = idx_plant_test,
+  idx_plant_test_site = idx_plant_test_site,
+  genotype_plant_test = genotype_plant_test,
+  neighbors_test = testing_df$neighbors.s,
+  annual_test = testing_df$annual.s,
+  perennial_test = testing_df$perennial.s,
+  shrub_test = testing_df$shrub.s,
+  site_year_id_test = testing_df$idx,
+  plot_index_test = rep(0, nrow(testing_df)),
+  n_site_year_test = length(unique(as.integer(as.factor(testing_df$site_year)))),
+  
+  n_test_full = nrow(testing_df_emg),
+  idx_plant_test_full = idx_plant_test_emg,
+  idx_plant_test_site_full = idx_plant_test_site_emg,
+  genotype_plant_test_full = genotype_plant_test_emg,
+  neighbors_test_full = testing_df_emg$neighbors.s,
+  annual_test_full = testing_df_emg$annual.s,
+  perennial_test_full = testing_df_emg$perennial.s,
+  shrub_test_full = testing_df_emg$shrub.s,
+  site_year_id_test_full = testing_df_emg$idx,
+  plot_index_test_full = rep(0, nrow(testing_df_emg)),
+  n_site_year_test_full = length(unique(as.integer(as.factor(testing_df_emg$site_year))))
+)
+stan_data_subset$n_X_full <- nrow(X_emg_SOS)
+stan_data_subset$p_X_full <- ncol(X_emg_SOS)
+stan_data_subset$q_X_full <- ncol(Lambda_emg_SOS)
+stan_data_subset$X_full <- X_emg_SOS
+stan_data_subset$Lambda_full <- Lambda_emg_SOS
+
+stan_data_subset$n_X_soil_full <- nrow(X_soil_emg)
+stan_data_subset$s_X_full <- ncol(X_soil_emg)
+stan_data_subset$X_soil_full <- X_soil_emg
+stan_data_subset$Lambda_soil_full <- Lambda_soil_emg
+
+# After subsetting training_df_sub, create a new integer factor for site_year
+site_year_id_train_sub <- as.integer(factor(training_df_sub$site_year))
+
+# Update n_site_year_train accordingly
+n_site_year_train_sub <- length(unique(training_df_sub$site_year))
+
+# Then pass these into stan_data_subset:
+stan_data_subset$site_year_id_train <- site_year_id_train_sub
+stan_data_subset$n_site_year_train <- n_site_year_train_sub
 
 ####### Fit stan model #########
 
