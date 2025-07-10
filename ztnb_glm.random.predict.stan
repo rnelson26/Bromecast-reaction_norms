@@ -3,7 +3,29 @@ functions {
   real zt_negbinom_lpmf(int y, real mu, real theta) {
     return neg_binomial_2_lpmf(y | mu, theta) - log1m_exp(neg_binomial_2_lpmf(0 | mu, theta));
   }
+
+  int ztnb_rng(real mu, real theta) {
+    real log_p0 = neg_binomial_2_lpmf(0 | mu, theta);
+    real u = uniform_rng(exp(log_p0), 1);
+    int y = 1;
+    real log_cdf = neg_binomial_2_lpmf(1 | mu, theta);
+
+    while (exp(log_cdf) < u && y < 10000) {
+      y += 1;
+      log_cdf = log_sum_exp(log_cdf, neg_binomial_2_lpmf(y | mu, theta));
+    }
+
+    // Safety fallback (shouldn’t trigger if model is well-behaved)
+    if (y >= 10000) {
+      y = 1;  // or some other fallback like poisson_rng(mu)
+    }
+
+    return y;
+  }
 }
+
+
+
 
 data {
   int<lower=1> n_train;
@@ -53,40 +75,36 @@ array[n_test] int<lower=n_site_year_train + 1, upper=n_site_year> site_year_id_t
   matrix[n_X_soil, s_X] X_soil;
   matrix[n_g, n_g] K;
   
-  // === Full training data ===
-  int<lower=1> n_X_full;
-int<lower=1> p_X_full;
-int<lower=1> q_X_full;
-matrix[n_X_full, p_X_full] X_full;
-matrix[p_X_full, q_X_full] Lambda_full;
+ int<lower=1> n_train_full;
+  int<lower=1> n_test_full;
 
-int<lower=1> n_X_soil_full;
-int<lower=1> s_X_full;
-matrix[n_X_soil_full, s_X_full] X_soil_full;
-matrix[s_X_full, q_X_full] Lambda_soil_full;
-int<lower=1> n_train_full;
-array[n_train_full] int<lower=1> idx_plant_train_full;
-array[n_train_full] int<lower=1> idx_plant_train_site_full;
-array[n_train_full] int<lower=1> genotype_plant_train_full;
-array[n_train_full] int<lower=1, upper=n_site_year_train> site_year_id_train_full;
-vector[n_train_full] neighbors_train_full;
-vector[n_train_full] annual_train_full;
-vector[n_train_full] perennial_train_full;
-vector[n_train_full] shrub_train_full;
-array[n_train_full] int<lower=0> plot_index_train_full;
+  // Add these declarations here BEFORE site_year_id_test_full
+  int<lower=1> n_site_year_train_full;
+  int<lower=1> n_site_year_full;
 
-// === Full testing data ===
-int<lower=1> n_test_full;
-array[n_test_full] int<lower=1> idx_plant_test_full;
-array[n_test_full] int<lower=1> idx_plant_test_site_full;
-array[n_test_full] int<lower=1> genotype_plant_test_full;
-vector[n_test_full] neighbors_test_full;
-vector[n_test_full] annual_test_full;
-vector[n_test_full] perennial_test_full;
-vector[n_test_full] shrub_test_full;
-array[n_test_full] int<lower=0> plot_index_test_full;
+  // Full training data
+  array[n_train_full] int<lower=1> idx_plant_train_full;
+  array[n_train_full] int<lower=1> idx_plant_train_site_full;
+  array[n_train_full] int<lower=1> genotype_plant_train_full;
+  array[n_train_full] int<lower=1, upper=n_site_year_train_full> site_year_id_train_full;
+  vector[n_train_full] neighbors_train_full;
+  vector[n_train_full] annual_train_full;
+  vector[n_train_full] perennial_train_full;
+  vector[n_train_full] shrub_train_full;
+  array[n_train_full] int<lower=0> plot_index_train_full;
 
+  // Full testing data
+  array[n_test_full] int<lower=1> idx_plant_test_full;
+  array[n_test_full] int<lower=1> idx_plant_test_site_full;
+  array[n_test_full] int<lower=1> genotype_plant_test_full;
+  vector[n_test_full] neighbors_test_full;
+  vector[n_test_full] annual_test_full;
+  vector[n_test_full] perennial_test_full;
+  vector[n_test_full] shrub_test_full;
+  array[n_test_full] int<lower=0> plot_index_test_full;
+  array[n_test_full] int<lower=n_site_year_train_full + 1, upper=n_site_year_full> site_year_id_test_full;
 }
+
 
 
 parameters {
@@ -209,35 +227,31 @@ beta_shrub ~ normal(0, 1);
 }
 
 generated quantities {
-  vector[n_test] mu_test;
+  real mu_cap = 10;
+
   vector[n_train] mu_train;
+  vector[n_test] mu_test;
   vector[n_train] mu_train_fixed;
   vector[n_test] mu_test_fixed;
+  vector[n_train_full] mu_train_full;
+  vector[n_test_full] mu_test_full;
 
-  // Posterior predictive samples
   array[n_train] int y_train_pred;
   array[n_test] int y_test_pred;
   array[n_train] int y_train_pred_fixed;
   array[n_test] int y_test_pred_fixed;
-
-  // Full dataset predictions
-  vector[n_train_full] mu_train_full;
-  vector[n_test_full] mu_test_full;
-
   array[n_train_full] int y_train_pred_full;
   array[n_test_full] int y_test_pred_full;
 
-  real mu_cap = 10; // cap log(mu) at 10 (~22,000)
-
-  // Training predictions
+  // Training
   for (i in 1:n_train) {
     int idx = idx_plant_train[i];
-    int idx_site = idx_plant_train_site[i];
-    int idx_genotype = genotype_plant_train[i];
+    int site = idx_plant_train_site[i];
+    int g = genotype_plant_train[i];
 
-    real mu_base = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) +
-                   dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
-                   beta_0_centered[idx_genotype] +
+    real mu_base = alpha + dot_product(W[idx, ], beta[g]) +
+                   dot_product(W_soil[site, ], beta[g]) +
+                   beta_0_centered[g] +
                    site_year_effect_train_scaled_centered[site_year_id_train[i]] +
                    beta_neighbors * neighbors_train[i] +
                    beta_annual * annual_train[i] +
@@ -246,26 +260,20 @@ generated quantities {
 
     real mu_final = mu_base + (plot_index_train[i] == 0 ? 0 : eta_plot_centered[plot_index_train[i]]);
     mu_train[i] = exp(fmin(mu_final, mu_cap));
-
-    // Posterior predictive
-    int y_sim = 0;
-    while (y_sim == 0)
-      y_sim = neg_binomial_2_rng(mu_train[i], theta);
-    y_train_pred[i] = y_sim;
+    y_train_pred[i] = ztnb_rng(mu_train[i], theta);
   }
 
-  // Test predictions
+  // Test
   for (i in 1:n_test) {
     int idx = idx_plant_test[i];
-    int idx_site = idx_plant_test_site[i];
-    int idx_genotype = genotype_plant_test[i];
+    int site = idx_plant_test_site[i];
+    int g = genotype_plant_test[i];
 
-    real site_year_sample = normal_rng(0, sigma_site_year);
-
-    real mu_base = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) +
-                   dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
-                   beta_0_centered[idx_genotype] +
-                   site_year_sample +
+    real site_year_noise = normal_rng(0, sigma_site_year);
+    real mu_base = alpha + dot_product(W[idx, ], beta[g]) +
+                   dot_product(W_soil[site, ], beta[g]) +
+                   beta_0_centered[g] +
+                   site_year_noise +
                    beta_neighbors * neighbors_test[i] +
                    beta_annual * annual_test[i] +
                    beta_perennial * perennial_test[i] +
@@ -273,66 +281,51 @@ generated quantities {
 
     real mu_final = mu_base + (plot_index_test[i] == 0 ? 0 : eta_plot_centered[plot_index_test[i]]);
     mu_test[i] = exp(fmin(mu_final, mu_cap));
-
-    // Posterior predictive
-    int y_sim = 0;
-    while (y_sim == 0)
-      y_sim = neg_binomial_2_rng(mu_test[i], theta);
-    y_test_pred[i] = y_sim;
+    y_test_pred[i] = ztnb_rng(mu_test[i], theta);
   }
 
-  // Fixed effects predictions (no site-year or plot noise)
+  // Fixed (no plot or site_year noise)
   for (i in 1:n_train) {
     int idx = idx_plant_train[i];
-    int idx_site = idx_plant_train_site[i];
-    int idx_genotype = genotype_plant_train[i];
+    int site = idx_plant_train_site[i];
+    int g = genotype_plant_train[i];
 
-    real mu_base = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) +
-                   dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
+    real mu_base = alpha + dot_product(W[idx, ], beta[g]) +
+                   dot_product(W_soil[site, ], beta[g]) +
                    beta_neighbors * neighbors_train[i] +
                    beta_annual * annual_train[i] +
                    beta_perennial * perennial_train[i] +
                    beta_shrub * shrub_train[i];
 
     mu_train_fixed[i] = exp(fmin(mu_base, mu_cap));
-
-    // Posterior predictive
-    int y_sim = 0;
-    while (y_sim == 0)
-      y_sim = neg_binomial_2_rng(mu_train_fixed[i], theta);
-    y_train_pred_fixed[i] = y_sim;
+    y_train_pred_fixed[i] = ztnb_rng(mu_train_fixed[i], theta);
   }
 
   for (i in 1:n_test) {
     int idx = idx_plant_test[i];
-    int idx_site = idx_plant_test_site[i];
-    int idx_genotype = genotype_plant_test[i];
+    int site = idx_plant_test_site[i];
+    int g = genotype_plant_test[i];
 
-    real mu_base = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) +
-                   dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
+    real mu_base = alpha + dot_product(W[idx, ], beta[g]) +
+                   dot_product(W_soil[site, ], beta[g]) +
                    beta_neighbors * neighbors_test[i] +
                    beta_annual * annual_test[i] +
                    beta_perennial * perennial_test[i] +
                    beta_shrub * shrub_test[i];
 
     mu_test_fixed[i] = exp(fmin(mu_base, mu_cap));
-
-    // Posterior predictive
-    int y_sim = 0;
-    while (y_sim == 0)
-      y_sim = neg_binomial_2_rng(mu_test_fixed[i], theta);
-    y_test_pred_fixed[i] = y_sim;
+    y_test_pred_fixed[i] = ztnb_rng(mu_test_fixed[i], theta);
   }
 
-  // Full training predictions
+  // Full training
   for (i in 1:n_train_full) {
     int idx = idx_plant_train_full[i];
-    int idx_site = idx_plant_train_site_full[i];
-    int idx_genotype = genotype_plant_train_full[i];
+    int site = idx_plant_train_site_full[i];
+    int g = genotype_plant_train_full[i];
 
-    real mu_base = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) +
-                   dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
-                   beta_0_centered[idx_genotype] +
+    real mu_base = alpha + dot_product(W[idx, ], beta[g]) +
+                   dot_product(W_soil[site, ], beta[g]) +
+                   beta_0_centered[g] +
                    site_year_effect_train_scaled_centered[site_year_id_train_full[i]] +
                    beta_neighbors * neighbors_train_full[i] +
                    beta_annual * annual_train_full[i] +
@@ -341,25 +334,19 @@ generated quantities {
 
     real mu_final = mu_base + (plot_index_train_full[i] == 0 ? 0 : eta_plot_centered[plot_index_train_full[i]]);
     mu_train_full[i] = exp(fmin(mu_final, mu_cap));
-
-    // Posterior predictive
-    int y_sim = 0;
-    while (y_sim == 0)
-      y_sim = neg_binomial_2_rng(mu_train_full[i], theta);
-    y_train_pred_full[i] = y_sim;
+    y_train_pred_full[i] = ztnb_rng(mu_train_full[i], theta);
   }
 
-  // Full test predictions
+  // Full test
   for (i in 1:n_test_full) {
     int idx = idx_plant_test_full[i];
-    int idx_site = idx_plant_test_site_full[i];
-    int idx_genotype = genotype_plant_test_full[i];
+    int site = idx_plant_test_site_full[i];
+    int g = genotype_plant_test_full[i];
 
     real site_year_noise = normal_rng(0, sigma_site_year);
-
-    real mu_base = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) +
-                   dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
-                   beta_0_centered[idx_genotype] +
+    real mu_base = alpha + dot_product(W[idx, ], beta[g]) +
+                   dot_product(W_soil[site, ], beta[g]) +
+                   beta_0_centered[g] +
                    site_year_noise +
                    beta_neighbors * neighbors_test_full[i] +
                    beta_annual * annual_test_full[i] +
@@ -368,15 +355,7 @@ generated quantities {
 
     real mu_final = mu_base + (plot_index_test_full[i] == 0 ? 0 : eta_plot_centered[plot_index_test_full[i]]);
     mu_test_full[i] = exp(fmin(mu_final, mu_cap));
-
-    // Posterior predictive
-    int y_sim = 0;
-    while (y_sim == 0)
-      y_sim = neg_binomial_2_rng(mu_test_full[i], theta);
-    y_test_pred_full[i] = y_sim;
+    y_test_pred_full[i] = ztnb_rng(mu_test_full[i], theta);
   }
 }
-
-
-
 

@@ -162,6 +162,7 @@ if (use_climate == 1) {
 }
 
 if (use_genetic == 1) {
+  logit_p += dot_product( beta[idx_genotype])
   logit_p += beta_0_centered[idx_genotype];
 }
 
