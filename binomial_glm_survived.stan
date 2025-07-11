@@ -161,66 +161,69 @@ beta_shrub ~ normal(0, 1);
 }
 
 generated quantities {
-    vector[n_test] p_test;
-    vector[n_train] p_train;
-    array[n_train] int e_train_pred;
-    array[n_test] int e_test_pred;
-    vector[n_train] p_train_fixed;
-array[n_train] int e_train_pred_fixed; 
-    
-    for (i in 1:n_train) {
-      int idx = idx_plant_train[i];
-       int idx_site = idx_plant_train_site[i];
-      int idx_genotype = genotype_plant_train[i];
-      
-      real logit_p = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) + dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
-                     site_year_effect_train_scaled_centered[site_year_id_train[i]] +
-                     beta_neighbors * neighbors_train[i] +
-                     beta_annual * annual_train[i] +
-                     beta_perennial * perennial_train[i] +
-                     beta_shrub * shrub_train[i] +
-                     beta_0_centered[idx_genotype];
-      
-      if (plot_index_train[i] != 0)
-        logit_p += eta_plot_centered[plot_index_train[i]];
-      
-      p_train[i] = inv_logit(logit_p);
-      e_train_pred[i] = bernoulli_logit_rng(logit_p);
-    }
-    
-    for (i in 1:n_test) {
-      int idx = idx_plant_test[i];
-      int idx_site = idx_plant_train_site[i];
-      int idx_genotype = genotype_plant_test[i];
-      real site_year_noise = normal_rng(0, sigma_site_year);
-    
-      real logit_p = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) + dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
-                     site_year_noise +
-                     beta_neighbors * neighbors_test[i] +
-                     beta_annual * annual_test[i] +
-                     beta_perennial * perennial_test[i] +
-                     beta_shrub * shrub_test[i] +
-                     beta_0_centered[idx_genotype];
-      
-      if (plot_index_test[i] != 0)
-        logit_p += eta_plot_centered[plot_index_test[i]];
-      
-      p_test[i] = inv_logit(logit_p);
-      e_test_pred[i] = bernoulli_logit_rng(logit_p);
-    }
-    for (i in 1:n_train) {
-        int idx = idx_plant_train[i];
-         int idx_site = idx_plant_train_site[i];
-        int idx_genotype = genotype_plant_train[i];
-        
-        real mu_fixed_base = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) + dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
-                             beta_neighbors * neighbors_train[i] +
-                             beta_annual * annual_train[i] +
-                             beta_perennial * perennial_train[i] +
-                             beta_shrub * shrub_train[i];
-      
-        p_train_fixed[i] = inv_logit(mu_fixed_base);  // Probability with fixed effects only
-        e_train_pred_fixed[i] = bernoulli_logit_rng(mu_fixed_base);
-      }
-    
+  vector[n_test] p_test;
+  vector[n_train] p_train;
+  array[n_train] int e_train_pred;
+  array[n_test] int e_test_pred;
+
+  vector[n_train] p_train_fixed;
+  array[n_train] int e_train_pred_fixed;
+
+  for (i in 1:n_train) {
+    int idx = idx_plant_train[i];
+    int idx_site = idx_plant_train_site[i];
+    int idx_genotype = genotype_plant_train[i];
+
+    // --- Full model with random effects ---
+    real logit_p = alpha + 
+                   dot_product(W[idx, ], beta[idx_genotype, ]) + 
+                   dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
+                   site_year_effect_train_scaled_centered[site_year_id_train[i]] +
+                   beta_neighbors * neighbors_train[i] +
+                   beta_annual * annual_train[i] +
+                   beta_perennial * perennial_train[i] +
+                   beta_shrub * shrub_train[i] +
+                   beta_0_centered[idx_genotype];
+
+    if (plot_index_train[i] != 0)
+      logit_p += eta_plot_centered[plot_index_train[i]];
+
+    p_train[i] = inv_logit(logit_p);
+    e_train_pred[i] = bernoulli_logit_rng(logit_p);
+
+    // --- Fixed effects only (no random effects) ---
+    real mu_fixed = alpha + 
+                    dot_product(W[idx, ], beta[idx_genotype, ]) +
+                    dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
+                    beta_neighbors * neighbors_train[i] +
+                    beta_annual * annual_train[i] +
+                    beta_perennial * perennial_train[i] +
+                    beta_shrub * shrub_train[i];
+
+    p_train_fixed[i] = inv_logit(mu_fixed);
+    e_train_pred_fixed[i] = bernoulli_logit_rng(mu_fixed);
+  }
+
+  for (i in 1:n_test) {
+    int idx = idx_plant_test[i];
+    int idx_site = idx_plant_train_site[i];  // Double check this indexing
+    int idx_genotype = genotype_plant_test[i];
+    real site_year_noise = normal_rng(0, sigma_site_year);
+
+    real logit_p = alpha + 
+                   dot_product(W[idx, ], beta[idx_genotype, ]) + 
+                   dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
+                   site_year_noise +
+                   beta_neighbors * neighbors_test[i] +
+                   beta_annual * annual_test[i] +
+                   beta_perennial * perennial_test[i] +
+                   beta_shrub * shrub_test[i] +
+                   beta_0_centered[idx_genotype];
+
+    if (plot_index_test[i] != 0)
+      logit_p += eta_plot_centered[plot_index_test[i]];
+
+    p_test[i] = inv_logit(logit_p);
+    e_test_pred[i] = bernoulli_logit_rng(logit_p);
+  }
 }

@@ -320,6 +320,27 @@ for (i in 1:n_X_soil_full) {
   r_train_full[i] = bernoulli_logit_rng(logit_p);
 }
 
+// Fixed-effects-only predictions for full training data
+vector[n_train_full] p_train_full_fixed;
+array[n_train_full] int r_train_full_fixed;
+
+for (i in 1:n_train_full) {
+  int idx = idx_plant_train_full[i];
+  int idx_site = idx_plant_train_site_full[i];
+  int g = genotype_plant_train_full[i];
+
+  real mu_fixed = alpha
+                  + dot_product(W_full[idx], beta[g])
+                  + dot_product(W_soil_full[idx_site], beta[g])
+                  + beta_neighbors * neighbors_train_full[i]
+                  + beta_annual * annual_train_full[i]
+                  + beta_perennial * perennial_train_full[i]
+                  + beta_shrub * shrub_train_full[i];
+
+  p_train_full_fixed[i] = inv_logit(mu_fixed);
+  r_train_full_fixed[i] = bernoulli_logit_rng(mu_fixed);
+}
+
 
   // Full test data predictions (site-year is random)
   for (i in 1:n_test_full) {

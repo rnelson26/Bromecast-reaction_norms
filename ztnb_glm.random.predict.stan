@@ -242,6 +242,10 @@ generated quantities {
   array[n_test] int y_test_pred_fixed;
   array[n_train_full] int y_train_pred_full;
   array[n_test_full] int y_test_pred_full;
+  
+    vector[n_train_full] mu_train_full_fixed;
+  array[n_train_full] int y_train_pred_full_fixed;
+
 
   // Training
   for (i in 1:n_train) {
@@ -335,6 +339,23 @@ generated quantities {
     real mu_final = mu_base + (plot_index_train_full[i] == 0 ? 0 : eta_plot_centered[plot_index_train_full[i]]);
     mu_train_full[i] = exp(fmin(mu_final, mu_cap));
     y_train_pred_full[i] = ztnb_rng(mu_train_full[i], theta);
+  }
+  // Fixed-effects-only predictions for full training data
+  for (i in 1:n_train_full) {
+    int idx = idx_plant_train_full[i];
+    int site = idx_plant_train_site_full[i];
+    int g = genotype_plant_train_full[i];
+
+    real mu_base = alpha
+                   + dot_product(W[idx, ], beta[g])
+                   + dot_product(W_soil[site, ], beta[g])
+                   + beta_neighbors * neighbors_train_full[i]
+                   + beta_annual * annual_train_full[i]
+                   + beta_perennial * perennial_train_full[i]
+                   + beta_shrub * shrub_train_full[i];
+
+    mu_train_full_fixed[i] = exp(fmin(mu_base, mu_cap));
+    y_train_pred_full_fixed[i] = ztnb_rng(mu_train_full_fixed[i], theta);
   }
 
   // Full test
