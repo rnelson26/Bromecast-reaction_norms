@@ -1183,55 +1183,6 @@ stan_data <- list(
   n_site_year_test_full = length(unique(as.integer(as.factor(testing_df_emg$site_year))))
 )
 
-stan_data_fit <- list(
-  # General inputs for the model
-  n_X = nrow(X_SOS),  ##X for without SOS
-  n_X_soil = nrow(X_soil),
-  p_X = ncol(X_SOS),   
-  s_X = ncol(X_soil),
-  q_X = ncol(Lambda_SOS),      
-  X = X_SOS,  
-  X_soil = X_soil, 
-  Lambda = Lambda_SOS,##Lambda for without SOS variables
-  Lambda_soil = Lambda_soil,  
-  n_g = length(unique(genotype_plant_train)),  
-  K = K_common_garden,    
-  n_plot = max(training_df$plot_index),
-  n_site_year = length(unique(c(training_df$site_year, testing_df$site_year))),
-  
-  
-  
-  
-  # Training data specifics
-  n_train = nrow(training_df),
-  y_train = y,
-  idx_plant_train = idx_plant_train,
-  idx_plant_train_site = idx_plant_train_site,
-  genotype_plant_train = genotype_plant_train,
-  neighbors_train = training_df$neighbors.s,
-  annual_train = training_df$annual.s,
-  perennial_train = training_df$perennial.s,
-  shrub_train = training_df$shrub.s,
-  plot_index_train = training_df$plot_index,
-  n_site_year_train = length(unique(as.integer(as.factor(training_df$site_year)))),
-  site_year_id_train = training_df$idx,
-  
-  # Testing data specifics
-  n_test = nrow(testing_df),
-  idx_plant_test = idx_plant_test,
-  idx_plant_test_site = idx_plant_test_site,
-  genotype_plant_test = genotype_plant_test,
-  neighbors_test = testing_df$neighbors.s,
-  annual_test = testing_df$annual.s,
-  perennial_test = testing_df$perennial.s,
-  shrub_test = testing_df$shrub.s,
-  site_year_id_test = testing_df$idx,
-  plot_index_test = rep(0, nrow(testing_df)),
-  n_site_year_test = length(unique(as.integer(as.factor(testing_df$site_year))))
-)
-
-
-
 training_df_emg$r_train <- ifelse(training_df_emg$Reproduced == "Y", 1L, 0L)
 testing_df_emg$r_test <- ifelse(testing_df_emg$Reproduced == "Y", 1L, 0L)
 
@@ -1375,131 +1326,109 @@ stan_data_emerged_full <- list(
   n_site_year_test = length(unique(as.integer(as.factor(testing_df_emg$site_year))))
 )
 
-######## Toggle variables on and off ############
-# === Full model ===
-stan_data$use_genetic <- 1
-stan_data$use_intra_competition <- 1
-stan_data$use_inter_competition <- 1
-stan_data$use_climate <- 1
+########## Modify stan data for submodels #########
 
-# === No genetics ===
-stan_data$use_genetic <- 0
-stan_data$use_intra_competition <- 1
-stan_data$use_inter_competition <- 1
-stan_data$use_climate <- 1
+######### no inter and intra (no comp) model ########
+stan_data_nocomp <- stan_data_reproduced
 
-stan_data_reproduced$use_genetic <- 0
-stan_data_reproduced$use_intra_competition <- 1
-stan_data_reproduced$use_inter_competition <- 1
-stan_data_reproduced$use_climate <- 1
+# Remove competition-related covariates
+stan_data_nocomp$neighbors_train <- NULL
+stan_data_nocomp$neighbors_train_full <- NULL
+stan_data_nocomp$neighbors_test <- NULL
+stan_data_nocomp$neighbors_test_full <- NULL
 
-stan_data_emerged_full$use_genetic <- 0
-stan_data_emerged_full$use_intra_competition <- 1
-stan_data_emerged_full$use_inter_competition <- 1
-stan_data_emerged_full$use_climate <- 1
+stan_data_nocomp$annual_train <- NULL
+stan_data_nocomp$annual_train_full <- NULL
+stan_data_nocomp$annual_test <- NULL
+stan_data_nocomp$annual_test_full <- NULL
 
-# === No interspecific competition ===
-stan_data$use_genetic <- 1
-stan_data$use_intra_competition <- 1
-stan_data$use_inter_competition <- 0
-stan_data$use_climate <- 1
+stan_data_nocomp$perennial_train <- NULL
+stan_data_nocomp$perennial_train_full <- NULL
+stan_data_nocomp$perennial_test <- NULL
+stan_data_nocomp$perennial_test_full <- NULL
 
-stan_data_reproduced$use_genetic <- 1
-stan_data_reproduced$use_intra_competition <- 1
-stan_data_reproduced$use_inter_competition <- 0
-stan_data_reproduced$use_climate <- 1
+stan_data_nocomp$shrub_train <- NULL
+stan_data_nocomp$shrub_train_full <- NULL
+stan_data_nocomp$shrub_test <- NULL
+stan_data_nocomp$shrub_test_full <- NULL
 
+######### no interspecific comp ###########
+stan_data_intra <- stan_data_reproduced
 
-stan_data_emerged_full$use_genetic <- 1
-stan_data_emerged_full$use_intra_competition <- 1
-stan_data_emerged_full$use_inter_competition <- 0
-stan_data_emerged_full$use_climate <- 1
+stan_data_intra$annual_train <- NULL
+stan_data_intra$annual_train_full <- NULL
+stan_data_intra$annual_test <- NULL
+stan_data_intra$annual_test_full <- NULL
 
+stan_data_intra$perennial_train <- NULL
+stan_data_intra$perennial_train_full <- NULL
+stan_data_intra$perennial_test <- NULL
+stan_data_intra$perennial_test_full <- NULL
 
-# === No intra and inter competition ===
-stan_data$use_genetic <- 1
-stan_data$use_intra_competition <- 0
-stan_data$use_inter_competition <- 0
-stan_data$use_climate <- 1
+stan_data_intra$shrub_train <- NULL
+stan_data_intra$shrub_train_full <- NULL
+stan_data_intra$shrub_test <- NULL
+stan_data_intra$shrub_test_full <- NULL
 
-stan_data_reproduced$use_genetic <- 1
-stan_data_reproduced$use_intra_competition <- 0
-stan_data_reproduced$use_inter_competition <- 0
-stan_data_reproduced$use_climate <- 1
+####### no genetics ############
+stan_data_nogen <- stan_data_reproduced
 
-stan_data_emerged_full$use_genetic <- 1
-stan_data_emerged_full$use_intra_competition <- 0
-stan_data_emerged_full$use_inter_competition <- 0
-stan_data_emerged_full$use_climate <- 1
+# Remove genotype-related items
+stan_data_nogen$n_g <- NULL
+stan_data_nogen$K <- NULL
 
+stan_data_nogen$genotype_plant_train <- NULL
+stan_data_nogen$genotype_plant_train_full <- NULL
+stan_data_nogen$genotype_plant_test <- NULL
+stan_data_nogen$genotype_plant_test_full <- NULL
 
-# === Climate only ===
-stan_data$use_genetic <- 0
-stan_data$use_intra_competition <- 0
-stan_data$use_inter_competition <- 0
-stan_data$use_climate <- 1
+######### climate/soil only ############
+stan_data_climate_only <- stan_data_reproduced
 
-stan_data_reproduced$use_genetic <- 0
-stan_data_reproduced$use_intra_competition <- 0
-stan_data_reproduced$use_inter_competition <- 0
-stan_data_reproduced$use_climate <- 1
+# Remove genotype structure
+stan_data_climate_only$n_g <- NULL
+stan_data_climate_only$K <- NULL
+stan_data_climate_only$genotype_plant_train <- NULL
+stan_data_climate_only$genotype_plant_train_full <- NULL
+stan_data_climate_only$genotype_plant_test <- NULL
+stan_data_climate_only$genotype_plant_test_full <- NULL
 
-stan_data_emerged_full$use_genetic <- 0
-stan_data_emerged_full$use_intra_competition <- 0
-stan_data_emerged_full$use_inter_competition <- 0
-stan_data_emerged_full$use_climate <- 1
+# Remove competition covariates
+stan_data_climate_only$neighbors_train <- NULL
+stan_data_climate_only$neighbors_train_full <- NULL
+stan_data_climate_only$neighbors_test <- NULL
+stan_data_climate_only$neighbors_test_full <- NULL
 
-###### Helper function for model flags ###########
-set_model_flags <- function(model_version = c("full", "no_genetic", "no_inter", "no_inter_intra", "climate_only")) {
-  version <- match.arg(model_version)
-  
-  switch(version,
-         "full" = list(
-           use_genetic = 1,
-           use_intra_competition = 1,
-           use_inter_competition = 1,
-           use_climate = 1
-         ),
-         "no_genetic" = list(
-           use_genetic = 0,
-           use_intra_competition = 1,
-           use_inter_competition = 1,
-           use_climate = 1
-         ),
-         "no_inter" = list(
-           use_genetic = 1,
-           use_intra_competition = 1,
-           use_inter_competition = 0,
-           use_climate = 1
-         ),
-         "no_inter_intra" = list(
-           use_genetic = 1,
-           use_intra_competition = 0,
-           use_inter_competition = 0,
-           use_climate = 1
-         ),
-         "climate_only" = list(
-           use_genetic = 0,
-           use_intra_competition = 0,
-           use_inter_competition = 0,
-           use_climate = 1
-         )
-  )
-}
+stan_data_climate_only$annual_train <- NULL
+stan_data_climate_only$annual_train_full <- NULL
+stan_data_climate_only$annual_test <- NULL
+stan_data_climate_only$annual_test_full <- NULL
 
-# set flag
-flags <- set_model_flags("no_inter_intra")
+stan_data_climate_only$perennial_train <- NULL
+stan_data_climate_only$perennial_train_full <- NULL
+stan_data_climate_only$perennial_test <- NULL
+stan_data_climate_only$perennial_test_full <- NULL
 
-stan_data <- c(stan_data, flags)
-stan_data_reproduced <- c(stan_data_reproduced, flags)
-stan_data_emerged_full <- c(stan_data_emerged_full, flags)
+stan_data_climate_only$shrub_train <- NULL
+stan_data_climate_only$shrub_train_full <- NULL
+stan_data_climate_only$shrub_test <- NULL
+stan_data_climate_only$shrub_test_full <- NULL
+
 
 # Fit using cmdrstan 
+### full models
 mod <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/ztnb_glm.random.predict.stan")
 #mod_fit <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/ztnb_glm.random.predict.fit.stan")
 mod_rep <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/binomial_glm_reproduced.stan")
 mod_emg <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/binomial_glm_survived.stan")
 
+### submodels for reproduced
+mod_rep_nogene <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/binomial_glm_reproduced_nogene.stan")
+mod_rep_nocomp <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/binomial_glm_reproduced_nocomp.stan")
+mod_rep_nointer <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/binomial_glm_reproduced_nointer.stan")
+mod_rep_clim <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/binomial_glm_reproduced_climateonly.stan")
+
+### null models
 mod_null_emg <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/null_model_emerged.stan")
 mod_null_rep <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/null_model_reproduced.stan")
 mod_null_fec <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/null_model_fecundity.stan")
@@ -1545,20 +1474,6 @@ fit_null_fec <- mod_null_fec$sample(
 
 
 #### Find good starting values ####
-### distinguish between data that gets fit in model vs full dataset only used for generated quanities (predictions) to help pathfinder fit
-#stan_data_full <- stan_data
-#stan_data_fit <- stan_data_full[!grepl("_full$", names(stan_data_full))]
-
-#stan_data_reproduced_full <- stan_data_reproduced
-#stan_data_reproduced_fit <- stan_data_reproduced_full[!grepl("_full$", names(stan_data_reproduced_full))]
-### Fecundity 
-
-#pathfinder_fit <- mod_fit$pathfinder(
- # data = stan_data_fit,
-  #init = 0,
-  #num_paths = 1
-#)
-#init_list <- pathfinder_fit$draws(format = "list")
 
 ## with full
 pathfinder_fit <- mod$pathfinder(
@@ -1570,12 +1485,45 @@ init_list <- pathfinder_fit$draws(format = "list")
 
 
 ### Reproduced 
+## full
 pathfinder_fit <- mod_rep$pathfinder(
-  data = stan_data_reproduced,          # your named list of data
-  init = 0,                  # or a list of reasonable inits
+  data = stan_data_rep,          # your named list of data, modify for each submodel
+  init = 0,                  
   num_paths = 1              # usually equal to number of chains
 )
 init_list <- pathfinder_fit$draws(format = "list")
+
+## climate only
+pathfinder_fit_clim <- mod_rep_clim$pathfinder(
+  data = stan_data_climate_only,          # your named list of data, modify for each submodel
+  init = 0,                  
+  num_paths = 1              # usually equal to number of chains
+)
+init_list_clim <- pathfinder_fit_clim$draws(format = "list")
+
+## no genetics
+pathfinder_fit_nogene <- mod_rep_nogene$pathfinder(
+  data = stan_data_nogen,          # your named list of data, modify for each submodel
+  init = 0,                  
+  num_paths = 1              # usually equal to number of chains
+)
+init_list_nogene <- pathfinder_fit_nogene$draws(format = "list")
+
+## no comp
+pathfinder_fit_nocomp <- mod_rep_nocomp$pathfinder(
+  data = stan_data_nocomp,          # your named list of data, modify for each submodel
+  init = 0,                  
+  num_paths = 1              # usually equal to number of chains
+)
+init_list_nocomp <- pathfinder_fit_nocomp$draws(format = "list")
+
+### no inter
+pathfinder_fit_nointer <- mod_rep_nointer$pathfinder(
+  data = stan_data_intra,          # your named list of data, modify for each submodel
+  init = 0,                  
+  num_paths = 1              # usually equal to number of chains
+)
+init_list_nointer <- pathfinder_fit_nointer$draws(format = "list")
 
 ### Emerged == full climate var
 pathfinder_fit <- mod_emg$pathfinder(
@@ -1621,6 +1569,42 @@ fit_rep <- mod_rep$sample(
   iter_warmup = iter_warmup,
   iter_sampling = iter_sampling,
   init = init_list
+)
+
+fit_rep_clim <- mod_rep_clim$sample(
+  data = stan_data_climate_only,
+  chains = 3,
+  parallel_chains = 3,
+  iter_warmup = iter_warmup,
+  iter_sampling = iter_sampling,
+  init = init_list_clim
+)
+
+fit_rep_nogene <- mod_rep_nogene$sample(
+  data = stan_data_nogen,
+  chains = 3,
+  parallel_chains = 3,
+  iter_warmup = iter_warmup,
+  iter_sampling = iter_sampling,
+  init = init_list_nogene
+)
+
+fit_rep_nocomp <- mod_rep_nocomp$sample(
+  data = stan_data_nocomp,
+  chains = 3,
+  parallel_chains = 3,
+  iter_warmup = iter_warmup,
+  iter_sampling = iter_sampling,
+  init = init_list_nocomp
+)
+
+fit_rep_nointer <- mod_rep_nointer$sample(
+  data = stan_data_intra,
+  chains = 3,
+  parallel_chains = 3,
+  iter_warmup = iter_warmup,
+  iter_sampling = iter_sampling,
+  init = init_list_nointer
 )
 
 ### Emerged Full Climate Vars
@@ -3428,6 +3412,23 @@ r_train_pred <- fit_rep$draws("r_train_full", format = "draws_matrix")
 r_test_pred  <- fit_rep$draws("r_test_full", format = "draws_matrix")
 r_train_pred_fixed <- fit_rep$draws("r_train_full_fixed", format = "draws_matrix")
 
+r_train_pred_clim <- fit_rep_clim$draws("r_train_full", format = "draws_matrix")
+r_test_pred_clim  <- fit_rep_clim$draws("r_test_full", format = "draws_matrix")
+#r_train_pred_fixed_clim <- fit_rep_clim$draws("r_train_full_fixed", format = "draws_matrix")
+## still ned to add 
+
+r_train_pred_nogene <- fit_rep_nogene$draws("r_train_full", format = "draws_matrix")
+r_test_pred_nogene  <- fit_rep_nogene$draws("r_test_full", format = "draws_matrix")
+#r_train_pred_nogene <- fit_rep_nogene$draws("r_train_full_fixed", format = "draws_matrix")
+
+r_train_pred_nocomp <- fit_rep_nocomp$draws("r_train_full", format = "draws_matrix")
+r_test_pred_nocomp <- fit_rep_nocomp$draws("r_test_full", format = "draws_matrix")
+#r_train_pred_fixed_nocomp <- fit_rep_nocomp$draws("r_train_full_fixed", format = "draws_matrix")
+
+r_train_pred_nointer <- fit_rep_nointer$draws("r_train_full", format = "draws_matrix")
+r_test_pred_nointer  <- fit_rep_nointer$draws("r_test_full", format = "draws_matrix")
+#r_train_pred_fixed_nointer <- fit_rep_nointer$draws("r_train_full_fixed", format = "draws_matrix")
+
 # Emergence
 e_train_pred <- fit_emg_full$draws("e_train_pred", format = "draws_matrix")
 e_test_pred  <- fit_emg_full$draws("e_test_pred", format = "draws_matrix")
@@ -3472,6 +3473,19 @@ crps_r <- list(
   train_fixed = get_crps(r_train_obs, r_train_pred_fixed)
 )
 
+crps_r_submodels <- list(
+  #train = get_crps(r_train_obs, r_train_pred),
+  #test  = get_crps(r_test_obs,  r_test_pred),
+  train_clim = get_crps(r_train_obs, r_train_pred_clim),
+  test_clim  = get_crps(r_test_obs,  r_test_pred_clim),
+  train_nogene = get_crps(r_train_obs, r_train_pred_nogene),
+  test_nogene  = get_crps(r_test_obs,  r_test_pred_nogene),
+  train_nocomp = get_crps(r_train_obs, r_train_pred_nocomp),
+  test_nocomp  = get_crps(r_test_obs,  r_test_pred_nocomp),
+  train_nointer = get_crps(r_train_obs, r_train_pred_nointer),
+  test_nointer  = get_crps(r_test_obs,  r_test_pred_nointer)
+)
+
 # Emergence
 crps_e <- list(
   train = get_crps(e_train_obs, e_train_pred),
@@ -3510,6 +3524,22 @@ skill_score <- function(main, null) {
    e_test        = skill_score(crps_e$test,  crps_e_null),
    e_train_fixed = skill_score(crps_e$train_fixed, crps_e_null)
  )
+ 
+ skill_scores_sub <- list(
+   r_train_clim       = skill_score(crps_r_submodels$train_clim, crps_r_null),
+   r_test_clim       = skill_score(crps_r_submodels$test_clim, crps_r_null),
+   r_train_nogene      = skill_score(crps_r_submodels$train_nogene, crps_r_null),
+   r_test_nogene      = skill_score(crps_r_submodels$test_nogene, crps_r_null),
+   r_train_nointer      = skill_score(crps_r_submodels$train_nointer, crps_r_null),
+   r_test_nointer     = skill_score(crps_r_submodels$test_nointer, crps_r_null),
+   r_train_nocomp      = skill_score(crps_r_submodels$train_nocomp, crps_r_null),
+   r_test_nocomp      = skill_score(crps_r_submodels$test_nocomp, crps_r_null)
+ )
+ 
+
+
+
+
 # ==== CRPS Summary Table ====
  crps_table <- data.frame(
    Component = c(
@@ -3541,6 +3571,59 @@ skill_score <- function(main, null) {
  library(flextable)
  flextable::flextable(crps_table) %>%
    flextable::save_as_docx(path = "CRPS_Table.docx")
+ 
+ #### ============== submodel table ======== #####
+ model_labels <- c("Climate only", "No genotype", "No interspecific", "No competition")
+ datasets <- c("Train", "Test")
+ 
+ # Construct clean vectors for CRPS and skill scores
+ crps_values <- c(
+   mean(crps_r_submodels$train_clim),
+   mean(crps_r_submodels$test_clim),
+   mean(crps_r_submodels$train_nogene),
+   mean(crps_r_submodels$test_nogene),
+   mean(crps_r_submodels$train_nointer),
+   mean(crps_r_submodels$test_nointer),
+   mean(crps_r_submodels$train_nocomp),
+   mean(crps_r_submodels$test_nocomp)
+ )
+ 
+ skill_scores_values <- c(
+   skill_scores_sub$r_train_clim,
+   skill_scores_sub$r_test_clim,
+   skill_scores_sub$r_train_nogene,
+   skill_scores_sub$r_test_nogene,
+   skill_scores_sub$r_train_nointer,
+   skill_scores_sub$r_test_nointer,
+   skill_scores_sub$r_train_nocomp,
+   skill_scores_sub$r_test_nocomp
+ )
+ 
+ # Make data frame
+ submodel_table <- data.frame(
+   Dataset = rep(datasets, times = 4),
+   Model_Type = rep(model_labels, each = 2),
+   CRPS = round(crps_values, 3),
+   Skill_Score = round(skill_scores_values, 3)
+ )
+ 
+ ft <- flextable(submodel_table) %>%
+   set_header_labels(
+     Data = "Dataset",
+     Model_Type = "Model Type",
+     CRPS = "CRPS",
+     Skill_Score = "Skill Score"
+   ) %>%
+   autofit()
+ 
+ library(officer)
+ 
+ doc <- read_docx() %>%
+   body_add_par("CRPS and Skill Score Summary", style = "heading 1") %>%
+   body_add_flextable(ft)
+ 
+ print(doc, target = "CRPS_Sub_Skill_Summary.docx")
+ 
 
 ####### Fitness by site year #####
 agg_train <- training_fitness %>%
