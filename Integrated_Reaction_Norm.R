@@ -1,7 +1,7 @@
 #### Integrated Reaction Norm Model #######
 ######## code by Becca Nelson and Justin Van Ee ###############################
 ############# created 3-25-25 ######################
-############# Last modified: 7-16-25 ##########################
+############# Last modified: 7-22-25 ##########################
 ######## modifies RMD file to pull from one integrated df ########
 
 rm(list = ls())
@@ -3412,7 +3412,6 @@ get_crps <- function(obs, pred_draws) {
   pred_draws <- as.matrix(pred_draws)
   crps_sample(y = obs, dat = t(pred_draws))  # transpose!
 }
-
 
 # ==== Compute CRPS Values ====
 
