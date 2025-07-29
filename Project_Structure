@@ -1,0 +1,48 @@
+project_root/
+├── models/
+│   ├── binomial_glm_reproduced.stan 
+│   ├── binomial_glm_reproduced_climateonly.stan
+│   ├── binomial_glm_reproduced_nogene.stan
+│   ├── binomial_glm_reproduced_nocomp.stan
+│   ├── binomial_glm_reproduced_nointer.stan
+│   ├── binomial_glm_survived.stan
+│   ├── binomial_glm_emerged_climateonly.stan
+│   ├── binomial_glm_emerged_nogene.stan
+│   ├── binomial_glm_emerged_nocomp.stan
+│   ├── binomial_glm_emerged_nointer.stan
+│   ├── bztnb_glm.random.predict.stan
+│   ├── ztnb_glm.random.predict_climateonly.stan
+│   ├── ztnb_glm.random.predict_nogene.stan
+│   ├── ztnb_glm.random.predict_nocomp.stan
+│   ├── ztnb_glm.random.predict_nointer.stan
+│   ├── null_model_emerged.stan
+│   ├── null_model_reproduced.stan
+│   └── null_model_fecundity.stan
+├── scripts/
+|   ├── 00_setup_data.R
+│   ├── 01_prepare_data.R
+│   ├── 02_prepare_standata_emg.R        
+│   ├── 03_prepare_standata_rep.R  
+│   └── 04_prepare_standata_fec.R 
+│   └── 05_Fit_Models.R 
+│   └── 06_CRPS.R 
+├── job_scripts/
+│   ├── run_fit_models.sh
+│   ├── run_crps.sh
+├── data/
+│   ├── combined_clean_climate_SOS_updated.csv
+│   ├── assigned_genotypes.csv
+│   ├── common_gardens/
+│   │   ├── 93cg_genotypes.csv
+│   │   ├── dailyVWCdata_allgardens_allyears.csv
+│   │   └── dailytempdata_allgardens_allyears.csv
+│   ├── 307tips.csv
+│   ├── BRTE307_IBSmatrix.txt
+│   ├── BRTE_NorthAmerica.csv
+│   └── sat_sites/
+│       └── soil_clean.csv
+├── results/
+│   ├── draws/
+│   ├── crps/
+│   └── fitness/
+└── master_model_list.csv     # need to add metadata file
