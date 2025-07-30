@@ -10,7 +10,7 @@ project_root/
 │   ├── binomial_glm_emerged_nogene.stan
 │   ├── binomial_glm_emerged_nocomp.stan
 │   ├── binomial_glm_emerged_nointer.stan
-│   ├── bztnb_glm.random.predict.stan
+│   ├── ztnb_glm.random.predict.stan
 │   ├── ztnb_glm.random.predict_climateonly.stan
 │   ├── ztnb_glm.random.predict_nogene.stan
 │   ├── ztnb_glm.random.predict_nocomp.stan
