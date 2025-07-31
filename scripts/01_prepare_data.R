@@ -87,6 +87,74 @@ K_common_garden <- as.matrix(kinship[genotypes_all$kinshipID,genotypes_all$kinsh
 # Put genotype numbers on rows and columns
 colnames(K_common_garden) <- rownames(K_common_garden) <- as.factor(genotypes_all$genotype)
 
+####### Random variable K ############
+
+simulate_K_matrices <- function(data, assigned_genotypes, genotypes = 1:93, n_draws = 100, decay_rate = 10) {
+  sites <- unique(data$site)
+  site_types <- setNames(data$Type[match(sites, data$site)], sites)
+  
+  # distinguish by type
+  common_garden_sites <- names(site_types[site_types == "Common_Garden"])
+  satellite_sites <- names(site_types[site_types == "Satellite"])
+  
+  # Euclidean distances
+  assigned_genotypes <- assigned_genotypes %>%
+    mutate(site = as.character(site),
+           distance = sqrt(Lat_Diff^2 + Lon_Diff^2))
+  
+  # Grid of all satellite sites × all genotypes
+  full_grid <- expand.grid(site = satellite_sites, genotype = genotypes)
+  
+  # weight information about source gentoypes by distance
+  prob_df <- full_grid %>%
+    left_join(
+      assigned_genotypes %>%
+        dplyr::select(site, genotype, distance),
+      by = c("site", "genotype")
+    ) %>%
+    # if missing distance values for a genotype-sat combo, this assigns a large distance for low probability
+    mutate(distance = ifelse(is.na(distance), max(distance, na.rm = TRUE) * 2, distance)) %>%
+    group_by(site) %>%
+    mutate(weight = exp(-distance * decay_rate)) %>%
+    mutate(prob = weight / sum(weight)) %>%
+    ungroup()
+  
+  # make site-genotype relationships for K
+  generate_K <- function() {
+    K <- matrix(0, nrow = length(sites), ncol = length(genotypes),
+                dimnames = list(sites, as.character(genotypes)))
+    
+    # Assign genotypes 1-93 to common garden sites (presence = 1)
+    K[common_garden_sites, ] <- 1
+    
+    # For satellite sites, probablistic sampling
+    for (s in satellite_sites) {
+      this_df <- prob_df %>% filter(site == s)
+      sampled_genotypes <- sample(this_df$genotype, size = length(genotypes), replace = TRUE, prob = this_df$prob)
+      tab <- table(sampled_genotypes)
+      K[s, names(tab)] <- as.numeric(tab > 0)  # binary presence = 1/absence =0
+    }
+    ### could switch to a threshold instead
+    
+    return(K)
+  }
+  
+  # Generates n_draws of randomly sampled K matrices
+  K_list <- replicate(n_draws, generate_K(), simplify = FALSE)
+  return(K_list)
+}
+
+## create list of K matrices 
+K_list <- simulate_K_matrices(data, assigned_genotypes, n_draws = 100, decay_rate = 10)
+
+## add kinship information among genotypes to K-List:
+site_kinship_list <- lapply(K_list, function(K) {
+  K %*% K_common_garden %*% t(K)
+})
+## note to self to check:
+#K_common_garden must be ordered consistently with the genotype columns of K_lists
+#K matrices rows are sites, columns are exactly as the genotypes in K_common_garden.
+## might be better to use  probabilistic weights instead of binary presence/absence
 
 ######## Demography info #########
 assigned_genotypes$site <- as.factor(assigned_genotypes$site)

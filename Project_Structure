@@ -19,7 +19,8 @@ project_root/
 │   ├── null_model_reproduced.stan
 │   └── null_model_fecundity.stan
 ├── scripts/
-|   ├── 00_setup_data.R
+|   ├── Merge.R
+|   ├── soils.R
 │   ├── 01_prepare_data.R
 │   ├── 02_prepare_standata_emg.R        
 │   ├── 03_prepare_standata_rep.R  
