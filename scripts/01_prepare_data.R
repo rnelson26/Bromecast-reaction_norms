@@ -1,18 +1,18 @@
 ################# Bromecast: 01.Prepare Data ##########################
 ############# created 3-25-25 ######################
-############# Last modified: 7-31-25 ##########################
+############# Last modified: 8-1-25 ##########################
 ######## Prepares all data for model fitting ################################
 
 source("scripts/00_setup.R")
 
 ###### summarise soil data to site-year & assign soil values to common garden ########
 
-soil_summary <- soil_clean %>% group_by(site_old) %>% summarise(across(c(pH, EC, OMpercent, Protein_g.kg), \(x) mean(x, na.rm = TRUE)))
+soil_summary <- soil_clean %>% group_by(site_old) %>% summarise(across(c(pH, EC, OMpercent, Protein_g.kg, X..Sand, X..Clay, X..Silt), \(x) mean(x, na.rm = TRUE)))
 
 data <- left_join(data, soil_summary, by = "site_old")
 
 
-vars_to_fill <- c("pH", "EC", "OMpercent", "Protein_g.kg")
+vars_to_fill <- c("pH", "EC", "OMpercent", "Protein_g.kg", "X..Sand", "X..Clay", "X..Silt")
 
 ## use Boise Low sat soil values for wildcat cg
 reference_values <- data %>%
@@ -351,7 +351,8 @@ SOS_vars <- c(
 
 
 soil_vars <- c(
-  "pH", "EC", "OMpercent", "Protein_g.kg")
+  "pH", "EC", "OMpercent", "Protein_g.kg", "X..Silt", "X..Sand")
+## note shouldn't use all three
 
 pca_data <- df %>% 
   dplyr::select(site_year, all_of(climate_vars))  %>% distinct() %>% 
@@ -449,7 +450,7 @@ Lambda_soil_emg <- as.matrix(pca_out_soil_emg$rotation[, 1:q_X])
 
 
 
-fviz_pca_biplot(pca_out,
+fviz_pca_biplot(pca_out_soil,
                 geom.ind = "point",               
                 fill.ind = "grey80",              
                 col.var = "contrib",              
@@ -458,8 +459,8 @@ fviz_pca_biplot(pca_out,
   theme_minimal()
 
 
-fviz_cos2(pca_out, choice = "var", axes = 1:2)
-fviz_contrib(pca_out_SOS, choice = "var", axes = 2, top = 10)
+fviz_cos2(pca_out_soil, choice = "var", axes = 1:2)
+fviz_contrib(pca_out_soil, choice = "var", axes = 2, top = 10)
 
 ## elbow plot
 explained_var <- pca_out$sdev^2
