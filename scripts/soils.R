@@ -1,7 +1,7 @@
 #### Bromecast Soil Data #######
 ######## code by Becca Nelson ###############################
 ############# created 4-24-25 ######################
-############# Last modified: 8-1-25 ##########################
+############# Last modified: 8-19-25 ##########################
 
 rm(list = ls())
 
@@ -13,7 +13,7 @@ world_soil <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/
 
 soil <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/sat_sites/soils.csv", header = TRUE)
 
-textures <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/sat_sites/texture_8_1_25.csv", header = TRUE)
+textures <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/sat_sites/texture_8_19_25.csv", header = TRUE)
 
 
 soil_info <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/sat_sites/soil_site_info.csv", header = TRUE)

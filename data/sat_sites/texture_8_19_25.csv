@@ -1,0 +1,43 @@
+Project,SiteCode,Sample ID,% Sand,% Clay,% Silt,Lab Notes
+Bromecast,Barton_burned,Barton,40.072,12.072,47.856,Burn Site; Site 48; S144-146
+Bromecast,Barton_unburned,Barton unburned,48.144,10.072,41.784,Site 50; 150-152
+Bromecast,Blumenthal01,Sat. Soils Blamentha,58.144,22.072,19.784,O1 #1; Site 10; S28-30
+Bromecast,Boise_High,Maxwell S2,70.072,12.144,17.784,Site 43; 129-131; small rocks in sample
+Bromecast,Boise_Low,Maxwell S1 Wilson ,78.072,8.072,13.856,Base low; Site 42; 126-128
+Bromecast,CaseAoyamaS1,Case aoyama S1,51.928,12.144,35.928,Site 20 ; S59-61
+Bromecast,CastValley,Cast Valley,62.072,18.072,19.856,Site 32; 95-97
+Bromecast,CG PASTURE,Native Mix Site 5,80.144,12.072,7.784,Cb(?) Pasture Site 5; 13-15
+Bromecast,dino,DINO,68.144,14.072,17.784,Site 19; S55-58
+Bromecast,EnsingS1 SuRDC,Ensing,82.144,4.072,13.784,Summerland; Site 27; 80-82
+Bromecast,EnsingS2 Summerland-Princeton,Ensing,81.928,4.072,14,Summerland 1; Princeton BC; S37 110-112
+Bromecast,EnsingS3 Bear Creek,Ensing S3,66.072,9.928,24,Site 22; S65-67
+Bromecast,EnsingS4 Lundbom,Ensing S4,66.144,8.072,25.784,Meritt BC; Site 24; S71-73
+Bromecast,EOARC,EO Arch ,66.144,12.072,21.784,"Site 38; S113, 114, 117"
+Bromecast,GreenCanyon,Green Canyon,46.144,18.072,35.784,Site 28; S83-85
+Bromecast,K1_vanDiepen,KI Van Diepen (rerun) ,80.072,6.072,13.856,Rerun from 6/23
+Bromecast,Kastilometes,Kat Silo Medes,44,10,46,Site 51; S153-155
+Bromecast,L1_vanDiepen,LI Van Diepen,74.072,8.072,17.856,Site 29; 86-88
+Bromecast,MPG_SR,MPG-SR,60.216,12,27.784,Site 46; S138-140
+Bromecast,NEAR HQ CPER,CPER ,74,10,16,"Near HQ Site 2, S4-6"
+Bromecast,OttS1,OTTSI #2,48,14.072,37.928,Site 47; S141-143
+Bromecast,Pearlwise,Pearlwise ,58,14.144,27.856,Site 21; S62-64
+Bromecast,Piedmont,Piedmont,40.072,7.928,52,Site 49; S147-149
+Bromecast,PMR- Brome,PMR ,62,12,26,Site 12; S36-38 (or 34-46?)
+Bromecast,PMR- Pine,PMR Prime,72,8.072,19.928,"#1, site 14; S40-42"
+Bromecast,Rush_Valley,Rush Valley Sat. site,52.144,12,35.856,Site 40; 122
+Bromecast,SouthEden,South Eden 2024,76,6.144,17.856,Site 23; 68-70
+Bromecast,SS,SS HQ Site 35,64,10.216,25.784,Site 35; 104-106
+Bromecast,SSHigh,Sat. SS High,54,16.216,29.784,Site 33; 98-100
+Bromecast,SSHQ,Sat. SS HQ,57.928,14.072,28,Site 36; 107-109
+Bromecast,Symstad1,Symstad septic,46.216,18.072,35.712,Site 44; 132-134
+Bromecast,Symstad2,Symstad S2 Pasture,50.072,18.072,31.856,Site 15; S43-45
+Bromecast,TB FIRE,TB Fire Fire,45.928,18.216,35.856,Site 7; S19-21
+Bromecast,Woodruff,Woodruff #1,47.928,10.072,42,Site 26 ; S77 - 79
+Bromecast,NEAR 4WAY CPER,CPER - 4 Way ,68,16.144,15.856,
+Bromecast,FAR NORTH CPER,CPER Far north,67.928,12.144,19.928,
+Bromecast,NEAR NUTNET,CPER Nut-Net ,77.856,6.216,15.928,
+Bromecast,HPGRS AGCR,HPGRS AGCR,59.856,18.216,21.928,
+Bromecast,TB LC Control,Lake Creek Control ,54.144,20.144,25.712,
+Bromecast,TB PRAIRIE DOG,Lake Creek Pdog,49.784,26.144,24.072,
+Bromecast,PMR- Pine,PMR Pine,71.928,8.072,20,
+Bromecast,Blumenthal01,Sat. Soils Blamentha,58.144,22.072,19.784,O1 #1; Site 10; S28-30
