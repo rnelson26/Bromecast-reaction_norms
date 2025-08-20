@@ -27,6 +27,7 @@ project_root/
 │   └── 04_prepare_standata_fec.R 
 │   └── 05_Fit_Models.R 
 │   └── 06_CRPS.R 
+│   └── 07_landscape_genomics.R
 ├── job_scripts/
 │   ├── run_fit_models.sh
 │   ├── run_crps.sh
