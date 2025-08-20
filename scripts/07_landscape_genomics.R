@@ -282,23 +282,21 @@ rownames(PCs) <- genotype_codes$genotype
 
 ########## Predict nearest genotype for satellite sites ######################
 
-# Ensure rownames of observed PCs are correct
+
 if(nrow(PCs) != length(genotype_codes$genotype)) stop("Mismatch: nrow(PCs) != length(genotype_codes)")
 rownames(PCs) <- genotype_codes$genotype
 
-# Bind new PCs on top
+
 PCs_all <- rbind(PCs_new, PCs)
 
-# Compute Euclidean distances between all rows
 D_all <- as.matrix(dist(PCs_all, method = "euclidean"))
 
 n_new <- nrow(PCs_new)
 n_g   <- nrow(PCs)
 
-# Extract new vs observed distances
 D_new_old <- D_all[1:n_new, (n_new + 1):(n_new + n_g), drop = FALSE]
 
-# Assign genotype names to columns 
+
 colnames(D_new_old) <- rownames(PCs)  
 
 # For each new site, assign nearest observed genotype
