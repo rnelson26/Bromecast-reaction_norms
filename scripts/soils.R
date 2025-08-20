@@ -56,6 +56,51 @@ soil_clean$site_old <- soil_clean$SiteCode
 
 write.csv(soil_clean,"/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/sat_sites/soil_clean.csv",row.names=F)
 
+###### Compare measured vs database values ##########
+database_textures <- world_soil %>% filter(hzdept == 5) %>% dplyr::select(id, siltmean, claymean, sandmean)
+## missing Goebl and Redbluff
+
+database_textures$SiteCode <- database_textures$id
+database_textures$SiteCode[database_textures$SiteCode == "CPER- Far north"] <- "FAR NORTH CPER"
+
+database_textures$SiteCode[database_textures$SiteCode == "EnsingS1_SuRDC" ] <- "EnsingS1 SuRDC"
+database_textures$SiteCode[database_textures$SiteCode == "EnsingS2_SumPrinceRd"] <- "EnsingS2 Summerland-Princeton"
+database_textures$SiteCode[database_textures$SiteCode == "EnsingS3_BearCreek"]  <- "EnsingS3 Bear Creek"
+database_textures$SiteCode[database_textures$SiteCode == "EnsingS4_LDBM"]  <- "EnsingS4 Lundbom"
+database_textures$SiteCode[database_textures$SiteCode == "CPER-4-Way"] <- "NEAR 4WAY CPER"
+database_textures$SiteCode[database_textures$SiteCode == "CPER- Near NutNet"] <- "NEAR NUTNET"
+
+unique(database_textures$SiteCode)
+unique(textures$SiteCode)
+
+compare_textures <- left_join(textures, database_textures, by = "SiteCode")
+
+library(ggplot2)
+
+#Silt
+lims_silt <- range(c(compare_textures$X..Silt, compare_textures$siltmean), na.rm = TRUE)
+ggplot(compare_textures, aes(x = X..Silt, y = siltmean, color = SiteCode)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "black") +
+  xlim(lims_silt) + ylim(lims_silt) +
+  theme_classic()
+
+#Sand
+lims_sand <- range(c(compare_textures$X..Sand, compare_textures$sandmean), na.rm = TRUE)
+ggplot(compare_textures, aes(x = X..Sand, y = sandmean, color = SiteCode)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "black") +
+  xlim(lims_sand) + ylim(lims_sand) +
+  theme_classic()
+
+#Clay
+lims_clay <- range(c(compare_textures$X..Clay, compare_textures$claymean), na.rm = TRUE)
+ggplot(compare_textures, aes(x = X..Clay, y = claymean, color = SiteCode)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "black") +
+  xlim(lims_clay) + ylim(lims_clay) +
+  theme_classic()
+
 ###### visualize soil texture ########
 library(ggtern)
 

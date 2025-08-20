@@ -124,8 +124,8 @@ vector[n_g] beta_0;
   for (l in 1:q_X)
     zeta[l] = tan(u_zeta[l]);
 
-  for (l in 1:q_X) {
-    beta[, l] = cholesky_decompose(K) * (sqrt(zeta[l]) * beta_raw[, l]);
+ for (l in 1:q_X) {
+    beta[, l] = mu_beta[l] + cholesky_decompose(K) * (sqrt(zeta[l]) * beta_raw[, l]);
   }
    beta_0 = zeta_0 * (cholesky_decompose(K) * beta_0_raw);  
    vector[n_g] beta_0_centered = beta_0 - mean(beta_0);
@@ -137,6 +137,7 @@ vector[n_g] beta_0;
 model {
   for (l in 1:q_X) {
     beta_raw[, l] ~ normal(0, 1);
+    mu_beta[l] ~ normal(0, 100);
   }
   //gamma ~ normal(0, 1);
   to_vector(W) ~ normal(0, 1);
