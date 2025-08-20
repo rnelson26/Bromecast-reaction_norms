@@ -316,5 +316,7 @@ assignment_df <- tibble(
 )
 
 print(assignment_df)
+# isn't printing genotype correctly 
 
-
+apply(D_new_old, 1, min)  
+nearest_idx                 
