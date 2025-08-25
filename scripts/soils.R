@@ -1,7 +1,7 @@
 #### Bromecast Soil Data #######
 ######## code by Becca Nelson ###############################
 ############# created 4-24-25 ######################
-############# Last modified: 8-19-25 ##########################
+############# Last modified: 8-25-25 ##########################
 
 rm(list = ls())
 
@@ -13,7 +13,7 @@ world_soil <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/
 
 soil <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/sat_sites/soils.csv", header = TRUE)
 
-textures <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/sat_sites/texture_8_19_25.csv", header = TRUE)
+textures <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/sat_sites/texture_8_25_25.csv", header = TRUE)
 
 
 soil_info <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/sat_sites/soil_site_info.csv", header = TRUE)
@@ -26,35 +26,6 @@ soil_clean <- left_join(soil_clean, textures, by = "SiteCode")
 
 soil_clean <- soil_clean %>% dplyr::select(SiteCode, UniqueID, SampleDescription, pH, EC, OMpercent, Protein_g.kg, SiteCode, X..Sand, X..Clay, X..Silt)
 
-
-## pull any missing texture information from world soil horizon
-
-missing_texture <- world_soil %>% filter(hzdept == 5) %>%  filter(id %in% c("FtK_Cottonwood_Coulee", "FtK_Lone_Pine", "CPER- Far north", "HardwareRanch", "MPG_IR", "MPG_TH", "Peavine",   "Plymouth")) %>% dplyr::select(id, siltmean, claymean, sandmean)
-## missing Goebl and Redbluff
-
-missing_texture$SiteCode <- missing_texture$id
-missing_texture$SiteCode[missing_texture$SiteCode == "CPER- Far north"] <- "FAR NORTH CPER"
-
-missing_texture$X..Sand <- missing_texture$sandmean
-missing_texture$X..Silt <- missing_texture$siltmean
-missing_texture$X..Clay <- missing_texture$claymean
-
-missing_texture_clean <- missing_texture %>% dplyr::select(X..Sand, X..Silt, X..Clay, SiteCode)
-
-soil_clean <- soil_clean %>%
-  left_join(missing_texture_clean, by = "SiteCode", suffix = c("", ".new")) %>%
-  mutate(
-    X..Sand = coalesce(X..Sand, X..Sand.new),
-    X..Silt = coalesce(X..Silt, X..Silt.new),
-    X..Clay = coalesce(X..Clay, X..Clay.new)
-  ) %>%
-  dplyr::select(-X..Sand.new, -X..Silt.new, -X..Clay.new)
-
-soil_clean$site_old <- soil_clean$SiteCode
-
-
-
-write.csv(soil_clean,"/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/sat_sites/soil_clean.csv",row.names=F)
 
 ###### Compare measured vs database values ##########
 database_textures <- world_soil %>% filter(hzdept == 5) %>% dplyr::select(id, siltmean, claymean, sandmean)
@@ -100,6 +71,55 @@ ggplot(compare_textures, aes(x = X..Clay, y = claymean, color = SiteCode)) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "black") +
   xlim(lims_clay) + ylim(lims_clay) +
   theme_classic()
+
+######## Database vs Sample Offset Regression ######
+library(DirichletReg)
+
+
+compare_textures$comp_obs <- DR_data(compare_textures[, c("X..Clay", "X..Silt", "X..Sand")] / 100)
+compare_textures$comp_means <- DR_data(compare_textures[, c("claymean", "siltmean", "sandmean")] / 100)
+
+fit <- DirichReg(comp_obs ~ claymean + siltmean + sandmean, data = compare_textures)
+
+summary(fit)
+
+missing_texture <- world_soil %>% filter(hzdept == 5) %>%  filter(id %in% c("FtK_Cottonwood_Coulee", "FtK_Lone_Pine", "CPER- Far north", "HardwareRanch", "MPG_IR", "MPG_TH", "Peavine",   "Plymouth")) %>% dplyr::select(id, siltmean, claymean, sandmean)
+## missing Goebl and Redbluff
+
+
+pred <- predict(fit, newdata = missing_texture, type = "response")
+pred * 100  
+
+pred_df <- as.data.frame(pred * 100)
+colnames(pred_df) <- c("X..Clay", "X..Silt", "X..Sand")
+
+missing_texture_pred <- cbind(missing_texture, pred_df)
+
+missing_texture_pred
+
+## add to existing dataframe with soil values
+
+missing_texture_pred$SiteCode <- missing_texture_pred$id
+missing_texture_pred$SiteCode[missing_texture_pred$SiteCode == "CPER- Far north"] <- "FAR NORTH CPER"
+
+missing_texture_clean <- missing_texture_pred %>% dplyr::select(X..Sand, X..Silt, X..Clay, SiteCode)
+
+soil_clean <- soil_clean %>%
+  left_join(missing_texture_clean, by = "SiteCode", suffix = c("", ".new")) %>%
+  mutate(
+    X..Sand = coalesce(X..Sand, X..Sand.new),
+    X..Silt = coalesce(X..Silt, X..Silt.new),
+    X..Clay = coalesce(X..Clay, X..Clay.new)
+  ) %>%
+  dplyr::select(-X..Sand.new, -X..Silt.new, -X..Clay.new)
+
+soil_clean$site_old <- soil_clean$SiteCode
+
+
+
+write.csv(soil_clean,"/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/sat_sites/soil_clean.csv",row.names=F)
+
+
 
 ###### visualize soil texture ########
 library(ggtern)
