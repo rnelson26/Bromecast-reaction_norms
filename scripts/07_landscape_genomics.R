@@ -3,12 +3,13 @@
 ######## Create K and assign genotypes ##########
 ######## code by Justin Van Ee and Becca Nelson ###############
 ############ created 8-19-25 #############
-############ last modified 8-20-25 ##########################
+############ last modified 9-4-25 ##########################
 
 ### to do:
-### cross validation
-### inclusion of additional genotypes
 ### add spatial variables 
+## env covariates for additional genotypes and sat sites
+ 
+## notes from Diana Gamba on full set of WNA genotypes: BRTE127_LDfilteredSNPs.bed is the SNP/genotype matrix for 158,420 snps/rows and 127 genotypes/columns. BRTE127_IBSmatrix.txt is the kinship matrix and BRTE_127wna_ordered.csv has the order of genotypes in those matrices (column ibs_id) and the chelsa climate variables. The first three columns of the bed file are the site id, major allele, minor allele; genotypes start on the 4th
  
 
 rm(list = ls())
@@ -44,9 +45,12 @@ bioclim <-
   ## filter for sequenced genotypes 
   filter(genotype %in% genotype_codes$genotype)
 
-bioclim <- bioclim %>% dplyr::select(-elevation)
-## remove for now since we don't have elevation for sat sites yet 
-
+chelsa <-  read.csv("data/BRTE_127wna_ordered.csv")
+## chelsa bioclim climate and site variables for all 127 wna genotypes
+#https://chelsa-climate.org/bioclim/
+#For specifications see: chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://chelsa-climate.org/wp-admin/download-page/CHELSA_tech_specification_V2.pdf
+#Not including elevation, which can be obtained in R with library(elevatr) and get_elev_raster() based on coordinates.
+  
 ### Remove any genotypes we did not get in bioclim 
 genotype_codes <-
   genotype_codes %>%
@@ -56,7 +60,11 @@ genotype_codes <-
 n_g <- nrow(genotype_codes)
 
 ### Connect to genotype/SNP matrix
-SNPs <- as.data.frame(read.table("data/BRTEcg_SNPs.bed", header = FALSE, sep=",",stringsAsFactors=FALSE))
+#SNPs <- as.data.frame(read.table("data/BRTEcg_SNPs.bed", header = FALSE, sep=",",stringsAsFactors=FALSE)) ##original 93 genotypes
+
+SNPs <- as.data.frame(read.table("data/BRTE127_LDfilteredSNPs.bed", header = FALSE, sep=",",stringsAsFactors=FALSE)) ## all the western North American genotypes 
+
+
 SNPs <- SNPs[,c(1:3,genotype_codes$SNPmatrix_column)] ## Columns 1:3 provide line name, reference and alternate allele.
 # genotype_codes$SNPmatrix_column in index sorts to match bioclim
 
@@ -89,6 +97,59 @@ data <- data %>%
   mutate(across(lon:prc.cld.q, scale))
 
 ## data has the 60 PCS along with spatial coordintes, genotype and bioclimate variables for the seed source locations. 
+
+##### Leave one out cross validation #########
+library(purrr)
+library(dplyr)
+
+# predictors
+predictor_vars_LM <- c(
+  "lon", "lat", "ann.mean.tmp", "mean.diurn.rng", "isotherm",
+  "tmp.seas", "max.tmp.wrm.m", "min.tmp.cld.m", "tmp.ann.rng",
+  "mean.tmp.wet.q", "mean.tmp.dry.q", "mean.tmp.wrm.q", "mean.tmp.cld.q",
+  "ann.prc", "prc.wet.m", "prc.dry.m", "prc.seas", "prc.wet.q",
+  "prc.dry.q", "prc.wrm.q", "prc.cld.q"
+)
+
+# Run LOOCV
+loocv_results <- map_dfr(1:nrow(data), function(i) {
+  
+  # Training data (all except ith row)
+  train_data <- data[-i, ]
+  test_data  <- data[i, ]
+  
+  # Fit models for each PC
+  mods <- map(1:n_pc, function(l) {
+    response <- paste0("PC", l)
+    form <- reformulate(predictor_vars_LM, response)
+    lm(form, data = train_data)
+  })
+  
+  # Predict PCs for held-out site
+  predPCs <- map_dbl(mods, ~ predict(.x, newdata = test_data))
+  truePCs <- as.numeric(test_data[paste0("PC", 1:n_pc)])
+  
+  tibble(
+    genotype = test_data$genotype,
+    site_row = i,
+    PC = paste0("PC", 1:n_pc),
+    observed = truePCs,
+    predicted = predPCs
+  )
+})
+
+# Calculate RMSE for each PC
+loocv_summary <- loocv_results %>%
+  group_by(PC) %>%
+  summarise(
+    rmse = sqrt(mean((observed - predicted)^2)),
+    cor  = cor(observed, predicted),
+    .groups = "drop"
+  )
+
+loocv_summary
+
+
 
 ###
 ### Fit models (linear regression)
@@ -223,6 +284,8 @@ ggplot(df, aes(x = value, fill = Method)) +
   theme(legend.position = "bottom")
 
 ## they are similar! So using the PC exp decay method, we can predict kinship for genotypes without knowing SNP data by using PC space to estimate genetic distances. We will do this next. 
+
+
 ########## Part 2: Predict genotype for satellite sites ######################
 ## name variables
 predictor_vars_LM <- c(
@@ -280,41 +343,120 @@ PCs_new <- do.call(cbind, predPC_list)
 colnames(PCs_new) <- paste0("PC", 1:n_pc)
 rownames(PCs) <- genotype_codes$genotype
 
-########## Predict nearest genotype for satellite sites ######################
+##### outputs: K and synthetic genotypes for sat sites #########
+# --- After you've created PCs_new ---
 
-
-if(nrow(PCs) != length(genotype_codes$genotype)) stop("Mismatch: nrow(PCs) != length(genotype_codes)")
-rownames(PCs) <- genotype_codes$genotype
-
-
-PCs_all <- rbind(PCs_new, PCs)
-
-D_all <- as.matrix(dist(PCs_all, method = "euclidean"))
-
+# 1. Assign synthetic genotype IDs (starting at 200)
 n_new <- nrow(PCs_new)
-n_g   <- nrow(PCs)
+new_ids <- paste0(200:(199 + n_new))
+rownames(PCs_new) <- new_ids
 
-D_new_old <- D_all[1:n_new, (n_new + 1):(n_new + n_g), drop = FALSE]
-
-
-colnames(D_new_old) <- rownames(PCs)  
-
-# For each new site, assign nearest observed genotype
-nearest_genotype <- apply(D_new_old, 1, function(x) {
-  idx <- which.min(x)
-  colnames(D_new_old)[idx]
-})
-
-nearest_distance <- apply(D_new_old, 1, min)
-
-assignment_df <- tibble(
-  site_code         = new_sites$site_code,
-  assigned_genotype = nearest_genotype,
-  nearest_distance  = nearest_distance
+genotype_index_new <- tibble(
+  site     = new_sites$site_code,
+  genotype = paste0(new_ids),
 )
 
-print(assignment_df)
-# isn't printing genotype correctly 
+# 2. Combine observed + new PCs
+PCs_all <- rbind(PCs, PCs_new)
 
-apply(D_new_old, 1, min)  
-nearest_idx                 
+# 3. Calculate pairwise Euclidean distances in PC space
+D_all <- dist(PCs_all, method = "euclidean") %>%
+  as.matrix()
+
+# 4. Predict kinship using the quadratic regression you fit earlier (opt_range)
+K_new_raw <- matrix(exp(predict(opt_range, newdata = data.frame(distance = c(D_all), 
+                                                                `I(distance^2)` = c(D_all^2)))),
+                    nrow = nrow(D_all), ncol = ncol(D_all))
+
+# 5. Enforce positive definiteness
+K_all <- Matrix::nearPD(K_new_raw)$mat %>% as.matrix()
+
+# 6. Build index of genotypes
+genotype_index_obs <- tibble(
+  site     = bioclim$site_code,         
+  genotype = genotype_codes$genotype
+)
+
+
+###### Part 3: Does an RDA approach yield better predictions for genetic disimilarity at satallite sites? ################
+
+## prepare data
+library(vegan)  # for RDA
+
+# Genotype matrix (rows = genotypes, columns = SNPs)
+# Make sure it's numeric (0,1,2 for SNP counts)
+geno_mat <- t(SNPs[,-c(1:3)])  # transpose so rows = genotypes
+rownames(geno_mat) <- genotype_codes$genotype
+
+# Environmental predictors for seed source sites
+env_mat <- bioclim %>%
+  dplyr::select(all_of(predictor_vars_LM)) %>%
+  mutate(across(everything(), as.numeric)) %>%
+  scale()
+rownames(env_mat) <- bioclim$genotype
+
+
+### fit RDA
+rda_mod <- rda(geno_mat ~ ., data = as.data.frame(env_mat))
+summary(rda_mod)
+RsquareAdj(rda_mod)  # adjusted R²
+constraining_scores <- scores(rda_mod, display = "sites", choices = 1:rda_mod$CCA$rank)  # scores of genotypes on constrained axes
+
+### predict synthetic satellite genotypes
+# Prepare new_sites environment matrix (scaled with training)
+sat_env <- new_sites_scaled %>%
+  dplyr::select(all_of(predictor_vars_LM)) %>%
+  as.data.frame()
+
+# Predict scores on constrained RDA axes
+pred_rda_scores <- predict(rda_mod, newdata = sat_env, type = "lc")[, 1:rda_mod$CCA$rank]
+pred_rda_matrix <- as.matrix(pred_rda_scores)
+rownames(pred_rda_matrix) <- paste0(200:(199 + nrow(new_sites)))
+
+
+### compare RDA vs PCA approaches
+rda_all <- rbind(constraining_scores, pred_rda_matrix)
+
+# Euclidean distances in RDA space
+D_rda <- dist(rda_all, method = "euclidean") %>% as.matrix()
+
+## fit kinship model for RDA
+K_rda_raw <- matrix(exp(predict(opt_range, 
+                                newdata = data.frame(distance = c(D_rda),
+                                                     `I(distance^2)` = c(D_rda^2)))),
+                    nrow = nrow(D_rda), ncol = ncol(D_rda))
+
+K_rda <- Matrix::nearPD(K_rda_raw)$mat %>% as.matrix()
+
+## compare predictive peformance for satellite sites 
+# For satellite sites only
+sat_ids <- paste0(200:(199 + nrow(new_sites)))
+
+# Compare distance distributions
+dist_PCA <- D_all[sat_ids, sat_ids]
+dist_RDA <- D_rda[sat_ids, sat_ids]
+
+# Simple correlation
+cor(c(dist_PCA), c(dist_RDA))
+## 94.7% correlation suggests both approaches are similar
+### 97.2% correlation when additional genotypes are added
+
+plot(c(dist_PCA), c(dist_RDA),
+     xlab = "PCA distances",
+     ylab = "RDA distances",
+     main = "Comparison of genetic dissimilarity predictions")
+
+
+#PCA method: Unsupervised — reduces the original genotype (SNP) variation into axes that explain variance without considering environment. Later, you fit linear models of the PCs as a function of environmental predictors to predict PC scores for satellite sites. So for the satellite sites, their predicted PC scores are informed by the environment, but the axes themselves (directions in genotype space) come from the genetic data.
+
+#RDA method: Constrained — ordination axes are influenced by the environmental predictors (bioclimate), so genetic variation is aligned with environmental gradients.
+
+#In short: a correlation of 0.947 indicates that your RDA-based synthetic genotypes largely agree with PCA-based predictions, but RDA may provide more biologically interpretable predictions if environment is expected to shape genetic differences.
+
+
+
+# Save outputs
+write.csv(genotype_index_new, "synthetic_satallite_genotypes.csv", row.names = FALSE)
+
+## clean workspace
+rm(list = setdiff(ls(), c("K_all", "genotype_index_new")))

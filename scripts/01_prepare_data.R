@@ -1,9 +1,10 @@
 ################# Bromecast: 01.Prepare Data ##########################
 ############# created 3-25-25 ######################
-############# Last modified: 9-3-25 ##########################
+############# Last modified: 9-4-25 ##########################
 ######## Prepares all data for model fitting ################################
-
+source("scripts/07_landscape_genomics.R")
 source("scripts/00_setup.R")
+
 
 ###### summarise soil data to site-year & assign soil values to common garden ########
 
@@ -58,9 +59,11 @@ data <- data %>%
 
 
 ####### Prepare data for model ########
+K_all ## updated kinship matrix
+genotype_index_new ## list of synthetic genotype names for satellite sites
 
 ### Genotypes info ##########
-#K <- diag(1, 93, 93) #indep kinship matrix
+
 
 BRTE <- left_join(BRTE, tips, by = "PopNum") 
 
