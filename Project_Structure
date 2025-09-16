@@ -24,10 +24,10 @@ project_root/
 │   ├── 01_prepare_data.R
 │   ├── 02_prepare_standata_emg.R        
 │   ├── 03_prepare_standata_rep.R  
-│   └── 04_prepare_standata_fec.R 
-│   └── 05_Fit_Models.R 
-│   └── 06_CRPS.R 
-│   └── 07_landscape_genomics.R
+│   ├── 04_prepare_standata_fec.R 
+│   ├── 05_Fit_Models.R 
+│   ├── 06_CRPS.R //split figures into seprate code or update title
+│   ├── 07_landscape_genomics.R
 ├── job_scripts/
 │   ├── run_fit_models.sh
 │   ├── run_crps.sh

@@ -2,6 +2,7 @@
 ############# created 3-25-25 ######################
 ############# Last modified: 9-4-25 ##########################
 ######## Prepares all data for model fitting ################################
+##add source for soils and merge data 
 source("scripts/07_landscape_genomics.R")
 source("scripts/00_setup.R")
 

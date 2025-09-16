@@ -150,7 +150,7 @@ model {
     int idx_genotype = genotype_plant_train[i];
     
     real logit_p = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) + 
-                   dot_product(W_soil[idx, ], beta[idx_genotype, ]) + dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
+                   dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
                    site_year_effect_train_scaled_centered[site_year_id_train[i]] + 
                    beta_neighbors * neighbors_train[i] +
                    beta_annual * annual_train[i] +
@@ -160,6 +160,7 @@ model {
   
     if (plot_index_train[i] != 0)
       logit_p += eta_plot_centered[plot_index_train[i]];
+ 
       r_train[i] ~ bernoulli_logit(logit_p);
 }
 
