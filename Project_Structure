@@ -1,26 +1,27 @@
 project_root/
 ├── models/
-│   ├── binomial_glm_reproduced.stan 
+│   ├── binomial_glm_reproduced_full.stan 
 │   ├── binomial_glm_reproduced_climateonly.stan
 │   ├── binomial_glm_reproduced_nogene.stan
 │   ├── binomial_glm_reproduced_nocomp.stan
 │   ├── binomial_glm_reproduced_nointer.stan
-│   ├── binomial_glm_survived.stan
+|   ├── binomial_glm_reproduced_null.stan
+│   ├── binomial_glm_emerged_full.stan
 │   ├── binomial_glm_emerged_climateonly.stan
 │   ├── binomial_glm_emerged_nogene.stan
 │   ├── binomial_glm_emerged_nocomp.stan
 │   ├── binomial_glm_emerged_nointer.stan
-│   ├── ztnb_glm.random.predict.stan
-│   ├── ztnb_glm.random.predict_climateonly.stan
-│   ├── ztnb_glm.random.predict_nogene.stan
-│   ├── ztnb_glm.random.predict_nocomp.stan
-│   ├── ztnb_glm.random.predict_nointer.stan
-│   ├── null_model_emerged.stan
-│   ├── null_model_reproduced.stan
-│   └── null_model_fecundity.stan
+|   ├── binomial_glm_emerged_null.stan
+│   ├── ztnb_glm_fecundity_full.stan
+│   ├── ztnb_glm_fecundity_climateonly.stan
+│   ├── ztnb_glm_fecundity_nogene.stan
+│   ├── ztnb_glm_fecundity_nocomp.stan
+│   ├── ztnb_glm_fecundity_nointer.stan
+│   └── ztnb_glm_fecundity_null.stan
 ├── scripts/
 |   ├── Merge.R
 |   ├── soils.R
+|   ├── 00_setup.R
 │   ├── 01_prepare_data.R
 │   ├── 02_prepare_standata_emg.R        
 │   ├── 03_prepare_standata_rep.R  
