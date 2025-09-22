@@ -3,8 +3,8 @@
 ############# Last modified: 7-29-25 ##########################
 ######## Prepares stan_data objects for emergence ################################
 
-source("scripts/00_setup.R")
-source("scripts/01_prepare_data.R")
+source("scripts/04_setup.R")
+source("scripts/05_prepare_data.R")
 
 ####### Fit stan model #########
 

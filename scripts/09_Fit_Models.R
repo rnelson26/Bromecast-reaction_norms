@@ -1,14 +1,14 @@
-################# Bromecast: 05.Fit Models ##########################
+################# Bromecast: 09.Fit Models ##########################
 ############# created 3-25-25 ######################
 ############# Last modified: 7-29-25 ##########################
 ######## Fits and Runs all models ################################
 
 # Load data
-source("scripts/00_setup.R")
-source("scripts/01_prepare_data.R")
-source("scripts/02_prepare_standata_emg.R")
-source("scripts/03_prepare_standata_rep.R")
-source("scripts/04_prepare_standata_fec.R")
+source("scripts/04_setup.R")
+source("scripts/05_prepare_data.R")
+source("scripts/06_prepare_standata_emg.R")
+source("scripts/07_prepare_standata_rep.R")
+source("scripts/08_prepare_standata_fec.R")
 
 # Define models
 model_configs <- list(

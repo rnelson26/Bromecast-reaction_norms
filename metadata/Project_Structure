@@ -32,6 +32,7 @@ project_root/
 │   ├── 07_prepare_standata_rep.R  ##assign stan data objects for reproduction  
 │   ├── 08_prepare_standata_fec.R ##assign stan data objects for fecundity
 │   ├── 09_Fit_Models.R ##fit stan models: this step takes a while
+│   ├── 09.1_run_single_model.R ##wrapper script for High Performance Computer 
 │   ├── 10_CRPS_and_figures.R ##analysis, data tables and figures
 │   ├── 11_Run_Everything.R ##run whole workflow
 ├── job_scripts/
@@ -56,3 +57,4 @@ project_root/
 ├── metadata/
 │   ├── Project_Structure.txt 
 │   ├── model_metadata.xlsx  
+├── figures/

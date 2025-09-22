@@ -1,17 +1,18 @@
+
 #!/bin/bash
 #SBATCH --job-name=fit_models
-#SBATCH --output=logs/fit_models_%j.out
-#SBATCH --error=logs/fit_models_%j.err
-#SBATCH --time=48:00:00          # max time hh:mm:ss - adjust as needed
-#SBATCH --cpus-per-task=4        # adjust based on your CPU needs
-#SBATCH --mem=16G                # adjust memory as needed
-#SBATCH --partition=standard     # change if your HPC uses partitions
+#SBATCH --output=logs/fit_models_%A_%a.out
+#SBATCH --error=logs/fit_models_%A_%a.err
+#SBATCH --time=24:00:00
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=16G
+#SBATCH --partition=standard
+#SBATCH --array=1-18   # one per model
 
-# Load R module (change based on your HPC)
 module load R/4.2.2
+mkdir -p logs results/draws
 
-# Create logs directory if it doesn't exist
-mkdir -p logs
+echo "SLURM_ARRAY_TASK_ID: $SLURM_ARRAY_TASK_ID"
+Rscript scripts/09.1_run_single_model.R $SLURM_ARRAY_TASK_ID
 
-# Run your R script
-Rscript scripts/05_Fit_Models.R
+## submit: sbatch job_scripts/run_fit_models.sh

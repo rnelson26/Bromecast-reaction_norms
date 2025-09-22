@@ -11,4 +11,4 @@ module load R/4.2.2
 
 mkdir -p logs
 
-Rscript scripts/06_CRPS.R
+Rscript scripts/10_CRPS_and_figures.R
