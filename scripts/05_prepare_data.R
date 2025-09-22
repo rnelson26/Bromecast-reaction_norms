@@ -16,7 +16,7 @@ data <- left_join(data, soil_summary, by = "site_old")
 
 vars_to_fill <- c("pH", "EC", "OMpercent", "Protein_g.kg", "X..Sand", "X..Clay", "X..Silt")
 
-## use Boise Low sat soil values for wildcat cg
+## use Boise Low sat soil values for wildcat & baltzor cg
 reference_values <- data %>%
   dplyr::filter(site_old == "Boise_Low") %>%
   dplyr::select(all_of(vars_to_fill)) %>%
@@ -27,6 +27,16 @@ for (var in vars_to_fill) {
 }
 
 reference_values <- data %>%
+  dplyr::filter(site_old == "Boise_Low") %>%
+  dplyr::select(all_of(vars_to_fill)) %>%
+  dplyr::summarise(across(everything(), ~ first(na.omit(.))))
+
+for (var in vars_to_fill) {
+  data[[var]][data$site_old == "BA" & is.na(data[[var]])] <- reference_values[[var]]
+}
+
+##use CG pasture to approximate Cheyenne
+reference_values <- data %>%
   dplyr::filter(site_old == "CG PASTURE") %>%
   dplyr::select(all_of(vars_to_fill)) %>%
   dplyr::summarise(across(everything(), ~ first(na.omit(.))))
@@ -34,6 +44,24 @@ reference_values <- data %>%
 for (var in vars_to_fill) {
   data[[var]][data$site_old == "CH" & is.na(data[[var]])] <- reference_values[[var]]
 }
+
+
+
+
+# Check completeness of soil variables 
+#vars_to_check <- c("pH", "EC", "OMpercent", "Protein_g.kg", "X..Sand", "X..Clay", "X..Silt")
+
+#missing_by_site <- data %>%
+  group_by(site) %>%
+  summarise(across(all_of(vars_to_check), ~ sum(is.na(.)), .names = "missing_{.col}")) %>%
+  ungroup()
+
+#missing_sites <- missing_by_site %>%
+  filter(if_any(starts_with("missing_"), ~ . > 0))
+
+#missing_sites
+
+
 
 ###### add cg climate offset #########
 offsets <- tibble(

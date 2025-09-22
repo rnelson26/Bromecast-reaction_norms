@@ -1,7 +1,7 @@
 #### Bromecast Soil Data #######
 ######## code by Becca Nelson ###############################
 ############# created 4-24-25 ######################
-############# Last modified: 8-25-25 ##########################
+############# Last modified: 9-22-25 ##########################
 
 rm(list = ls())
 
@@ -9,7 +9,7 @@ rm(list = ls())
 library(tidyverse)
 
 ##### Load Data #########
-world_soil <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/soil_data.csv", header = TRUE)
+world_soil <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/soil_data_updated.csv", header = TRUE)
 
 soil <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/sat_sites/soils.csv", header = TRUE)
 
@@ -17,6 +17,9 @@ textures <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/da
 
 
 soil_info <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/sat_sites/soil_site_info.csv", header = TRUE)
+
+list <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/list.csv", header = TRUE)
+site_list <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/data/site_list.csv", header = TRUE)
 
 ######## Combine data in format for integration with model #####
 
@@ -29,7 +32,7 @@ soil_clean <- soil_clean %>% dplyr::select(SiteCode, UniqueID, SampleDescription
 
 ###### Compare measured vs database values ##########
 database_textures <- world_soil %>% filter(hzdept == 5) %>% dplyr::select(id, siltmean, claymean, sandmean)
-## missing Goebl and Redbluff
+
 
 database_textures$SiteCode <- database_textures$id
 database_textures$SiteCode[database_textures$SiteCode == "CPER- Far north"] <- "FAR NORTH CPER"
@@ -83,8 +86,8 @@ fit <- DirichReg(comp_obs ~ claymean + siltmean + sandmean, data = compare_textu
 
 summary(fit)
 
-missing_texture <- world_soil %>% filter(hzdept == 5) %>%  filter(id %in% c("FtK_Cottonwood_Coulee", "FtK_Lone_Pine", "CPER- Far north", "HardwareRanch", "MPG_IR", "MPG_TH", "Peavine",   "Plymouth")) %>% dplyr::select(id, siltmean, claymean, sandmean)
-## missing Goebl and Redbluff
+missing_texture <- world_soil %>% filter(hzdept == 5) %>%  filter(id %in% c("FtK_Cottonwood_Coulee", "FtK_Lone_Pine", "CPER- Far north", "HardwareRanch", "MPG_IR", "MPG_TH", "Peavine",   "Plymouth", "GoeblS1", "RedBluff" )) %>% dplyr::select(id, siltmean, claymean, sandmean)
+
 
 
 pred <- predict(fit, newdata = missing_texture, type = "response")
@@ -156,8 +159,8 @@ library(sf)
 
 # Ensure site_list has correct column names
 #x <- site_list %>% 
-# rename(id = ID, lat = Latitude, lon = Longitude) %>% 
-#  select(id, lat, lon)
+ #rename(id = ID, lat = Latitude, lon = Longitude) %>% 
+  #select(id, lat, lon)
 
 # Fetch SoilGrids data
 #soil_data <- fetchSoilGrids(
@@ -229,3 +232,51 @@ labs(title = "Median Clay Fraction (clayQ50) by Site",
      y = "Clay Fraction (Median)") 
 
 #write.csv(horizon_data, "soil_data.csv", row.names = FALSE)
+
+### get two sites missing from original extraction:
+library(soilDB)
+library(aqp)
+library(dplyr)
+library(sf)
+
+# Define the two new sites
+new_sites <- data.frame(
+  id  = c("GoeblS1", "RedBluff"),
+  lat = c(39.550182, 45.579969),
+  lon = c(-105.095917, -111.664617)
+)
+
+# Fetch SoilGrids data for new sites
+soil_data_new <- fetchSoilGrids(
+  x = new_sites,
+  loc.names = c("id", "lat", "lon"),
+  depth_intervals = c("0-5", "5-15", "15-30", "30-60", "60-100", "100-200"),
+  variables = c("bdod", "cec", "cfvo", "clay", "nitrogen", "phh2o", "sand", "silt",
+                "soc", "ocd", "wv0010", "wv0033", "wv1500"),
+  grid = FALSE,
+  target_resolution = c(250, 250),
+  summary_type = c("Q0.05", "Q0.5", "Q0.95", "mean"),
+  verbose = TRUE,
+  progress = TRUE
+)
+
+# Extract horizon-level data
+horizon_data_new <- horizons(soil_data_new)
+
+# Optional: save as CSV
+write.csv(horizon_data_new, "soil_data_new_sites.csv", row.names = FALSE)
+
+# Load existing soil data
+world_soil <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/soil_data.csv", header = TRUE)
+
+# Merge new soil data with existing
+horizon_data_new <- horizon_data_new %>%
+  mutate(
+    hzID = as.integer(hzID)  
+  )
+world_soil_combined <- bind_rows(world_soil, horizon_data_new)
+# Check
+head(world_soil_combined)
+
+write.csv(world_soil_combined, "soil_data_updated.csv", row.names = FALSE)
+

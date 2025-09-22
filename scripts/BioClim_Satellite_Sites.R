@@ -5,7 +5,7 @@
 
 rm(list = ls())
 
-source("scripts/00_setup.R")
+source("scripts/04_setup.R")
 
 library(terra)
 library(dplyr)
