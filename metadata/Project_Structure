@@ -1,0 +1,58 @@
+project_root/
+├── models/
+### Emegence 
+│   ├── binomial_glm_emerged_full.stan ## full model
+│   ├── binomial_glm_emerged_climateonly.stan ## climate only
+│   ├── binomial_glm_emerged_nogene.stan ## no genomics
+│   ├── binomial_glm_emerged_nocomp.stan ## no intra and interspecific competition
+│   ├── binomial_glm_emerged_nointer.stan ## no interspecic competition
+|   ├── binomial_glm_emerged_null.stan ## mean only null model 
+## Reproduction 
+│   ├── binomial_glm_reproduced_full.stan 
+│   ├── binomial_glm_reproduced_climateonly.stan
+│   ├── binomial_glm_reproduced_nogene.stan
+│   ├── binomial_glm_reproduced_nocomp.stan
+│   ├── binomial_glm_reproduced_nointer.stan
+|   ├── binomial_glm_reproduced_null.stan
+### Fecundity 
+│   ├── ztnb_glm_fecundity_full.stan
+│   ├── ztnb_glm_fecundity_climateonly.stan
+│   ├── ztnb_glm_fecundity_nogene.stan
+│   ├── ztnb_glm_fecundity_nocomp.stan
+│   ├── ztnb_glm_fecundity_nointer.stan
+│   └── ztnb_glm_fecundity_null.stan
+├── scripts/
+|   ├── 00_Merge.R ## merge common garden and satellite data
+|   ├── 01_soils.R ## load and extract soil information 
+|   ├── 02_Coefs.R ## generate coefficients for common garden gravel temperature offset 
+│   ├── 03_landscape_genomics.R ## kinship information & synthetic genotypes 
+|   ├── 04_setup.R ## load packages and finals for main analysis 
+│   ├── 05_prepare_data.R ## prepare data for main analysis
+│   ├── 06_prepare_standata_emg.R ##assign stan data objects for emergence       
+│   ├── 07_prepare_standata_rep.R  ##assign stan data objects for reproduction  
+│   ├── 08_prepare_standata_fec.R ##assign stan data objects for fecundity
+│   ├── 09_Fit_Models.R ##fit stan models: this step takes a while
+│   ├── 10_CRPS_and_figures.R ##analysis, data tables and figures
+│   ├── 11_Run_Everything.R ##run whole workflow
+├── job_scripts/
+│   ├── run_fit_models.sh
+│   ├── run_crps.sh
+├── data/
+│   ├── combined_clean_climate_SOS_updated.csv ##merged data with climate information
+│   ├── assigned_genotypes.csv ## assigned genotypes to satellite sites
+│   ├── common_gardens/
+│   │   ├── 93cg_genotypes.csv ## common garden genotypes
+│   │   ├── dailyVWCdata_allgardens_allyears.csv ## common garden water content
+│   │   └── dailytempdata_allgardens_allyears.csv ## common garden temperature
+│   ├── 307tips.csv ## genomic information
+│   ├── BRTE307_IBSmatrix.txt ## genomic matrix for 93 common garden genotypes
+│   ├── BRTE_NorthAmerica.csv ## genomic matrix for all North American genotypes
+│   └── sat_sites/
+│       └── soil_clean.csv ## soil information 
+├── results/
+│   ├── draws/
+│   ├── crps/
+│   └── fitness/
+├── metadata/
+│   ├── Project_Structure.txt 
+│   ├── model_metadata.xlsx  
