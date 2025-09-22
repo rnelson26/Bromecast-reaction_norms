@@ -39,7 +39,7 @@ for (var in vars_to_fill) {
 offsets <- tibble(
   site    = c("BA_black", "BA_white", "CH_black",                   "CH_white", "SS_black", "SS_white", "WI_black",                     
 "WI_white"),
-  offset  = c(1.0, -1.0, 1.607874, -1.607874, 1.407078, -1.407078, 0.8875247, -0.8875247)   
+  offset  = c(1.035, -1.035, 1.607874, -1.607874, 1.407078, -1.407078, 0.8875247, -0.8875247)   
 ) #Climate to cause temp diff degrees C from data logged average divided by two except for bA
 
 data <- data %>%

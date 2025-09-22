@@ -41,6 +41,7 @@ project_root/
 ├── data/
 │   ├── combined_clean_climate_SOS_updated.csv ##merged data with climate information
 │   ├── assigned_genotypes.csv ## assigned genotypes to satellite sites
+|   ├── BCtemploggers.csv ## Baltzor common garden temperature loggers 
 │   ├── common_gardens/
 │   │   ├── 93cg_genotypes.csv ## common garden genotypes
 │   │   ├── dailyVWCdata_allgardens_allyears.csv ## common garden water content
