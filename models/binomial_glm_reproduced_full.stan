@@ -83,6 +83,7 @@ data {
 
 parameters {
   matrix[n_g, q_X] beta_raw;
+    vector[q_X] mu_beta; 
   vector<lower=0, upper=1.57079632679>[p_X] u_sigma;
   vector<lower=0, upper=1.57079632679>[s_X] u_sigma_soil;
   vector<lower=0, upper=1.57079632679>[q_X] u_zeta;

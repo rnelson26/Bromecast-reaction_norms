@@ -459,7 +459,7 @@ plot(c(dist_PCA), c(dist_RDA),
 write.csv(genotype_index_new, "synthetic_satallite_genotypes.csv", row.names = FALSE)
 
 ## clean workspace
-rm(list = setdiff(ls(), c("K_all", "genotype_index_new")))
+#rm(list = setdiff(ls(), c("K_all", "genotype_index_new")))
 
 seed_sites <- bioclim %>% dplyr::select(site_code, lon, lat) %>% distinct()
 write.csv(seed_sites, "seed_sites.csv", row.names = FALSE)

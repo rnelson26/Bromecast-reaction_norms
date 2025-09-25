@@ -120,12 +120,11 @@ real<lower=0> sigma_site_year;
 vector[n_plot] eta_plot_raw;
 real<lower=0> sigma_plot;
 real alpha; // Global intercept
-
+}
 
 transformed parameters {
   vector<lower=0>[p_X] sigma;
   vector<lower=0>[q_X] zeta;
-  real<lower=0> zeta_0 = 5 * tan(u_zeta_0);
    vector<lower=0>[s_X] sigma_soil;
 vector[n_site_year_train] site_year_effect_train_scaled = sigma_site_year * site_year_effect_train_raw;
   vector[n_plot] eta_plot;
@@ -141,7 +140,7 @@ eta_plot = sigma_plot * eta_plot_raw;
 
   for (l in 1:q_X)
     zeta[l] = tan(u_zeta[l]);
-
+}
 
 model {
   theta ~ gamma(1, 0.1);

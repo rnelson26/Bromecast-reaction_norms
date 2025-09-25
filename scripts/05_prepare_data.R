@@ -52,12 +52,12 @@ for (var in vars_to_fill) {
 #vars_to_check <- c("pH", "EC", "OMpercent", "Protein_g.kg", "X..Sand", "X..Clay", "X..Silt")
 
 #missing_by_site <- data %>%
-  group_by(site) %>%
-  summarise(across(all_of(vars_to_check), ~ sum(is.na(.)), .names = "missing_{.col}")) %>%
-  ungroup()
+ # group_by(site) %>%
+  #summarise(across(all_of(vars_to_check), ~ sum(is.na(.)), .names = "missing_{.col}")) %>%
+  #ungroup()
 
 #missing_sites <- missing_by_site %>%
-  filter(if_any(starts_with("missing_"), ~ . > 0))
+#  filter(if_any(starts_with("missing_"), ~ . > 0))
 
 #missing_sites
 
@@ -723,3 +723,4 @@ testing_df_emg$e_test <- ifelse(testing_df_emg$Emerged == "Y", 1L, 0L)
 
 training_df_rep$r_train <- ifelse(training_df_rep$Reproduced == "Y", 1L, 0L)
 testing_df_rep$r_test <- ifelse(testing_df_rep$Reproduced == "Y", 1L, 0L)
+
