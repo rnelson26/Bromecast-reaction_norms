@@ -1,6 +1,6 @@
 ################# Bromecast: 09.Fit Models ##########################
 ############# created 3-25-25 ######################
-############# Last modified: 7-29-25 ##########################
+############# Last modified: 9-25-25 ##########################
 ######## Fits and Runs all models ################################
 
 # Load data
@@ -41,36 +41,37 @@ model_configs <- list(
 )
 
 ## check that the models compile
-compile_results <- list()
+#compile_results <- list()
 
-for (config in model_configs) {
-  cat("Checking compilation for:", config$name, "\n")
+#for (config in model_configs) {
+ # cat("Checking compilation for:", config$name, "\n")
   
   # Try compiling the model
-  result <- tryCatch({
-    mod <- cmdstan_model(file.path("models", config$file))
+  #result <- tryCatch({
+   # mod <- cmdstan_model(file.path("models", config$file))
     # Pathfinder is optional; can also just stop here if compilation succeeds
-    TRUE  # compilation succeeded
-  }, error = function(e) {
-    cat("ERROR compiling", config$name, ":", e$message, "\n")
-    FALSE  # compilation failed
-  })
+    #TRUE  # compilation succeeded
+#  }, error = function(e) {
+ #   cat("ERROR compiling", config$name, ":", e$message, "\n")
+  #  FALSE  # compilation failed
+  #})
   
-  compile_results[[config$name]] <- result
-}
+  #compile_results[[config$name]] <- result
+#}
 
 # Summary of which models compile
-compile_results
-
+#compile_results
 
 
 
 # Iterate and Fit models 
 for (config in model_configs) {
-  cat("Running:", config$name, "\n")
+  cat("Running model:", config$name, "\n")
   
+  # Compile model
   mod <- cmdstan_model(file.path("models", config$file))
   
+  # Pathfinder initialization
   pathfinder_fit <- mod$pathfinder(
     data = config$data,
     init = 0,
@@ -78,6 +79,7 @@ for (config in model_configs) {
   )
   init_list <- pathfinder_fit$draws(format = "list")
   
+  # Fit the model
   fit <- mod$sample(
     data = config$data,
     init = init_list,
@@ -88,59 +90,21 @@ for (config in model_configs) {
     seed = 123
   )
   
-  fit$save_object(file = file.path("output", paste0("fit_", config$name, ".rds")))
+  # Assign fit as a unique object in workspace
+  assign(paste0("fit_", config$name), fit)
+  
+
+  # Dynamically extract prediction-type variables
+  gq_names <- fit$metadata()$names_gq          # all generated quantities
+  pred_vars <- grep("_pred$", gq_names, value = TRUE)  # only prediction matrices
+  
+  # Extract draws for each prediction variable
+  gqs <- lapply(pred_vars, function(v) fit$draws(variables = v, format = "matrix"))
+  names(gqs) <- pred_vars
+  
+  # Save predictions to RDS (memory safe)
+  saveRDS(gqs, file.path("output", paste0("gqs_", config$name, ".rds")))
+  
+  cat("Saved prediction matrices for:", config$name, "\n\n")
 }
 
-# ================
-# Null models
-# ================
-
-# Precompiled null models
-mod_null_emg <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/null_model_emerged.stan")
-mod_null_rep <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/null_model_reproduced.stan")
-mod_null_fec <- cmdstan_model("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/null_model_fecundity.stan")
-
-cat("Running null: emerged\n")
-fit_null_emg <- mod_null_emg$sample(
-  data = list(
-    n_train = nrow(training_df_emg),
-    n_test = nrow(testing_df_emg),
-    e_train = training_df_emg$e_train
-  ),
-  seed = 123,
-  chains = 3,
-  parallel_chains = 3,
-  iter_warmup = 100,
-  iter_sampling = 1000
-)
-fit_null_emg$save_object("output/fit_null_emerged.rds")
-
-cat("Running null: reproduced\n")
-fit_null_rep <- mod_null_rep$sample(
-  data = list(
-    n_train = nrow(training_df_rep),
-    n_test = nrow(testing_df_rep),
-    r_train = training_df_rep$r_train
-  ),
-  seed = 123,
-  chains = 3,
-  parallel_chains = 3,
-  iter_warmup = 100,
-  iter_sampling = 1000
-)
-fit_null_rep$save_object("output/fit_null_reproduced.rds")
-
-cat("Running null: fecundity\n")
-fit_null_fec <- mod_null_fec$sample(
-  data = list(
-    n_train = nrow(training_df),
-    n_test = nrow(testing_df),
-    y_train = training_df$Fecundity
-  ),
-  seed = 123,
-  chains = 3,
-  parallel_chains = 3,
-  iter_warmup = 100,
-  iter_sampling = 1000
-)
-fit_null_fec$save_object("output/fit_null_fecundity.rds")

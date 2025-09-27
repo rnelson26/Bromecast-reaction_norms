@@ -3,8 +3,8 @@
 ############# Last modified: 9-22-25 ##########################
 ######## CRPS & Skill Scores for all model variants ################################
 
-source("scripts/04_setup.R")
-source("scripts/05_prepare_data.R")
+
+#source("scripts/09_Fit_Models.R")
 
 # ========== SETUP ==========
 stages <- c("emerged", "repro", "fecundity")
