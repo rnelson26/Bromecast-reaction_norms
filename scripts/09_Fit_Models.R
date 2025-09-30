@@ -1,6 +1,6 @@
 ################# Bromecast: 09.Fit Models ##########################
 ############# created 3-25-25 ######################
-############# Last modified: 9-25-25 ##########################
+############# Last modified: 9-30-25 ##########################
 ######## Fits and Runs all models ################################
 
 # Load data
@@ -83,9 +83,9 @@ for (config in model_configs) {
   fit <- mod$sample(
     data = config$data,
     init = init_list,
-    chains = 3,
-    parallel_chains = 3,
-    iter_warmup = 100,
+    chains = 4,
+    parallel_chains = 4,
+    iter_warmup = 500,
     iter_sampling = 1000,
     seed = 123
   )
