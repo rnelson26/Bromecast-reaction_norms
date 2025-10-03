@@ -44,19 +44,27 @@ bioclim <-
   arrange(genotype) %>%
   ## filter for sequenced genotypes 
   filter(genotype %in% genotype_codes$genotype)
+## Chelsa data, Megan originally made 
 
 chelsa <-  read.csv("data/BRTE_127wna_ordered.csv")
 ## chelsa bioclim climate and site variables for all 127 wna genotypes
 #https://chelsa-climate.org/bioclim/
 #For specifications see: chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://chelsa-climate.org/wp-admin/download-page/CHELSA_tech_specification_V2.pdf
 #Not including elevation, which can be obtained in R with library(elevatr) and get_elev_raster() based on coordinates.
+
+## Chelsa ends at 2018, Daymet has current stuff 
+
   
-### outputs from Megan's code -- how to intrepet 
+### to do: change climate outputs to Megan's code but keep lat/long from Diana, get rid of stuff Justin originally used 
+## questions for Justin: cross validation, environmental space, how kinship matches genotype index
+### incorporate all 127, drop out ones not in common garden for reaction norm 
 
 ### Remove any genotypes we did not get in bioclim 
 genotype_codes <-
   genotype_codes %>%
   filter(genotype %in% unique(bioclim$genotype))
+
+## hopefully will be resolved by daymet
 
 ### Get number of genotypes
 n_g <- nrow(genotype_codes)
@@ -112,6 +120,7 @@ predictor_vars_LM <- c(
   "ann.prc", "prc.wet.m", "prc.dry.m", "prc.seas", "prc.wet.q",
   "prc.dry.q", "prc.wrm.q", "prc.cld.q"
 )
+## should be same 19 bioclim variables with daymet
 
 # Run LOOCV
 loocv_results <- map_dfr(1:nrow(data), function(i) {
@@ -151,7 +160,7 @@ loocv_summary <- loocv_results %>%
 
 loocv_summary
 
-
+### ask Justin loocv if something further should be done...
 
 ###
 ### Fit models (linear regression)
@@ -217,38 +226,43 @@ summary(df_GLS$rmse)
 summary(df_LM$rmse)
 
 ###
-### Calculate kinship matrix from principal component genetic distance matrix 
+### Calculate kinship matrix from principal component environmental distance matrix among genotypes
 ###
 
 # Get distance matrix (this is only for observed genotypes, we'll need to predict for satellite sites)
 D <- PCs %>%
   dist(method = "euclidean", diag=TRUE, upper=TRUE) %>%
   as.matrix()
-## distance matrix in PC space
+## distance matrix in PC space, currently has 92 in it, environmental distance between each genotypes
 
 ### Calculate IBS matrix, note that increasing MAF will cause off diagonals to decrease
+## genetic distance, kinship matrix 
 K <- 
   SNPs[,-c(1:3)] %>%
   t() %>%
   kinship(method="IBS", MAF=0.10) %>%
   cov2cor()
+### check with Justin that column headers in V are genotype numbers 
+
 ## IBS is identity by state
 ## MAF is minor allele frequency threshold for less common alleles
 ### K is a kinship covariance matrix 
 
 ###
-### Find relationship between derived kinship and genetic distance (PC space) using quadratic regression
+### Find relationship between derived kinship and environmental distance among genotypes (in PC space)  using quadratic regression
 ###
 
 # Use simple linear regression to find the optimal range parameter 
 distance <- c(D)
-hist(distance) # Can see the near clonal pairs in this plot on the fair left 
+hist(distance) # Can see the near clonal pairs in this plot on the fair left --- this doesn't make sense because it's environment PC among genotypes
 log_kinship <- c(log(K))
 hist(log_kinship) # Now far right
 
+plot(x=distance, y=log_kinship) # as you get further away in environmental space, then kinship less related
+
 # Fit model (no intercept)
 opt_range <- lm(log_kinship ~ distance + I(distance^2) - 1)
-summary(opt_range) # excellent fit (i.e., genetic distance + distance^2 in PC space is a good predictor of kinship)
+summary(opt_range) # excellent fit (i.e., environmental distance among genotypes + distance^2 in PC space is a good predictor of kinship)
 
 # Predict new kinship matrix (not guaranteed to be positive definite unless both beta_1 and beta_2 < 0)
 K_new_raw <- matrix((exp(predict(opt_range))), n_g, n_g) 
@@ -288,7 +302,9 @@ ggplot(df, aes(x = value, fill = Method)) +
 ## they are similar! So using the PC exp decay method, we can predict kinship for genotypes without knowing SNP data by using PC space to estimate genetic distances. We will do this next. 
 
 
-########## Part 2: Predict genotype for satellite sites ######################
+########## Part 2: Assign genotype for satellite sites ######################
+### check that column headers on K align with numbers of synthetic genotypes 
+
 ## name variables
 predictor_vars_LM <- c(
   "lon", "lat", "ann.mean.tmp", "mean.diurn.rng", "isotherm",
@@ -352,6 +368,7 @@ rownames(PCs) <- genotype_codes$genotype
 n_new <- nrow(PCs_new)
 new_ids <- paste0(200:(199 + n_new))
 rownames(PCs_new) <- new_ids
+### make sure genotype ID order matches position in matrix
 
 genotype_index_new <- tibble(
   site     = new_sites$site_code,
