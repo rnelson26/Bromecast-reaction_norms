@@ -51,6 +51,8 @@ chelsa <-  read.csv("data/BRTE_127wna_ordered.csv")
 #For specifications see: chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://chelsa-climate.org/wp-admin/download-page/CHELSA_tech_specification_V2.pdf
 #Not including elevation, which can be obtained in R with library(elevatr) and get_elev_raster() based on coordinates.
   
+### outputs from Megan's code -- how to intrepet 
+
 ### Remove any genotypes we did not get in bioclim 
 genotype_codes <-
   genotype_codes %>%
