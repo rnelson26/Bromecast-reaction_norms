@@ -3,19 +3,17 @@
 ######## Create K and assign genotypes ##########
 ######## code by Justin Van Ee and Becca Nelson ###############
 ############ created 8-19-25 #############
-############ last modified 9-4-25 ##########################
+############ last modified 10-6-25 ##########################
 
-### to do:
-### add spatial variables 
-## env covariates for additional genotypes and sat sites
+## questions for Justin: cross validation, environmental space, how kinship matches genotype index
+
  
 ## notes from Diana Gamba on full set of WNA genotypes: BRTE127_LDfilteredSNPs.bed is the SNP/genotype matrix for 158,420 snps/rows and 127 genotypes/columns. BRTE127_IBSmatrix.txt is the kinship matrix and BRTE_127wna_ordered.csv has the order of genotypes in those matrices (column ibs_id) and the chelsa climate variables. The first three columns of the bed file are the site id, major allele, minor allele; genotypes start on the 4th
  
 
 rm(list = ls())
 ### Load Packages ################
-source("scripts/BioClim_Satellite_Sites.R")
-## to generate newsites
+
 library(rwc) 
 library(ape)
 library(MASS) 
@@ -30,6 +28,11 @@ library(statgenGWAS)
 
 ######## Part 1: PC Exp Decay Method with known source sites ###########
 ######## Load data ###################
+## seed source daymet
+clim <- 
+  read.csv("data/seed_climate_info.csv",header=T) 
+
+
 ### Get genotype key matrix for connecting with genotype matrix 
 genotype_codes <- 
   read.csv("https://raw.githubusercontent.com/pbadler/bromecast-data/main/traits/data/rawdata/gamba_growthchamber/BRTEcg_genotypesCode.csv",header=T) %>%
@@ -38,33 +41,8 @@ genotype_codes <-
   ## Remove non-sequenced genotype 
   filter(!is.na(SNPmatrix_column))
 
-### Bring in bioclimate variables 
-bioclim <- 
-  read_csv("https://raw.githubusercontent.com/pbadler/bromecast-data/main/gardens/deriveddata/BioclimateOfOrigin_AllGenotypes.csv") %>%
-  arrange(genotype) %>%
-  ## filter for sequenced genotypes 
-  filter(genotype %in% genotype_codes$genotype)
-## Chelsa data, Megan originally made 
 
-chelsa <-  read.csv("data/BRTE_127wna_ordered.csv")
-## chelsa bioclim climate and site variables for all 127 wna genotypes
-#https://chelsa-climate.org/bioclim/
-#For specifications see: chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://chelsa-climate.org/wp-admin/download-page/CHELSA_tech_specification_V2.pdf
-#Not including elevation, which can be obtained in R with library(elevatr) and get_elev_raster() based on coordinates.
 
-## Chelsa ends at 2018, Daymet has current stuff 
-
-  
-### to do: change climate outputs to Megan's code but keep lat/long from Diana, get rid of stuff Justin originally used 
-## questions for Justin: cross validation, environmental space, how kinship matches genotype index
-### incorporate all 127, drop out ones not in common garden for reaction norm 
-
-### Remove any genotypes we did not get in bioclim 
-genotype_codes <-
-  genotype_codes %>%
-  filter(genotype %in% unique(bioclim$genotype))
-
-## hopefully will be resolved by daymet
 
 ### Get number of genotypes
 n_g <- nrow(genotype_codes)

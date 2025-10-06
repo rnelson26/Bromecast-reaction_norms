@@ -1,8 +1,10 @@
 ##########################################
 ### Extract Daymet daily data for seed source sites ###########
 ### Date created: 9/24/25 #########
-## last modified: 10/3/25 ###########
+## last modified: 10/6/25 ###########
 ##########################################
+## read in information for all 127 western north american seed source sites 
+full_list <-  read.csv("data/BRTE_127wna_ordered.csv")
 
 
 ####### Megan's code #############
@@ -16,8 +18,11 @@ library(daymetr); library(lubridate)
 gps <- read_csv("https://raw.githubusercontent.com/pbadler/bromecast-data/refs/heads/main/gardens/deriveddata/BioclimateOfOrigin_AllGenotypes.csv") %>% 
   dplyr::select(site = site_code, lat, lon) 
 
+#gps <- full_list %>% dplyr::select(NewSiteCode, PopNum, Latitude, Longitude) %>% distinct()
+## using Diana's full list of 127 genotypes doesn't match spatial coverage of download_daymet_batch function
+
 # Write csv to current location
-write_csv(gps, "data/gps_sites.csv")
+write_csv(gps, "data/gps_sites.csv") ## list of coordinates for seed source sites 
 
 # Get daymet data for coordinates of interest
 df_batch <- download_daymet_batch(file_location = "data/gps_sites.csv",
@@ -84,6 +89,13 @@ cbind(site_code = unique_sites, as_tibble(store_bioclim)) -> df_bioclim
 
 df_bioclim %>% 
   filter(site_code %notin% c("SS", "CH", "BA", "WI")) -> df_bioclim_source
+
+coord <- full_list %>% dplyr::select(NewSiteCode, PopNum, Latitude, Longitude) %>% distinct()
+coord$site_code <- coord$NewSiteCode
+
+df_seed <- left_join(df_bioclim_source, coord, by = "site_code")
+
+write_csv(df_bioclim, "data/seed_climate_info.csv")
 
 # Repeat process for site years for common garden
 # Write csv to current location
