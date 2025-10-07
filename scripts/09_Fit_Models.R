@@ -13,7 +13,7 @@ source("scripts/08_prepare_standata_fec.R")
 
 ### save prepped data workspace for HPC use 
 save.image(file = "prepped_workspace.RData")
-
+## too large to easily load 
 
 # Define models 
 model_configs <- list(
