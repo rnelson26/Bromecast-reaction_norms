@@ -1,6 +1,6 @@
 ################# Bromecast: 09.Fit Models ##########################
 ############# created 3-25-25 ######################
-############# Last modified: 9-30-25 ##########################
+############# Last modified: 10-7-25 ##########################
 ######## Fits and Runs all models ################################
 
 # Load data
@@ -11,6 +11,8 @@ source("scripts/06_prepare_standata_emg.R")
 source("scripts/07_prepare_standata_rep.R")
 source("scripts/08_prepare_standata_fec.R")
 
+### save prepped data workspace for HPC use 
+save.image(file = "prepped_workspace.RData")
 
 
 # Define models 
