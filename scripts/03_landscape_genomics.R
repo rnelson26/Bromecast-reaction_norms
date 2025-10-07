@@ -3,7 +3,7 @@
 ######## Create K and assign genotypes ##########
 ######## code by Justin Van Ee and Becca Nelson ###############
 ############ created 8-19-25 #############
-############ last modified 10-6-25 ##########################
+############ last modified 10-7-25 ##########################
 
 ## questions for Justin: cross validation, environmental space, how kinship matches genotype index
 
@@ -40,8 +40,7 @@ genotype_codes <-
   arrange(genotype) %>%
   ## Remove non-sequenced genotype 
   filter(!is.na(SNPmatrix_column))
-
-
+### only for common garden and not finding a similar file for all 127
 
 
 ### Get number of genotypes
@@ -77,12 +76,16 @@ PCs <- PC_out$x[,1:n_pc]
 data <-
   cbind(
     PCs,
-    bioclim
+    clim
   ) 
+## ask Justin how these map on
 
 # Standardize predictors (mean 0, sd 1)
+#data <- data %>%
+ # mutate(across(lon:prc.cld.q, scale))
+
 data <- data %>%
-  mutate(across(lon:prc.cld.q, scale))
+  mutate(across(bioclim_1, Longitude))
 
 ## data has the 60 PCS along with spatial coordintes, genotype and bioclimate variables for the seed source locations. 
 
@@ -91,13 +94,15 @@ library(purrr)
 library(dplyr)
 
 # predictors
-predictor_vars_LM <- c(
-  "lon", "lat", "ann.mean.tmp", "mean.diurn.rng", "isotherm",
-  "tmp.seas", "max.tmp.wrm.m", "min.tmp.cld.m", "tmp.ann.rng",
-  "mean.tmp.wet.q", "mean.tmp.dry.q", "mean.tmp.wrm.q", "mean.tmp.cld.q",
-  "ann.prc", "prc.wet.m", "prc.dry.m", "prc.seas", "prc.wet.q",
-  "prc.dry.q", "prc.wrm.q", "prc.cld.q"
-)
+#predictor_vars_LM <- c(
+ # "lon", "lat", "ann.mean.tmp", "mean.diurn.rng", "isotherm",
+ # "tmp.seas", "max.tmp.wrm.m", "min.tmp.cld.m", "tmp.ann.rng",
+ # "mean.tmp.wet.q", "mean.tmp.dry.q", "mean.tmp.wrm.q", "mean.tmp.cld.q",
+ # "ann.prc", "prc.wet.m", "prc.dry.m", "prc.seas", "prc.wet.q",
+  #"prc.dry.q", "prc.wrm.q", "prc.cld.q"
+#)
+
+predictor_vars_LM <- c("Latitude",  "Longitude",  "bioclim_1",  "bioclim_2",  "bioclim_3",  "bioclim_4",  "bioclim_5", "bioclim_6", "bioclim_7", "bioclim_8",  "bioclim_9",  "bioclim_10", "bioclim_11", "bioclim_12", "bioclim_13", "bioclim_14", "bioclim_15", "bioclim_16", "bioclim_17", "bioclim_18", "bioclim_19")
 ## should be same 19 bioclim variables with daymet
 
 # Run LOOCV

@@ -1,7 +1,7 @@
 ##########################################
 ### Extract Daymet daily data for seed source sites ###########
 ### Date created: 9/24/25 #########
-## last modified: 10/6/25 ###########
+## last modified: 10/7/25 ###########
 ##########################################
 ## read in information for all 127 western north american seed source sites 
 full_list <-  read.csv("data/BRTE_127wna_ordered.csv")
@@ -95,7 +95,7 @@ coord$site_code <- coord$NewSiteCode
 
 df_seed <- left_join(df_bioclim_source, coord, by = "site_code")
 
-write_csv(df_bioclim, "data/seed_climate_info.csv")
+write_csv(df_seed, "data/seed_climate_info.csv")
 
 # Repeat process for site years for common garden
 # Write csv to current location
