@@ -94,6 +94,7 @@ transformed parameters {
 
 model {
   // Priors
+  beta[l] ~ normal(0, zeta[l]) // relationship between emergence and climate assumed to be the same across genotypes, need to do correct for loop over PCs
   to_vector(W) ~ normal(0, 1);
   to_vector(W_soil) ~ normal(0, 1);
   site_year_effect_train_raw ~ normal(0, 1);
@@ -114,8 +115,8 @@ model {
     int s = site_year_id_train[i];
 
     real logit_p = alpha
-                 + dot_product(W_scaled[idx], zeta)
-                 + dot_product(W_soil_scaled[site], zeta)
+                 + dot_product(W_scaled[idx], beta)
+                 + dot_product(W_soil_scaled[site], beta_soil)
                  + site_year_effect_train_scaled_centered[s]
                  + beta_neighbors * neighbors_train[i]
                  + beta_annual * annual_train[i]

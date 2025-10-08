@@ -148,7 +148,7 @@ loocv_summary
 ###
 ### Fit models (linear regression)
 ###
-## here, predictors are environmental covariates, response variables are the PCs for seed source locations.
+## here, predictors are environmental covariates, response variables are the PCs of the SNPs for seed source locations.
 
 # Identify predictor columns
 predictor_vars <- names(data)[which(names(data) == "lon"):which(names(data) == "prc.cld.q")]
@@ -192,7 +192,7 @@ mods_GLS <- map(1:n_pc, function(l) {
     correlation = corExp(form = ~ lon + lat, nugget = FALSE),
     method = "REML"
   )
-})
+}) ### put lat lon into glm net 
 
 # Get RMSE 
 df_GLS <- map_dfr(mods_GLS, ~{
@@ -209,14 +209,14 @@ summary(df_GLS$rmse)
 summary(df_LM$rmse)
 
 ###
-### Calculate kinship matrix from principal component environmental distance matrix among genotypes
+### Calculate kinship matrix from principal component genetic distance matrix 
 ###
 
 # Get distance matrix (this is only for observed genotypes, we'll need to predict for satellite sites)
 D <- PCs %>%
   dist(method = "euclidean", diag=TRUE, upper=TRUE) %>%
   as.matrix()
-## distance matrix in PC space, currently has 92 in it, environmental distance between each genotypes
+## distance matrix in PC space, currently has 92 in it, genetic distance 
 
 ### Calculate IBS matrix, note that increasing MAF will cause off diagonals to decrease
 ## genetic distance, kinship matrix 
@@ -226,6 +226,7 @@ K <-
   kinship(method="IBS", MAF=0.10) %>%
   cov2cor()
 ### check with Justin that column headers in V are genotype numbers 
+### supposed to correspond to what Diana has in google drive 
 
 ## IBS is identity by state
 ## MAF is minor allele frequency threshold for less common alleles
@@ -241,14 +242,14 @@ hist(distance) # Can see the near clonal pairs in this plot on the fair left ---
 log_kinship <- c(log(K))
 hist(log_kinship) # Now far right
 
-plot(x=distance, y=log_kinship) # as you get further away in environmental space, then kinship less related
+plot(x=distance, y=log_kinship) # as you get further away in genetic distance, then kinship less related
 
 # Fit model (no intercept)
 opt_range <- lm(log_kinship ~ distance + I(distance^2) - 1)
-summary(opt_range) # excellent fit (i.e., environmental distance among genotypes + distance^2 in PC space is a good predictor of kinship)
+summary(opt_range) # excellent fit (i.e., genetic distance + distance^2 in PC space is a good predictor of kinship)
 
 # Predict new kinship matrix (not guaranteed to be positive definite unless both beta_1 and beta_2 < 0)
-K_new_raw <- matrix((exp(predict(opt_range))), n_g, n_g) 
+K_new_raw <- matrix((exp(predict(opt_range))), n_g, n_g) ## full one, 92 known genotypes and interelated for all common garden and satellite site, use as new kinship matrix in stan code with different genotype, and replace assigning by distance to synethetic genotype mapping, link them to data file in list  
 
 # Enforce it to be PD 
 K_new <- K_new_raw %>%
@@ -264,6 +265,7 @@ summary(c(abs(K_new-K_new_raw)))
 K_off <- K[upper.tri(K)]
 Knew_off <- K_new[upper.tri(K_new)]
 
+### chose name or index for synthetic genotypes based on new site code,first 92 or so known genotypes in kinship matrix
 # Build data frame
 df <- data.frame(
   value = c(K_off, Knew_off),

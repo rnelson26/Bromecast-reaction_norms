@@ -51,7 +51,7 @@ array[n_test] int<lower=n_site_year_train + 1, upper=n_site_year> site_year_id_t
 parameters {
   matrix[n_g, q_X] beta_raw;
   vector[q_X] mu_beta; 
-  vector<lower=0, upper=1.57079632679>[p_X] u_sigma;
+  vector<lower=0, upper=1.57079632679>[p_X] u_sigma; //pi/2 = 1.57, stablizes half-cauchy in stan
   vector<lower=0, upper=1.57079632679>[s_X] u_sigma_soil;
   vector<lower=0, upper=1.57079632679>[q_X] u_zeta;
   matrix[n_X, q_X] W;
@@ -88,7 +88,7 @@ vector[n_g] beta_0;
 
   for (j in 1:s_X)
       sigma_soil[j] = tan(u_sigma_soil[j]);
-
+//zeta is a multivariate normal prior -- might be able to change back and see if it still convergences, zerta is cauchi, and beta is multivariate normal or clarify in comments 
   for (l in 1:q_X)
     zeta[l] = tan(u_zeta[l]);
 
@@ -104,20 +104,20 @@ vector[n_g] beta_0;
 
 model {
   for (l in 1:q_X) {
-    beta_raw[, l] ~ normal(0, 1);
+    beta_raw[, l] ~ normal(0, 1); //fixed, do not change 
     mu_beta[l] ~ normal(0, 100);
   }
   //gamma ~ normal(0, 1);
-  to_vector(W) ~ normal(0, 1);
-  to_vector(W_soil) ~ normal(0, 1);
+  to_vector(W) ~ normal(0, 1); //fixed, do not change
+  to_vector(W_soil) ~ normal(0, 1); //fixed, do not change 
 
   // Likelihood for bernoulli binomial
   for (i in 1:n_train) {
     int idx = idx_plant_train[i];
     int idx_site = idx_plant_train_site[i];  
     int idx_genotype = genotype_plant_train[i];
-    
-    real logit_p = alpha + dot_product(W[idx, ], beta[idx_genotype, ])  + dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
+    //separate a beta_soil[idx_genotype] with separate prior indentiical to beta for climate with prior defined similarly for beta_soil
+    real logit_p = alpha + dot_product(W[idx, ], beta[idx_genotype, ])  + dot_product(W_soil[idx_site, ], beta_soil[idx_genotype, ]) +
                    site_year_effect_train_scaled_centered[site_year_id_train[i]] + 
                    beta_neighbors * neighbors_train[i] +
                    beta_annual * annual_train[i] +
@@ -132,11 +132,12 @@ model {
 
 
       // Priors for random intercept of site_year_effect and for common garden plot random effect
+      // try changing priors to 0, 100 and see if it affects model and if it is needed. if not stable say used strong priors. can't change multivariate normal random variables, z beta/cholesky part, all below you can back off and widen  
 site_year_effect_train_raw ~ normal(0, 1);
 sigma_site_year ~ normal(0, 1);
 eta_plot_raw ~ normal(0, 1);
 sigma_plot ~ normal(0, 1); 
-beta_0_raw ~ normal(0, 1); 
+beta_0_raw ~ normal(0, 1); //do not change this prior 
 alpha ~ normal(0, 1);
 
 

@@ -85,7 +85,7 @@ for (config in model_configs) {
   fit <- mod$sample(
     data = config$data,
     init = init_list,
-    chains = 4,
+    chains = 4, ### or 3 chains 
     parallel_chains = 4,
     iter_warmup = 500,
     iter_sampling = 1000,

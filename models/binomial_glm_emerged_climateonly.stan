@@ -141,8 +141,8 @@ generated quantities {
     real site_year_noise = normal_rng(0, sigma_site_year);
 
     real logit_p = alpha
-                 + dot_product(W_scaled[idx], zeta)
-                 + dot_product(W_soil_scaled[site], zeta)
+                 + dot_product(W_scaled[idx], beta)
+                 + dot_product(W_soil_scaled[site], beta_soil)
                  + site_year_noise;
 
     if (plot_index_test[i] != 0)

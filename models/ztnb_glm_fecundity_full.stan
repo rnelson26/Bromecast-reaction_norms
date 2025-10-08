@@ -24,7 +24,7 @@ functions {
   }
 }
 
-
+//might be a more efficient way to do this, could produce predictions outside of stan as well or could do rejection sampling, could try removing generated quantities when checking inference  
 
 
 data {
