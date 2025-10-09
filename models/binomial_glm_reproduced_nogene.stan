@@ -1,5 +1,4 @@
 
-
 data {
   int<lower=1> n_train;
   int<lower=1> n_test;
@@ -68,48 +67,53 @@ data {
   array[n_test_full] int<lower=1> idx_plant_test_site_full;
   array[n_test_full] int<lower=1> site_year_id_test_full;
   vector[n_test_full] neighbors_test_full;
-  vector[n_test_full] annual_test_full;
+  vector[n_test_full] vector[n_test_full] annual_test_full;
   vector[n_test_full] perennial_test_full;
   vector[n_test_full] shrub_test_full;
   array[n_test_full] int<lower=0> plot_index_test_full;
 }
 
 parameters {
-  vector<lower=0, upper=1.57079632679>[p_X] u_sigma;
-  vector<lower=0, upper=1.57079632679>[s_X] u_sigma_soil;
-  vector<lower=0, upper=1.57079632679>[q_X] u_zeta; //in place of genetics, use vector of latent variance parameters 
+  vector<lower=0, upper=pi()/2>[p_X] u_sigma;
+  vector<lower=0, upper=pi()/2>[s_X] u_sigma_soil;
+  vector<lower=0, upper=pi()/2>[q_X] u_zeta; 
+
   matrix[n_X, q_X] W;
   matrix[n_X, q_X] W_soil;
+
+  vector[q_X] beta;        // climate coefficients (shared)
+  vector[q_X] beta_soil;   // soil coefficients (shared)
+
   real beta_neighbors;
   real beta_annual;
   real beta_perennial;
   real beta_shrub;
+
   vector[n_site_year_train] site_year_effect_train_raw;
   real<lower=0> sigma_site_year;
+
   vector[n_plot] eta_plot_raw;
   real<lower=0> sigma_plot;
-  real alpha; // Global intercept
+
+  real alpha;  // intercept
 }
 
 transformed parameters {
   vector<lower=0>[p_X] sigma;
-  vector<lower=0>[q_X] zeta;
   vector<lower=0>[s_X] sigma_soil;
+  vector<lower=0>[q_X] zeta;
+
   matrix[n_X, q_X] W_scaled;
   matrix[n_X_soil, q_X] W_soil_scaled;
+
   vector[n_site_year_train] site_year_effect_train_scaled;
   vector[n_site_year_train] site_year_effect_train_scaled_centered;
   vector[n_plot] eta_plot;
   vector[n_plot] eta_plot_centered;
 
-  for (j in 1:p_X)
-    sigma[j] = tan(u_sigma[j]);
-
-  for (j in 1:s_X)
-    sigma_soil[j] = tan(u_sigma_soil[j]);
-
-  for (l in 1:q_X)
-    zeta[l] = tan(u_zeta[l]);
+  for (j in 1:p_X) sigma[j] = tan(u_sigma[j]);
+  for (j in 1:s_X) sigma_soil[j] = tan(u_sigma_soil[j]);
+  for (l in 1:q_X) zeta[l] = tan(u_zeta[l]);
 
   site_year_effect_train_scaled = sigma_site_year * site_year_effect_train_raw;
   site_year_effect_train_scaled_centered = site_year_effect_train_scaled - mean(site_year_effect_train_scaled);
@@ -117,11 +121,8 @@ transformed parameters {
   eta_plot = sigma_plot * eta_plot_raw;
   eta_plot_centered = eta_plot - mean(eta_plot);
 
-  for (i in 1:n_X)
-    W_scaled[i] = X[i] * Lambda;
-
-  for (i in 1:n_X_soil)
-    W_soil_scaled[i] = X_soil[i] * Lambda_soil;
+  for (i in 1:n_X) W_scaled[i] = X[i] * Lambda;
+  for (i in 1:n_X_soil) W_soil_scaled[i] = X_soil[i] * Lambda_soil;
 }
 
 model {
@@ -139,6 +140,9 @@ model {
   beta_perennial ~ normal(0, 1);
   beta_shrub ~ normal(0, 1);
 
+  beta ~ normal(0, 1);
+  beta_soil ~ normal(0, 1);
+
   // Likelihood
   for (i in 1:n_train) {
     int idx = idx_plant_train[i];
@@ -146,8 +150,8 @@ model {
     int s = site_year_id_train[i];
 
     real logit_p = alpha
-                 + dot_product(W_scaled[idx], zeta)
-                 + dot_product(W_soil_scaled[site], zeta)
+                 + dot_product(W_scaled[idx], beta)
+                 + dot_product(W_soil_scaled[site], beta_soil)
                  + site_year_effect_train_scaled_centered[s]
                  + beta_neighbors * neighbors_train[i]
                  + beta_annual * annual_train[i]
@@ -169,7 +173,6 @@ generated quantities {
 
   vector[n_train_full] p_train_full;
   array[n_train_full] int r_train_full;
-
   vector[n_test_full] p_test_full;
   array[n_test_full] int r_test_full;
 
@@ -177,11 +180,8 @@ generated quantities {
   matrix[n_X_full, q_X] W_full;
   matrix[n_X_soil_full, q_X] W_soil_full;
 
-  for (i in 1:n_X_full)
-    W_full[i] = X_full[i] * Lambda_full;
-
-  for (i in 1:n_X_soil_full)
-    W_soil_full[i] = X_soil_full[i] * Lambda_soil_full;
+  for (i in 1:n_X_full) W_full[i] = X_full[i] * Lambda_full;
+  for (i in 1:n_X_soil_full) W_soil_full[i] = X_soil_full[i] * Lambda_soil_full;
 
   // Training predictions
   for (i in 1:n_train) {
@@ -190,16 +190,15 @@ generated quantities {
     int s = site_year_id_train[i];
 
     real logit_p = alpha
-                 + dot_product(W_scaled[idx], zeta)
-                 + dot_product(W_soil_scaled[site], zeta)
+                 + dot_product(W_scaled[idx], beta)
+                 + dot_product(W_soil_scaled[site], beta_soil)
                  + site_year_effect_train_scaled_centered[s]
                  + beta_neighbors * neighbors_train[i]
                  + beta_annual * annual_train[i]
                  + beta_perennial * perennial_train[i]
                  + beta_shrub * shrub_train[i];
 
-    if (plot_index_train[i] != 0)
-      logit_p += eta_plot_centered[plot_index_train[i]];
+    if (plot_index_train[i] != 0) logit_p += eta_plot_centered[plot_index_train[i]];
 
     p_train[i] = inv_logit(logit_p);
     r_train_pred[i] = bernoulli_logit_rng(logit_p);
@@ -213,16 +212,15 @@ generated quantities {
     real site_year_noise = normal_rng(0, sigma_site_year);
 
     real logit_p = alpha
-                 + dot_product(W_scaled[idx], zeta)
-                 + dot_product(W_soil_scaled[site], zeta)
+                 + dot_product(W_scaled[idx], beta)
+                 + dot_product(W_soil_scaled[site], beta_soil)
                  + site_year_noise
                  + beta_neighbors * neighbors_test[i]
                  + beta_annual * annual_test[i]
                  + beta_perennial * perennial_test[i]
                  + beta_shrub * shrub_test[i];
 
-    if (plot_index_test[i] != 0)
-      logit_p += eta_plot_centered[plot_index_test[i]];
+    if (plot_index_test[i] != 0) logit_p += eta_plot_centered[plot_index_test[i]];
 
     p_test[i] = inv_logit(logit_p);
     r_test_pred[i] = bernoulli_logit_rng(logit_p);
@@ -239,8 +237,8 @@ generated quantities {
                            : normal_rng(0, sigma_site_year);
 
     real logit_p = alpha
-                 + dot_product(W_full[idx], zeta)
-                 + dot_product(W_soil_full[site], zeta)
+                 + dot_product(W_full[idx], beta)
+                 + dot_product(W_soil_full[site], beta_soil)
                  + site_year_effect
                  + beta_neighbors * neighbors_train_full[i]
                  + beta_annual * annual_train_full[i]
@@ -262,8 +260,8 @@ generated quantities {
     real site_year_noise = normal_rng(0, sigma_site_year);
 
     real logit_p = alpha
-                 + dot_product(W_full[idx], zeta)
-                 + dot_product(W_soil_full[site], zeta)
+                 + dot_product(W_full[idx], beta)
+                 + dot_product(W_soil_full[site], beta_soil)
                  + site_year_noise
                  + beta_neighbors * neighbors_test_full[i]
                  + beta_annual * annual_test_full[i]
@@ -277,4 +275,5 @@ generated quantities {
     r_test_full[i] = bernoulli_logit_rng(logit_p);
   }
 }
+
 

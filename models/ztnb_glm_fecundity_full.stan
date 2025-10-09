@@ -25,6 +25,7 @@ functions {
 }
 
 //might be a more efficient way to do this, could produce predictions outside of stan as well or could do rejection sampling, could try removing generated quantities when checking inference  
+//this does use a rejection-sampling style cumulative sum for generating posterior predictive draws in generated quantities
 
 
 data {
@@ -110,9 +111,12 @@ array[n_test] int<lower=n_site_year_train + 1, upper=n_site_year> site_year_id_t
 parameters {
   matrix[n_g, q_X] beta_raw;
   vector[q_X] mu_beta; 
+  matrix[n_g, q_X] beta_soil_raw;
+  vector[q_X] mu_beta_soil; 
   vector<lower=0, upper=1.57079632679>[p_X] u_sigma;
   vector<lower=0, upper=1.57079632679>[s_X] u_sigma_soil;
   vector<lower=0, upper=1.57079632679>[q_X] u_zeta;
+  vector<lower=0, upper=1.57079632679>[q_X] u_zeta_soil;
   matrix[n_X, q_X] W;
   matrix[n_X_soil, q_X] W_soil;
   real beta_neighbors;
@@ -133,16 +137,19 @@ real alpha; // Global intercept
 
 transformed parameters {
   vector<lower=0>[p_X] sigma;
+  vector<lower=0>[s_X] sigma_soil;
   vector<lower=0>[q_X] zeta;
   real<lower=0> zeta_0 = 5 * tan(u_zeta_0);
-   vector<lower=0>[s_X] sigma_soil;
+  vector<lower=0>[q_X] zeta_soil;
   matrix[n_g, q_X] beta;
-vector[n_site_year_train] site_year_effect_train_scaled = sigma_site_year * site_year_effect_train_raw;
+  matrix[n_g, q_X] beta_soil;
+  vector[n_site_year_train] site_year_effect_train_scaled = sigma_site_year * site_year_effect_train_raw;
   vector[n_plot] eta_plot;
   vector[n_site_year_train] site_year_effect_train_scaled_centered = site_year_effect_train_scaled - mean(site_year_effect_train_scaled);
 eta_plot = sigma_plot * eta_plot_raw;
- vector[n_plot] eta_plot_centered = eta_plot - mean(eta_plot);
-vector[n_g] beta_0;
+  vector[n_plot] eta_plot_centered = eta_plot - mean(eta_plot);
+  vector[n_g] beta_0;
+  vector[n_g] beta_0_centered; 
 
   for (j in 1:p_X)
     sigma[j] = tan(u_sigma[j]);
@@ -152,13 +159,20 @@ vector[n_g] beta_0;
 
   for (l in 1:q_X)
     zeta[l] = tan(u_zeta[l]);
+    
+  for (l in 1:q_X)
+    zeta_soil[l] = tan(u_zeta_soil[l]);
 
   for (l in 1:q_X) {
     beta[, l] = mu_beta[l] + cholesky_decompose(K) * (sqrt(zeta[l]) * beta_raw[, l]);
   }
    beta_0 = zeta_0 * (cholesky_decompose(K) * beta_0_raw);  
-   vector[n_g] beta_0_centered = beta_0 - mean(beta_0);
+   beta_0_centered = beta_0 - mean(beta_0);
+   
+  for (l in 1:q_X) {
+   beta_soil[, l] = mu_beta_soil[l] + cholesky_decompose(K) * (sqrt(zeta_soil[l]) * beta_soil_raw[, l]);
 }
+
 
  //use same structure for genotype random intercepts, start normal 0,1 and then get decomposed here with K and square root of variance parameter 
 
@@ -168,6 +182,17 @@ model {
     beta_raw[, l] ~ normal(0, 1);
      mu_beta[l] ~ normal(0, 100);
   }
+  
+  for (l in 1:q_X) {
+  beta_soil_raw[, l] ~ normal(0, 1); //fixed, do not change 
+  mu_beta_soil[l] ~ normal(0, 100);
+}
+
+u_sigma ~ uniform(0, 1.57079632679); //added priors for sigma and zeta 
+u_sigma_soil ~ uniform(0, 1.57079632679);
+u_zeta ~ uniform(0, 1.57079632679);
+u_zeta_soil ~ uniform(0, 1.57079632679);
+ 
   theta ~ gamma(1, 0.1);
   //gamma ~ normal(0, 1);
   to_vector(W) ~ normal(0, 1);
@@ -178,7 +203,7 @@ model {
   int idx = idx_plant_train[i];
   int idx_genotype = genotype_plant_train[i];
   int idx_site = idx_plant_train_site[i];  
-  real mu_base = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) +  dot_product(W_soil[idx_site, ], beta[idx_genotype, ]) +
+  real mu_base = alpha + dot_product(W[idx, ], beta[idx_genotype, ]) +  dot_product(W_soil[idx_site, ], beta_soil[idx_genotype, ]) +
                  site_year_effect_train_scaled_centered[site_year_id_train[i]] +  
                  //beta[idx_genotype, 1] augment matrix for genotype intercepts index by genotype to get variable intercepts for genotype
                  beta_neighbors * neighbors_train[i] +
@@ -256,7 +281,7 @@ generated quantities {
     int g = genotype_plant_train[i];
 
     real mu_base = alpha + dot_product(W[idx, ], beta[g]) +
-                   dot_product(W_soil[site, ], beta[g]) +
+                   dot_product(W_soil[site, ], beta_soil[g]) +
                    beta_0_centered[g] +
                    site_year_effect_train_scaled_centered[site_year_id_train[i]] +
                    beta_neighbors * neighbors_train[i] +
@@ -277,7 +302,7 @@ generated quantities {
 
     real site_year_noise = normal_rng(0, sigma_site_year);
     real mu_base = alpha + dot_product(W[idx, ], beta[g]) +
-                   dot_product(W_soil[site, ], beta[g]) +
+                   dot_product(W_soil[site, ], beta_soil[g]) +
                    beta_0_centered[g] +
                    site_year_noise +
                    beta_neighbors * neighbors_test[i] +
@@ -297,7 +322,7 @@ generated quantities {
     int g = genotype_plant_train[i];
 
     real mu_base = alpha + dot_product(W[idx, ], beta[g]) +
-                   dot_product(W_soil[site, ], beta[g]) +
+                   dot_product(W_soil[site, ], beta_soil[g]) +
                    beta_neighbors * neighbors_train[i] +
                    beta_annual * annual_train[i] +
                    beta_perennial * perennial_train[i] +
@@ -313,7 +338,7 @@ generated quantities {
     int g = genotype_plant_test[i];
 
     real mu_base = alpha + dot_product(W[idx, ], beta[g]) +
-                   dot_product(W_soil[site, ], beta[g]) +
+                   dot_product(W_soil[site, ], beta_soil[g]) +
                    beta_neighbors * neighbors_test[i] +
                    beta_annual * annual_test[i] +
                    beta_perennial * perennial_test[i] +
@@ -330,7 +355,7 @@ generated quantities {
     int g = genotype_plant_train_full[i];
 
     real mu_base = alpha + dot_product(W[idx, ], beta[g]) +
-                   dot_product(W_soil[site, ], beta[g]) +
+                   dot_product(W_soil[site, ], beta_soil[g]) +
                    beta_0_centered[g] +
                    site_year_effect_train_scaled_centered[site_year_id_train_full[i]] +
                    beta_neighbors * neighbors_train_full[i] +
@@ -350,7 +375,7 @@ generated quantities {
 
     real mu_base = alpha
                    + dot_product(W[idx, ], beta[g])
-                   + dot_product(W_soil[site, ], beta[g])
+                   + dot_product(W_soil[site, ], beta_soil[g])
                    + beta_neighbors * neighbors_train_full[i]
                    + beta_annual * annual_train_full[i]
                    + beta_perennial * perennial_train_full[i]
@@ -368,7 +393,7 @@ generated quantities {
 
     real site_year_noise = normal_rng(0, sigma_site_year);
     real mu_base = alpha + dot_product(W[idx, ], beta[g]) +
-                   dot_product(W_soil[site, ], beta[g]) +
+                   dot_product(W_soil[site, ], beta_soil[g]) +
                    beta_0_centered[g] +
                    site_year_noise +
                    beta_neighbors * neighbors_test_full[i] +
