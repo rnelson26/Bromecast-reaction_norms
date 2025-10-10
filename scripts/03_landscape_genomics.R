@@ -3,10 +3,13 @@
 ######## Create K and assign genotypes ##########
 ######## code by Justin Van Ee and Becca Nelson ###############
 ############ created 8-19-25 #############
-############ last modified 10-7-25 ##########################
+############ last modified 10-10-25 ##########################
 
-## questions for Justin: cross validation, environmental space, how kinship matches genotype index
 
+## to do:
+### add genotypes code that correspond to 127
+## update with glmnet
+## export outputs of K and genotype index for satellite sites so that they could be added to reaction norm model 
  
 ## notes from Diana Gamba on full set of WNA genotypes: BRTE127_LDfilteredSNPs.bed is the SNP/genotype matrix for 158,420 snps/rows and 127 genotypes/columns. BRTE127_IBSmatrix.txt is the kinship matrix and BRTE_127wna_ordered.csv has the order of genotypes in those matrices (column ibs_id) and the chelsa climate variables. The first three columns of the bed file are the site id, major allele, minor allele; genotypes start on the 4th
  
@@ -34,12 +37,12 @@ clim <-
 
 
 ### Get genotype key matrix for connecting with genotype matrix 
-genotype_codes <- 
-  read.csv("https://raw.githubusercontent.com/pbadler/bromecast-data/main/traits/data/rawdata/gamba_growthchamber/BRTEcg_genotypesCode.csv",header=T) %>%
+#genotype_codes <- 
+ # read.csv("https://raw.githubusercontent.com/pbadler/bromecast-data/main/traits/data/rawdata/gamba_growthchamber/BRTEcg_genotypesCode.csv",header=T) %>%
   ## Sort Data
-  arrange(genotype) %>%
+#  arrange(genotype) %>%
   ## Remove non-sequenced genotype 
-  filter(!is.na(SNPmatrix_column))
+ # filter(!is.na(SNPmatrix_column))
 ### only for common garden and not finding a similar file for all 127
 
 
