@@ -15,14 +15,23 @@ library(dismo); library(factoextra); library(ggfortify);
 library(daymetr); library(lubridate)
 
 # Read GPS data for all genotypes from main Bromecast repository
-gps <- read_csv("https://raw.githubusercontent.com/pbadler/bromecast-data/refs/heads/main/gardens/deriveddata/BioclimateOfOrigin_AllGenotypes.csv") %>% 
+gps_megan <- read_csv("https://raw.githubusercontent.com/pbadler/bromecast-data/refs/heads/main/gardens/deriveddata/BioclimateOfOrigin_AllGenotypes.csv") %>% 
   dplyr::select(site = site_code, lat, lon) 
 
-#gps <- full_list %>% dplyr::select(NewSiteCode, PopNum, Latitude, Longitude) %>% distinct()
-## using Diana's full list of 127 genotypes doesn't match spatial coverage of download_daymet_batch function
+gps <- full_list %>% dplyr::select(NewSiteCode, PopNum, Latitude, Longitude) %>% distinct() %>%
+  filter(!NewSiteCode %in% c("DocEnglishBluffER1", 
+                             "SteelheadPP1", 
+                             "NorthThompsonPP1", 
+                             "MarbleCanyon1"))
+## using Diana's full list of 127 genotypes but removing 4 BC sites to far north to be covered in daymet
 
 # Write csv to current location
-write_csv(gps, "data/gps_sites.csv") ## list of coordinates for seed source sites 
+gps_clean <- gps %>%
+  dplyr::select(site = NewSiteCode, lat = Latitude, lon = Longitude) %>%
+  distinct()   
+
+
+write_csv(gps_clean, "data/gps_sites.csv") ## list of coordinates for seed source sites 
 
 # Get daymet data for coordinates of interest
 df_batch <- download_daymet_batch(file_location = "data/gps_sites.csv",
