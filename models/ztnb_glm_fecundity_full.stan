@@ -187,11 +187,6 @@ model {
   beta_soil_raw[, l] ~ normal(0, 1); //fixed, do not change 
   mu_beta_soil[l] ~ normal(0, 100);
 }
-
-u_sigma ~ uniform(0, 1.57079632679); //added priors for sigma and zeta 
-u_sigma_soil ~ uniform(0, 1.57079632679);
-u_zeta ~ uniform(0, 1.57079632679);
-u_zeta_soil ~ uniform(0, 1.57079632679);
  
   theta ~ gamma(1, 0.1);
   //gamma ~ normal(0, 1);

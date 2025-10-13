@@ -113,11 +113,6 @@ for (l in 1:q_X) {
   mu_beta_soil[l] ~ normal(0, 100);
 }
 
-u_sigma ~ uniform(0, 1.57079632679);
-u_sigma_soil ~ uniform(0, 1.57079632679);
-u_zeta ~ uniform(0, 1.57079632679);
-u_zeta_soil ~ uniform(0, 1.57079632679);
-
   to_vector(W) ~ normal(0, 1);
   to_vector(W_soil) ~ normal(0, 1);
 
