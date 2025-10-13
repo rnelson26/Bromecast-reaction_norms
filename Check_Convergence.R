@@ -62,13 +62,13 @@ fit_fec <- mod_fec$sample(
 
 ####### Traceplots ##################
 # Extract posterior samples
-posterior <- fit_fec$draws(variables = c("theta","beta", "sigma", "W", "zeta", "mu_test", "mu_train", "W_soil"))
+posterior <- fit_fec$draws(variables = c("theta","beta", "sigma", "W", "zeta",  "W_soil"))
 
-posterior_rep <- fit_rep$draws(variables = c("beta", "sigma", "W", "zeta", "p_test", "p_train", "W_soil"))
+posterior_rep <- fit_rep$draws(variables = c("beta", "sigma", "W", "zeta", "W_soil"))
 
-posterior_emg_full <- fit_emg_full$draws(variables = c("beta", "sigma", "W", "zeta", "p_test", "p_train", "W_soil"))
+posterior_emg_full <- fit_emg$draws(variables = c("beta", "sigma", "W", "zeta",  "W_soil"))
 
-
+iter_warmup <- 500  
 #
 # Traceplots for diagnostics
 #
@@ -78,15 +78,12 @@ color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = c("theta"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 
-color_scheme_set("mix-blue-pink")
-p <- mcmc_trace(posterior_rep,  pars = c("theta"), n_warmup = iter_warmup)
-p + facet_text(size = 15)
-
 
 # beta
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = c("beta[20,1]","beta[20,2]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
+## chains look funky when widening priors
 
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior_rep,  pars = c("beta[20,1]","beta[20,2]"), n_warmup = iter_warmup)
@@ -96,15 +93,12 @@ color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior_emg_full,  pars = c("beta[20,1]","beta[20,2]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 
-color_scheme_set("mix-blue-pink")
-p <- mcmc_trace(posterior_emg_fall,  pars = c("beta[20,1]","beta[20,2]"), n_warmup = iter_warmup)
-p + facet_text(size = 15)
-
 
 # sigma
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = paste0("sigma[", 1:ncol(X), "]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
+## chains look funky
 
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior_rep,  pars = paste0("sigma[", 1:ncol(X), "]"), n_warmup = iter_warmup)
@@ -115,14 +109,13 @@ color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior_emg_full,  pars = paste0("sigma[", 1:ncol(X), "]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 
-color_scheme_set("mix-blue-pink")
-p <- mcmc_trace(posterior_emg_fall,  pars = paste0("sigma[", 1:ncol(X_emg_fall), "]"), n_warmup = iter_warmup)
-p + facet_text(size = 15)
+
 
 # zeta
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = paste0("zeta[", 1:q_X, "]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
+#chains are funky
 
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior_rep,  pars = paste0("zeta[", 1:q_X, "]"), n_warmup = iter_warmup)
@@ -132,15 +125,12 @@ color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior_emg_full,  pars = paste0("zeta[", 1:q_X, "]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 
-color_scheme_set("mix-blue-pink")
-p <- mcmc_trace(posterior_emg_fall,  pars = paste0("zeta[", 1:q_X, "]"), n_warmup = iter_warmup)
-p + facet_text(size = 15)
 
 # W
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = c("W[1,1]","W[1,2]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
-
+#chains funky
 
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior_rep,  pars = c("W[1,1]","W[1,2]"), n_warmup = iter_warmup)
@@ -158,6 +148,7 @@ p + facet_text(size = 15)
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = c("W_soil[1,1]","W_soil[1,2]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
+#chains look funky
 
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior_rep,  pars = c("W_soil[1,1]","W_soil[1,2]"), n_warmup = iter_warmup)
@@ -167,74 +158,78 @@ color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior_emg_full,  pars = c("W_soil[1,1]","W_soil[1,2]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
 
-color_scheme_set("mix-blue-pink")
-p <- mcmc_trace(posterior_emg_fall,  pars = c("W_soil[1,1]","W_soil[1,2]"), n_warmup = iter_warmup)
-p + facet_text(size = 15)
 
 # mu
-color_scheme_set("mix-blue-pink")
-p <- mcmc_trace(posterior,  pars = c("mu_train[191]"), n_warmup = iter_warmup)
-p + facet_text(size = 15)
+#color_scheme_set("mix-blue-pink")
+#p <- mcmc_trace(posterior,  pars = c("mu_train[191]"), n_warmup = iter_warmup)
+#p + facet_text(size = 15)
 
-color_scheme_set("mix-blue-pink")
-p <- mcmc_trace(posterior,  pars = c("mu_test[199]"), n_warmup = iter_warmup)
-p + facet_text(size = 15)
+#color_scheme_set("mix-blue-pink")
+#p <- mcmc_trace(posterior,  pars = c("mu_test[199]"), n_warmup = iter_warmup)
+#p + facet_text(size = 15)
 
-color_scheme_set("mix-blue-pink")
-p <- mcmc_trace(posterior_rep,  pars = c("mu_train[199]"), n_warmup = iter_warmup)
-p + facet_text(size = 15)
+#color_scheme_set("mix-blue-pink")
+#p <- mcmc_trace(posterior_rep,  pars = c("mu_train[199]"), n_warmup = iter_warmup)
+#p + facet_text(size = 15)
 
-color_scheme_set("mix-blue-pink")
-p <- mcmc_trace(posterior_rep,  pars = c("mu_test[199]"), n_warmup = iter_warmup)
-p + facet_text(size = 15)
+#color_scheme_set("mix-blue-pink")
+#p <- mcmc_trace(posterior_rep,  pars = c("mu_test[199]"), n_warmup = iter_warmup)
+#p + facet_text(size = 15)
 
 
 
-color_scheme_set("mix-blue-pink")
-p <- mcmc_trace(posterior,  pars = c("p_train[199]"), n_warmup = iter_warmup)
-p + facet_text(size = 15)
+#color_scheme_set("mix-blue-pink")
+#p <- mcmc_trace(posterior,  pars = c("p_train[199]"), n_warmup = iter_warmup)
+#p + facet_text(size = 15)
 
-color_scheme_set("mix-blue-pink")
-p <- mcmc_trace(posterior,  pars = c("p_test[199]"), n_warmup = iter_warmup)
-p + facet_text(size = 15)
+#color_scheme_set("mix-blue-pink")
+#p <- mcmc_trace(posterior,  pars = c("p_test[199]"), n_warmup = iter_warmup)
+#p + facet_text(size = 15)
 
-color_scheme_set("mix-blue-pink")
-p <- mcmc_trace(posterior_rep,  pars = c("p_train[199]"), n_warmup = iter_warmup)
-p + facet_text(size = 15)
+#color_scheme_set("mix-blue-pink")
+#p <- mcmc_trace(posterior_rep,  pars = c("p_train[199]"), n_warmup = iter_warmup)
+#p + facet_text(size = 15)
 
-color_scheme_set("mix-blue-pink")
-p <- mcmc_trace(posterior_rep,  pars = c("p_test[199]"), n_warmup = iter_warmup)
-p + facet_text(size = 15)
+#color_scheme_set("mix-blue-pink")
+#p <- mcmc_trace(posterior_rep,  pars = c("p_test[199]"), n_warmup = iter_warmup)
+#p + facet_text(size = 15)
 
-color_scheme_set("mix-blue-pink")
-p <- mcmc_trace(posterior_emg_full,  pars = c("p_train[199]"), n_warmup = iter_warmup)
-p + facet_text(size = 15)
+#color_scheme_set("mix-blue-pink")
+#p <- mcmc_trace(posterior_emg_full,  pars = c("p_train[199]"), n_warmup = iter_warmup)
+#p + facet_text(size = 15)
 
-color_scheme_set("mix-blue-pink")
-p <- mcmc_trace(posterior_emg_full,  pars = c("p_test[199]"), n_warmup = iter_warmup)
-p + facet_text(size = 15)
+#color_scheme_set("mix-blue-pink")
+#p <- mcmc_trace(posterior_emg_full,  pars = c("p_test[199]"), n_warmup = iter_warmup)
+#p + facet_text(size = 15)
 
-color_scheme_set("mix-blue-pink")
-p <- mcmc_trace(posterior_emg_fall,  pars = c("p_train[199]"), n_warmup = iter_warmup)
-p + facet_text(size = 15)
+#color_scheme_set("mix-blue-pink")
+#p <- mcmc_trace(posterior_emg_fall,  pars = c("p_train[199]"), n_warmup = iter_warmup)
+#p + facet_text(size = 15)
 
-color_scheme_set("mix-blue-pink")
-p <- mcmc_trace(posterior_emg_fall,  pars = c("p_test[199]"), n_warmup = iter_warmup)
-p + facet_text(size = 15)
+#color_scheme_set("mix-blue-pink")
+#p <- mcmc_trace(posterior_emg_fall,  pars = c("p_test[199]"), n_warmup = iter_warmup)
+#p + facet_text(size = 15)
 
 ##### rhat############
 library(posterior)
+#R-hat < 1.01: excellent convergence
+#1.01–1.05 → okay but worth checking
+#1.05 → potential non-convergence
 
 # Fecundity model
 rhat_fec <- fit_fec$summary() |> dplyr::select(variable, rhat)
-print(head(rhat_fec, 10))  # peek at first 10
-mean(rhat_fec$rhat, na.rm = TRUE)  # mean Rhat
+print(head(rhat_fec, 10))  #first 10
+mean(rhat_fec$rhat, na.rm = TRUE)  # mean Rhat = 1.743881
+hist(rhat_fec$rhat)
 
 # Reproduction model
 rhat_rep <- fit_rep$summary() |> dplyr::select(variable, rhat)
-mean(rhat_rep$rhat, na.rm = TRUE)
+print(head(rhat_rep, 10))
+mean(rhat_rep$rhat, na.rm = TRUE) #mean Rhat = 1.001342
+hist(rhat_rep$rhat) 
 
 # Emergence model
-rhat_emg_full <- fit_emg_full$summary() |> dplyr::select(variable, rhat)
-mean(rhat_emg_full$rhat, na.rm = TRUE)
-
+rhat_emg_full <- fit_emg$summary() |> dplyr::select(variable, rhat)
+print(head(rhat_emg_full, 10))
+mean(rhat_emg_full$rhat, na.rm = TRUE) #1.002497
+hist(rhat_emg_full$rhat) 
