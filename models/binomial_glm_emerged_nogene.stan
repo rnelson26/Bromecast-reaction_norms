@@ -95,6 +95,7 @@ transformed parameters {
   for (i in 1:n_X_soil)
     W_soil_scaled[i] = X_soil[i] * Lambda_soil;
 }
+}
 
 model {
   // Priors

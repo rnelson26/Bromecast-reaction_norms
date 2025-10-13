@@ -124,6 +124,7 @@ transformed parameters {
   for (j in 1:s_X) sigma_soil[j] = tan(u_sigma_soil[j]);
   for (l in 1:q_X) zeta[l] = tan(u_zeta[l]);
 }
+}
 
 model {
   theta ~ gamma(1, 0.1);

@@ -1,3 +1,28 @@
+functions {
+  // Log-likelihood for zero-truncated Negative Binomial
+  real zt_negbinom_lpmf(int y, real mu, real theta) {
+    return neg_binomial_2_lpmf(y | mu, theta) - log1m_exp(neg_binomial_2_lpmf(0 | mu, theta));
+  }
+
+  int ztnb_rng(real mu, real theta) {
+    real log_p0 = neg_binomial_2_lpmf(0 | mu, theta);
+    real u = uniform_rng(exp(log_p0), 1);
+    int y = 1;
+    real log_cdf = neg_binomial_2_lpmf(1 | mu, theta);
+
+    while (exp(log_cdf) < u && y < 10000) {
+      y += 1;
+      log_cdf = log_sum_exp(log_cdf, neg_binomial_2_lpmf(y | mu, theta));
+    }
+
+    // Safety fallback (shouldn’t trigger if model is well-behaved)
+    if (y >= 10000) {
+      y = 1;  // or some other fallback like poisson_rng(mu)
+    }
+
+    return y;
+  }
+}
 
 //version of fecundity full for model checking of priors (no generated quantities)
 
@@ -145,7 +170,7 @@ eta_plot = sigma_plot * eta_plot_raw;
   for (l in 1:q_X) {
    beta_soil[, l] = mu_beta_soil[l] + cholesky_decompose(K) * (sqrt(zeta_soil[l]) * beta_soil_raw[, l]);
 }
-
+}
 
  //use same structure for genotype random intercepts, start normal 0,1 and then get decomposed here with K and square root of variance parameter 
 

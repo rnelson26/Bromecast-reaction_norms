@@ -26,19 +26,22 @@ data {
   int<lower=1> s_X;
 
   matrix[n_X, p_X] X;
+  /// same comment as in other file
+  /// you should have a different number of PCs for climate versus soil.
   matrix[p_X, q_X] Lambda;
   matrix[s_X, q_X] Lambda_soil;
   matrix[n_X_soil, s_X] X_soil;
 }
 
 parameters {
+  /// no convergence issues? If so, pi()/2 is good
   vector<lower=0, upper=pi()/2>[p_X] u_sigma;
   vector<lower=0, upper=pi()/2>[s_X] u_sigma_soil;
   vector<lower=0, upper=pi()/2>[q_X] u_zeta;
 
   matrix[n_X, q_X] W;
   matrix[n_X_soil, q_X] W_soil;
-
+  /// yes, same slopes and intercepts across all genotypes because we are ingoring genotype 
   vector[q_X] beta;       // climate latent coefficients
   vector[q_X] beta_soil;  // soil latent coefficients
 
@@ -62,20 +65,32 @@ transformed parameters {
 
   vector[n_plot] eta_plot = sigma_plot * eta_plot_raw;
   vector[n_plot] eta_plot_centered = eta_plot - mean(eta_plot);
+  
+  /// Here is where you would put prior for beta and beta_soil 
+  /// for (l in 1:q_X) beta[l] = zeta[l] * beta_raw[l]; 
+  /// or this is in model block 
+  /// beta[l] ~ normal(0, zeta[l]); where zeta[l] is sd and zeta[l]^2 is variance
 
   for (j in 1:p_X) sigma[j] = tan(u_sigma[j]);
   for (j in 1:s_X) sigma_soil[j] = tan(u_sigma_soil[j]);
   for (l in 1:q_X) zeta[l] = tan(u_zeta[l]);
-
+  /// you had n_X for both X and X_soil in the previous "full" model
+  /// here you have n_X and n_X_soil 
+  /// check which one is correct. 
+  /// is there soil and climate data at the same number of sites or do they differ? 
+  /// if one is indexed in time and the other is not then they definetely will differ, right? 
+  /// Also, I don't understand this part below 
   for (i in 1:n_X) W_scaled[i] = X[i] * Lambda;
   for (i in 1:n_X_soil) W_soil_scaled[i] = X_soil[i] * Lambda_soil;
-}
 }
 
 model {
   // Priors
   to_vector(W) ~ normal(0, 1);
   to_vector(W_soil) ~ normal(0, 1);
+  
+  /// Where is the probabilistic PCA part? 
+  /// i.e., target += normal_lpdf(X[i, j] | dot_product(Lambda[j, ], W[i, ]), sigma[j]); 
 
   site_year_effect_train_raw ~ normal(0, 1);
   sigma_site_year ~ normal(0, 1);

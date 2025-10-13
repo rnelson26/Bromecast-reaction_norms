@@ -143,7 +143,7 @@ vector[n_g] beta_0_centered;
    for (l in 1:q_X) {
   beta_soil[, l] = mu_beta_soil[l] + cholesky_decompose(K) * (sqrt(zeta_soil[l]) * beta_soil_raw[, l]);
 }
-
+}
  //use same structure for genotype random intercepts, start normal 0,1 and then get decomposed here with K and square root of variance parameter 
 
 
