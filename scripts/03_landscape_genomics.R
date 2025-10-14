@@ -87,8 +87,6 @@ data <-
 #data <- data %>%
  # mutate(across(lon:prc.cld.q, scale))
 
-data <- data %>%
-  mutate(across(bioclim_1, Longitude))
 
 ## data has the 60 PCS along with spatial coordintes, genotype and bioclimate variables for the seed source locations. 
 

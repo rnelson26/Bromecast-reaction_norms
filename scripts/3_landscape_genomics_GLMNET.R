@@ -4,7 +4,7 @@
 ######## Create K and assign genotypes ##########
 ######## code by Justin Van Ee and Becca Nelson ###############
 ############ created 8-19-25 #############
-############ last modified 10-10-25 ##########################
+############ last modified 10-14-25 ##########################
 
 ## to do: add genotype code equivalent for all of WNA from Diana
 ### check that glment works and that k_all aligns with names of snps
@@ -34,17 +34,39 @@ library(dplyr)
 clim <- read.csv("data/seed_climate_info.csv", header = TRUE)
 
 ### Get genotype key matrix for connecting with genotype matrix 
-# genotype_codes <- read.csv("https://raw.githubusercontent.com/pbadler/bromecast-data/main/traits/data/rawdata/gamba_growthchamber/BRTEcg_genotypesCode.csv", header = TRUE) %>%
-#   arrange(genotype) %>%
-#   filter(!is.na(SNPmatrix_column))  # only for common garden
+ genotype_codes <- read.csv("https://raw.githubusercontent.com/pbadler/bromecast-data/main/traits/data/rawdata/gamba_growthchamber/BRTEcg_genotypesCode.csv", header = TRUE) %>%
+   arrange(genotype) %>%
+   filter(!is.na(SNPmatrix_column))  # only for common garden
+ 
+ ### assign genotypes to full list of genotypes for WNA, using existing genotype codes where appropriate:
+ 
+ clim_with_geno <- clim %>%
+   left_join(genotype_codes %>% dplyr::select(NewSiteCode, genotype), by = "NewSiteCode")
+
+ missing_idx <- which(is.na(clim_with_geno$genotype))
+
+ if (length(missing_idx) > 0) {
+   max_existing <- max(genotype_codes$genotype, na.rm = TRUE)
+   new_genos <- seq(from = max_existing + 1, length.out = length(missing_idx))
+   
+   clim_with_geno$genotype[missing_idx] <- new_genos
+ }
+ 
+ clim_with_geno$genotype <- as.integer(clim_with_geno$genotype)
+ 
 
 ### Get number of genotypes
- n_g <- nrow(genotype_codes)
+ n_g <- nrow(clim_with_geno)
 
 ### Connect to genotype/SNP matrix
 SNPs <- as.data.frame(read.table("data/BRTE127_LDfilteredSNPs.bed", header = FALSE, sep = ",", stringsAsFactors = FALSE))  ## all western North American genotypes
 
-SNPs <- SNPs[, c(1:3, genotype_codes$SNPmatrix_column)] ## columns 1:3 = line name, reference, alt allele
+## make a new column for order of genotypes in the snp matrix (.bed file)
+clim_with_geno <- clim_with_geno %>%
+  mutate(SNPmatrix_column = ibs_id + 3)
+
+
+SNPs <- SNPs[, c(1:3, clim_with_geno$SNPmatrix_column)] ## columns 1:3 = line name, reference, alt allele
 
 ## Calculate principal components of genotype matrix 
 PC_out <- prcomp(t(SNPs[,-c(1:3)]))
@@ -63,10 +85,12 @@ n_pc <- 60  # 99% of variance explained
 PCs <- PC_out$x[, 1:n_pc]
 
 # Augment dataset (PCs + environmental predictors)
-data <- cbind(PCs, clim)
+data <- cbind(PCs, clim_with_geno)
 
 # Standardize predictors if needed
-data <- data %>% mutate(across(bioclim_1, Longitude))
+data <- data %>%
+  mutate(across(c(Latitude, Longitude, starts_with("bioclim_")), scale))
+
 
 # has response variables (PCs of genetic distance) and predictors (daymet bioclimatic variables, latitude, longitude)
 
@@ -141,6 +165,8 @@ distance <- c(D)
 log_kinship <- c(log(K))
 opt_range <- lm(log_kinship ~ distance + I(distance^2) - 1)
 K_new_raw <- matrix(exp(predict(opt_range)), nrow(Y), nrow(Y))
+# original notes from meeting with Justin: full one, 92 known genotypes and interelated for all common garden and satellite site, use as new kinship matrix in stan code with different genotype, and replace assigning by distance to synethetic genotype mapping, link them to data file in list  
+
 
 #Fits a quadratic relationship between genetic distance in PC space and log kinship.
 #Predicts a new kinship matrix (K_new_raw) for all genotypes including ones without SNP data (satellite sites)
@@ -173,6 +199,8 @@ ggplot(df, aes(x = value, fill = Method)) +
 ## PC exp decay method allows predicting kinship for genotypes without SNP data
 
 ########## Part 2: Assign synthetic genotypes for satellite sites ######################
+
+
 
 # Step 0: Ensure predictor variables are numeric and scaled using training data
 train_predictors_raw <- data %>% dplyr::select(all_of(predictor_vars_LM))
