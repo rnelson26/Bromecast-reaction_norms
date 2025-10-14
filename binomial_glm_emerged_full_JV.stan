@@ -71,7 +71,7 @@ parameters {
   /// matrix[n_X, 5] W;
   /// matrix[n_X, 2] W_soil;
   matrix[n_X, q_X] W;
-  matrix[n_X, q_X] W_soil;
+  matrix[n_X, q_X] W_soil; //find the ones with the typo and change n_X_soil 
   real beta_neighbors;
   real beta_annual;
   real beta_perennial;
@@ -123,7 +123,7 @@ for (l in 1:q_X)
   /// 6. this probably was my mistake from the first time I handed over the code but it should be 
   /// (zeta[l] * beta_raw[, l]), no square root. zeta, sigma, sigma_soil are standard deviation, not variance  
   /// if you multiply a normal distribution by a scalar, you get its square in the variance 
-  /// for example if z ~ normal(0, 1), then (zeta * z ) ~ normal(0, zeta^2), where I am using normal(mean, variance) 
+  /// for example if z ~ normal(0, 1), then (zeta * z ) ~ normal(0, zeta^2), where I am using normal(mean, variance) -- okay as is but zeta is variance so call it zeta 2 by name and sigma 2
   for (l in 1:q_X) {
     beta[, l] = mu_beta[l] + cholesky_decompose(K) * (sqrt(zeta[l]) * beta_raw[, l]);
   }

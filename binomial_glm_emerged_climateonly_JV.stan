@@ -70,6 +70,7 @@ transformed parameters {
   /// for (l in 1:q_X) beta[l] = zeta[l] * beta_raw[l]; 
   /// or this is in model block 
   /// beta[l] ~ normal(0, zeta[l]); where zeta[l] is sd and zeta[l]^2 is variance
+  /// do some renaming to clarify since we are putting half cauchy priors on the variances 
 
   for (j in 1:p_X) sigma[j] = tan(u_sigma[j]);
   for (j in 1:s_X) sigma_soil[j] = tan(u_sigma_soil[j]);

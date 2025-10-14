@@ -225,7 +225,7 @@ site_year_effect_train_raw ~ normal(0, 100);
 sigma_site_year ~ normal(0, 100);
 eta_plot_raw ~ normal(0, 100);
 sigma_plot ~ normal(0, 100); 
-beta_0_raw ~ normal(0, 100); 
+beta_0_raw ~ normal(0, 1); //do not change
 alpha ~ normal(0, 100);
 
 

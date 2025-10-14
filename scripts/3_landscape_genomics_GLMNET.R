@@ -107,12 +107,12 @@ loocv_results <- map_dfr(1:nrow(X), function(i) {
   # Training and test data
   X_train <- X[-i, ]
   Y_train <- Y[-i, ]
-  X_test  <- X[i, , drop = FALSE]
+ # X_test  <- X[i, , drop = FALSE] #decide whether to include second part 
   
   # Fit LASSO for each PC
   predPCs <- map_dbl(1:n_pc, function(l) {
     cv_fit <- cv.glmnet(X_train, Y_train[, l], alpha = 1)  # LASSO
-    predict(cv_fit, newx = X_test, s = "lambda.min")
+    predict(cv_fit, new = X_train, s = "lambda.min")
   })
   
   truePCs <- Y[i, ]
@@ -146,19 +146,22 @@ loocv_summary
 glmnet_models <- map(1:n_pc, function(l) {
   y <- Y[, l]
   cv.glmnet(X, y, alpha = 1)  # LASSO with CV to select lambda
+  ## add a predict function here new data for satellite sites 
 })
-
+# mostly just need this part 
 #Trains the final LASSO models for each PC using all the data. These models will later be used to predict PCs for new sites (satellite sites).
 
 ###
 ### Calculate kinship matrix from principal component genetic distance matrix
 ###
-D <- dist(PCs, method = "euclidean", diag = TRUE, upper = TRUE) %>% as.matrix()
+D <- dist(PCs, method = "euclidean", diag = TRUE, upper = TRUE) %>% as.matrix() ## rbind predict from synthetic genotypes, append that to PCs 
 K <- SNPs[,-c(1:3)] %>% t() %>% kinship(method="IBS", MAF=0.10) %>% cov2cor()
 
 #D = Euclidean distance between genotypes in PC space (genetic distance).
 #K = Kinship matrix based on identity-by-state (IBS).
 #MAF=0.10 removes very rare alleles that can otherwise skew kinship estimates.
+
+### should have PCs for satellites as well in what ends up in K_new_raw
 
 # Quadratic regression for PC-based kinship prediction
 distance <- c(D)
@@ -199,7 +202,8 @@ ggplot(df, aes(x = value, fill = Method)) +
 ## PC exp decay method allows predicting kinship for genotypes without SNP data
 
 ########## Part 2: Assign synthetic genotypes for satellite sites ######################
-
+### most of this part is not necessary except the parts that need to be moved up described above 
+## Figure: where known genotypes are in PC space (standard ordination figure) vs in different color synthetic satellite site genotypes paired with geographic map or environmental map with precip and temperature space 
 
 
 # Step 0: Ensure predictor variables are numeric and scaled using training data
@@ -240,7 +244,7 @@ genotype_index_new <- tibble(
 )
 
 # Step 3: Combine observed PCs and new PCs
-PCs_all <- rbind(PCs, PCs_new)
+PCs_all <- rbind(PCs, PCs_new) ## move up to first part
 
 # Step 4: Compute pairwise Euclidean distances in PC space
 D_all <- as.matrix(dist(PCs_all, method = "euclidean"))
