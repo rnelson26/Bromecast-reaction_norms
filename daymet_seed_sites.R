@@ -1,11 +1,14 @@
 ##########################################
-### Extract Daymet daily data for seed source sites ###########
+### Extract Daymet daily data for seed source & sat sites ###########
 ### Date created: 9/24/25 #########
-## last modified: 10/14/25 ###########
+## last modified: 10/15/25 ###########
 ##########################################
+## to do: satellite sites 
+
+
 ## read in information for all 127 western north american seed source sites 
 full_list <-  read.csv("data/BRTE_127wna_ordered.csv")
-
+sat_list <- read.csv("data/list.csv")
 
 ####### Megan's code #############
 # Load libraries
@@ -33,8 +36,20 @@ gps_clean <- gps %>%
 
 write_csv(gps_clean, "data/gps_sites.csv") ## list of coordinates for seed source sites 
 
-# Get daymet data for coordinates of interest
+## for satellite sites
+sat_list <- sat_list %>%
+  dplyr::select(site = site_year, lat = Lat, lon = Lon) %>%
+  distinct()   
+write_csv(sat_list, "data/gps_sat_sites.csv") #
+
+# Get daymet data for coordinates of interest for seed source sites
 df_batch <- download_daymet_batch(file_location = "data/gps_sites.csv",
+                                  start = 1991,
+                                  end = 2020,
+                                  internal = TRUE,
+                                  simplify = TRUE)
+
+df_batch_sat <- download_daymet_batch(file_location = "data/gps_sat_sites.csv",
                                   start = 1991,
                                   end = 2020,
                                   internal = TRUE,
@@ -47,11 +62,23 @@ df_batch %>%
          month= strftime(date_, "%m"), 
          day=strftime(date_,"%d")) -> df_filt
 
+df_batch_sat %>% 
+  filter(measurement %in% c("prcp..mm.day.", "tmax..deg.c.", "tmin..deg.c.")) %>% 
+  mutate(date_= as.Date(yday-1, origin=paste0(year, "-01-01")), 
+         month= strftime(date_, "%m"), 
+         day=strftime(date_,"%d")) -> df_filt_sat
+
 df_filt %>% 
   filter(measurement == "prcp..mm.day.") %>% 
   group_by(site, year, month) %>% 
   summarize(precip_total = sum(value)) %>% 
   ungroup() -> precip_summary
+
+df_filt_sat %>% 
+  filter(measurement == "prcp..mm.day.") %>% 
+  group_by(site, year, month) %>% 
+  summarize(precip_total = sum(value)) %>% 
+  ungroup() -> precip_summary_sat
 
 df_filt %>% 
   filter(measurement == "tmax..deg.c.") %>% 
@@ -59,15 +86,30 @@ df_filt %>%
   summarize(tmax_avg = mean(value)) %>% 
   ungroup() -> tmax_summary
 
+df_filt_sat %>% 
+  filter(measurement == "tmax..deg.c.") %>% 
+  group_by(site, year, month) %>% 
+  summarize(tmax_avg = mean(value)) %>% 
+  ungroup() -> tmax_summary_sat
+
 df_filt %>% 
   filter(measurement == "tmin..deg.c.") %>% 
   group_by(site, year, month) %>% 
   summarize(tmin_avg = mean(value)) %>% 
   ungroup() -> tmin_summary
 
+df_filt_sat %>% 
+  filter(measurement == "tmin..deg.c.") %>% 
+  group_by(site, year, month) %>% 
+  summarize(tmin_avg = mean(value)) %>% 
+  ungroup() -> tmin_summary_sat
+
 # Bring together all climate data
 climnorm <- cbind(precip_summary, tmax_avg = tmax_summary$tmax_avg,
                   tmin_avg = tmin_summary$tmin_avg)
+
+climnorm_sat <- cbind(precip_summary_sat, tmax_avg = tmax_summary_sat$tmax_avg,
+                  tmin_avg = tmin_summary_sat$tmin_avg)
 
 # For climate norm, we want the average for each month across all of the years
 climnorm %>% 
@@ -76,6 +118,13 @@ climnorm %>%
             tmax_avg_mean = mean(tmax_avg),
             tmin_avg_mean = mean(tmin_avg)) %>% 
   ungroup() -> for_bioclim
+
+climnorm_sat %>% 
+  group_by(site, month) %>% 
+  summarize(precip_total_mean = mean(precip_total),
+            tmax_avg_mean = mean(tmax_avg),
+            tmin_avg_mean = mean(tmin_avg)) %>% 
+  ungroup() -> for_bioclim_sat
 
 # Calculate bioclimatic variables using for loop
 store_bioclim <- matrix(NA, nrow = length(unique(for_bioclim$site)), ncol = 19)
@@ -93,6 +142,23 @@ colnames(store_bioclim) <- paste("bioclim", 1:19, sep = "_")
 
 cbind(site_code = unique_sites, as_tibble(store_bioclim)) -> df_bioclim
 
+## repeat for satellite sites
+store_bioclim_sat <- matrix(NA, nrow = length(unique(for_bioclim_sat$site)), ncol = 19)
+unique_sites <- unique(for_bioclim_sat$site)
+
+for (i in 1:nrow(store_bioclim_sat)){
+  test <- for_bioclim %>% filter(site == unique_sites[i])
+  
+  store_bioclim[i,] <- biovars(prec = test$precip_total_mean,
+                               tmin = test$tmin_avg_mean,
+                               tmax = test$tmax_avg_mean)
+}
+colnames(store_bioclim_sat) <- paste("bioclim", 1:19, sep = "_")
+
+
+
+cbind(site_code = unique_sites, as_tibble(store_bioclim_sat)) -> df_bioclim_sat
+
 # Remove common garden sites
 `%notin%` <- Negate(`%in%`)
 
@@ -104,6 +170,7 @@ coord$site_code <- coord$NewSiteCode
 
 df_seed <- left_join(df_bioclim_source, coord, by = "site_code")
 
+write_csv(df_seed, "data/seed_climate_info.csv")
 write_csv(df_seed, "data/seed_climate_info.csv")
 
 # Repeat process for site years for common garden

@@ -4,7 +4,7 @@
 ######## Create K and assign genotypes ##########
 ######## code by Justin Van Ee and Becca Nelson ###############
 ############ created 8-19-25 #############
-############ last modified 10-14-25 ##########################
+############ last modified 10-15-25 ##########################
 
 ## to do: add genotype code equivalent for all of WNA from Diana
 ### check that glment works and that k_all aligns with names of snps
@@ -94,62 +94,81 @@ data <- data %>%
 
 # has response variables (PCs of genetic distance) and predictors (daymet bioclimatic variables, latitude, longitude)
 
-### Leave-one-out cross validation (LOOCV) #########
-predictor_vars_LM <- c("Latitude",  "Longitude", paste0("bioclim_", 1:19))  # predictors for glmnet
+##### Compare Lasso vs Ridge Regression #######
 
-# Create predictor and response matrices
-X <- as.matrix(data[, predictor_vars_LM]) ## bioclimatic variables and coordinates
-Y <- as.matrix(data[, paste0("PC", 1:n_pc)])  # response PCs
+X <- as.matrix(data[, predictor_vars_LM])
+Y <- as.matrix(data[, paste0("PC", 1:n_pc)])
 
-# Run LOOCV for each PC using glmnet (LASSO)
-loocv_results <- map_dfr(1:nrow(X), function(i) {
+fit_cv_predict <- function(X, y, alpha_val) {
+  cv_fit <- cv.glmnet(X, y, alpha = alpha_val)
+  preds <- predict(cv_fit, newx = X, s = "lambda.min")
+  list(preds = preds, lambda = cv_fit$lambda.min)
+}
+
+# Compare LASSO vs. Ridge Regression
+comparison_results <- map_dfr(1:n_pc, function(l) {
+  y <- Y[, l]
   
-  # Training and test data
-  X_train <- X[-i, ]
-  Y_train <- Y[-i, ]
- # X_test  <- X[i, , drop = FALSE] #decide whether to include second part 
-  
-  # Fit LASSO for each PC
-  predPCs <- map_dbl(1:n_pc, function(l) {
-    cv_fit <- cv.glmnet(X_train, Y_train[, l], alpha = 1)  # LASSO
-    predict(cv_fit, new = X_train, s = "lambda.min")
-  })
-  
-  truePCs <- Y[i, ]
+  # LASSO
+  lasso <- fit_cv_predict(X, y, alpha_val = 1)
+  # Ridge
+  ridge <- fit_cv_predict(X, y, alpha_val = 0)
   
   tibble(
-    genotype = data$genotype[i],
-    site_row = i,
-    PC = paste0("PC", 1:n_pc),
-    observed = truePCs,
-    predicted = predPCs
+    PC = paste0("PC", l),
+    rmse_lasso = sqrt(mean((y - lasso$preds)^2)),
+    cor_lasso  = cor(y, lasso$preds),
+    rmse_ridge = sqrt(mean((y - ridge$preds)^2)),
+    cor_ridge  = cor(y, ridge$preds)
   )
 })
 
-#Iterates over each row (SNP site) in the dataset. Leaves the i-th site out as the test data set. Fits LASSO regression on the remaining data for each PC separately. cv.glmnet() picks the best lambda (penalty) via internal cross-validation.It predicts the held-out PC values and stores observed vs predicted.
+comparison_results
+#apply(Y, 2, sd)  
 
-# Calculate RMSE and correlation for each PC
-loocv_summary <- loocv_results %>%
-  group_by(PC) %>%
-  summarise(
-    rmse = sqrt(mean((observed - predicted)^2)),
-    cor  = cor(observed, predicted),
-    .groups = "drop"
-  )
 
-loocv_summary
-## how well predicted and observed PCs are correlated (cor)
+
+
+plot_data <- comparison_results %>%
+  pivot_longer(cols = c(rmse_lasso, rmse_ridge, cor_lasso, cor_ridge),
+               names_to = c(".value", "method"),
+               names_pattern = "(.*)_(.*)")
+
+#RMSE (lower better)
+ggplot(plot_data, aes(x = PC, y = rmse, fill = method)) +
+  geom_col(position = "dodge") +
+  theme_minimal() +
+  labs(title = "RMSE comparison: LASSO vs Ridge", y = "RMSE")
+
+# Correlation (higher better)
+ggplot(plot_data, aes(x = PC, y = cor, fill = method)) +
+  geom_col(position = "dodge") +
+  theme_minimal() +
+  labs(title = "Correlation comparison: LASSO vs Ridge", y = "Correlation")
+
+## slight differences ridge seems slightly better, especially for first few PCs
+
+### GLMNET #########
+library(glmnet)
+library(purrr)
+
+predictor_vars_LM <- c("Latitude",  "Longitude", paste0("bioclim_", 1:19))  # predictors for glmnet
+
+# Predictor and response matrices
+X <- as.matrix(data[, predictor_vars_LM])        # predictors: coords + bioclim
+Y <- as.matrix(data[, paste0("PC", 1:n_pc)])     # response PCs
+
 
 ###
 ### Fit final glmnet models for each PC (all data)
 ###
 glmnet_models <- map(1:n_pc, function(l) {
   y <- Y[, l]
-  cv.glmnet(X, y, alpha = 1)  # LASSO with CV to select lambda
+  cv.glmnet(X, y, alpha = 0)  # Ridge with CV to select lambda, set to 1 for Lasso
   ## add a predict function here new data for satellite sites 
 })
 # mostly just need this part 
-#Trains the final LASSO models for each PC using all the data. These models will later be used to predict PCs for new sites (satellite sites).
+#Trains the final Ridge models for each PC using all the data. These models will later be used to predict PCs for new sites (satellite sites).
 
 ###
 ### Calculate kinship matrix from principal component genetic distance matrix
@@ -205,29 +224,6 @@ ggplot(df, aes(x = value, fill = Method)) +
 ### most of this part is not necessary except the parts that need to be moved up described above 
 ## Figure: where known genotypes are in PC space (standard ordination figure) vs in different color synthetic satellite site genotypes paired with geographic map or environmental map with precip and temperature space 
 
-
-# Step 0: Ensure predictor variables are numeric and scaled using training data
-train_predictors_raw <- data %>% dplyr::select(all_of(predictor_vars_LM))
-train_means <- sapply(train_predictors_raw, mean, na.rm = TRUE)
-train_sds   <- sapply(train_predictors_raw, sd, na.rm = TRUE)
-
-scale_with_training <- function(df, means, sds) {
-  out <- df
-  for (nm in names(means)) {
-    out[[nm]] <- (df[[nm]] - means[[nm]]) / sds[[nm]]
-  }
-  out
-}
-
-new_sites_scaled <- new_sites %>%
-  mutate(across(all_of(predictor_vars_LM), as.numeric)) %>%
-  scale_with_training(train_means, train_sds)
-
-# Step 1: Predict PCs for satellite sites using GLMnet models from Part 1
-predPC_list <- lapply(mods_glmnet, function(mod) {
-  predict(mod, newx = as.matrix(new_sites_scaled %>% dplyr::select(all_of(predictor_vars_LM))),
-          s = "lambda.min")
-})
 
 # Combine predictions into a matrix
 PCs_new <- do.call(cbind, predPC_list)
