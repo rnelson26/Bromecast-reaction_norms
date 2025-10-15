@@ -10,6 +10,7 @@ stan_data_emg_full <- list(
   p_X = ncol(X_emg_SOS),
   s_X = ncol(X_soil_emg),
   q_X = ncol(Lambda_emg_SOS),
+  q_X_soil = ncol(Lambda_soil_emg),
   X = X_emg_SOS,
   X_soil = X_soil_emg,
   Lambda = Lambda_emg_SOS,

@@ -51,6 +51,7 @@ data {
   int<lower=1> n_X;
   int<lower=1> p_X;
   int<lower=1> q_X;
+  int<lower=1> q_X_soil;
   int<lower=1> n_g;
   int<lower=1> n_plot;
   int<lower=1> n_X_soil;
@@ -58,7 +59,7 @@ data {
 
   matrix[n_X, p_X] X; 
   matrix[p_X, q_X] Lambda;
-  matrix[s_X, q_X] Lambda_soil;
+  matrix[s_X, q_X_soil] Lambda_soil;
   matrix[n_X_soil, s_X] X_soil;
   matrix[n_g, n_g] K;
 
@@ -88,13 +89,14 @@ data {
 
 parameters {
   vector[q_X] beta;        // climate coefficients
-  vector[q_X] beta_soil;   // soil coefficients
+  vector[q_X_soil] beta_soil;   // soil coefficients
   vector<lower=0, upper=pi()/2>[p_X] u_sigma;
   vector<lower=0, upper=pi()/2>[s_X] u_sigma_soil;
   vector<lower=0, upper=pi()/2>[q_X] u_zeta;
+  vector<lower=0, upper=pi()/2>[q_X_soil] u_zeta_soil;
   
   matrix[n_X, q_X] W;
-  matrix[n_X_soil, q_X] W_soil;
+  matrix[n_X_soil, q_X_soil] W_soil;
 
   real beta_neighbors;
   real beta_annual;
@@ -113,6 +115,7 @@ transformed parameters {
   vector<lower=0>[p_X] sigma;
   vector<lower=0>[s_X] sigma_soil;
   vector<lower=0>[q_X] zeta;
+  vector<lower=0>[q_X_soil] zeta_soil;
 
   vector[n_site_year_train] site_year_effect_train_scaled = sigma_site_year * site_year_effect_train_raw;
   vector[n_site_year_train] site_year_effect_train_scaled_centered = site_year_effect_train_scaled - mean(site_year_effect_train_scaled);
@@ -123,6 +126,7 @@ transformed parameters {
   for (j in 1:p_X) sigma[j] = tan(u_sigma[j]);
   for (j in 1:s_X) sigma_soil[j] = tan(u_sigma_soil[j]);
   for (l in 1:q_X) zeta[l] = tan(u_zeta[l]);
+  for (l in 1:q_X_soil) zeta_soil[l] = tan(u_zeta_soil[l]);
 }
 }
 

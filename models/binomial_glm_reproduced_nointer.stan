@@ -27,6 +27,7 @@ data {
   int<lower=1> n_X;
   int<lower=1> p_X;
   int<lower=1> q_X;
+  int<lower=1> q_X_soil;
   int<lower=1> n_g;
   int<lower=1> n_plot;
   int<lower=1> n_X_soil;
@@ -34,7 +35,7 @@ data {
 
   matrix[n_X, p_X] X;
   matrix[p_X, q_X] Lambda;
-  matrix[s_X, q_X] Lambda_soil;
+  matrix[s_X, q_X_soil] Lambda_soil;
   matrix[n_X_soil, s_X] X_soil;
   matrix[n_g, n_g] K;
 
@@ -45,11 +46,12 @@ data {
   int<lower=0> n_X_soil_full;
   int<lower=0> s_X_full;
   int<lower=0> q_X_full;
+  int<lower=0> q_X_soil_full;
 
   matrix[n_X_full, p_X_full] X_full;
   matrix[n_X_soil_full, s_X_full] X_soil_full;
   matrix[p_X_full, q_X_full] Lambda_full;
-  matrix[s_X_full, q_X_full] Lambda_soil_full;
+  matrix[s_X_full, q_X_soil_full] Lambda_soil_full;
 
   array[n_train_full] int<lower=1> idx_plant_train_full;     
   array[n_train_full] int<lower=1> idx_plant_train_site_full;
@@ -71,14 +73,14 @@ data {
 parameters {
   matrix[n_g, q_X] beta_raw;
   vector[q_X] mu_beta; 
-  matrix[n_g, q_X] beta_soil_raw;
-  vector[q_X] mu_beta_soil; 
+  matrix[n_g, q_X_soil] beta_soil_raw;
+  vector[q_X_soil] mu_beta_soil; 
   vector<lower=0, upper=1.57079632679>[p_X] u_sigma;
   vector<lower=0, upper=1.57079632679>[s_X] u_sigma_soil;
   vector<lower=0, upper=1.57079632679>[q_X] u_zeta;
   vector<lower=0, upper=1.57079632679>[q_X] u_zeta_soil;
   matrix[n_X, q_X] W;
-  matrix[n_X_soil, q_X] W_soil;
+  matrix[n_X_soil, q_X_soil] W_soil;
   real beta_neighbors;
 vector[n_site_year_train] site_year_effect_train_raw;
 real<lower=0> sigma_site_year;
@@ -95,9 +97,9 @@ transformed parameters {
   vector<lower=0>[s_X] sigma_soil;
   vector<lower=0>[q_X] zeta;
   real<lower=0> zeta_0 = 5 * tan(u_zeta_0);
-  vector<lower=0>[q_X] zeta_soil;
+  vector<lower=0>[q_X_soil] zeta_soil;
   matrix[n_g, q_X] beta;
-  matrix[n_g, q_X] beta_soil;
+  matrix[n_g, q_X_soil] beta_soil;
 vector[n_site_year_train] site_year_effect_train_scaled = sigma_site_year * site_year_effect_train_raw;
   vector[n_site_year_train] site_year_effect_train_scaled_centered = site_year_effect_train_scaled - mean(site_year_effect_train_scaled);
   vector[n_plot] eta_plot;
@@ -115,7 +117,7 @@ vector[n_g] beta_0_centered;
   for (l in 1:q_X)
     zeta[l] = tan(u_zeta[l]);
     
-  for (l in 1:q_X)
+  for (l in 1:q_X_soil)
     zeta_soil[l] = tan(u_zeta_soil[l]);
 
     for (l in 1:q_X) {
@@ -124,7 +126,7 @@ vector[n_g] beta_0_centered;
    beta_0 = zeta_0 * (cholesky_decompose(K) * beta_0_raw);  
    beta_0_centered = beta_0 - mean(beta_0);
 
-for (l in 1:q_X) {
+for (l in 1:q_X_soil) {
   beta_soil[, l] = mu_beta_soil[l] + cholesky_decompose(K) * (sqrt(zeta_soil[l]) * beta_soil_raw[, l]);
 }
 }
@@ -138,7 +140,7 @@ model {
   }
 
 
-for (l in 1:q_X) {
+for (l in 1:q_X_soil) {
   beta_soil_raw[, l] ~ normal(0, 1); //fixed, do not change 
   mu_beta_soil[l] ~ normal(0, 100);
 }
@@ -213,13 +215,13 @@ array[n_test_full] int r_test_full;
 
   // Projected covariates for full data
   matrix[n_train_full, q_X_full] W_train_full;
-  matrix[n_train_full, q_X_full] W_soil_train_full;
+  matrix[n_train_full, q_X_soil_full] W_soil_train_full;
   matrix[n_test_full, q_X_full] W_test_full;
-  matrix[n_test_full, q_X_full] W_soil_test_full;
+  matrix[n_test_full, q_X_soil_full] W_soil_test_full;
 
   // Project predictors for full training and test sets
 matrix[n_X_full, q_X_full] W_full;
-matrix[n_X_soil_full, q_X_full] W_soil_full;
+matrix[n_X_soil_full, q_X_soil_full] W_soil_full;
 
 for (i in 1:n_X_full) {
   W_full[i] = X_full[i] * Lambda_full;
