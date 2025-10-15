@@ -61,7 +61,7 @@ parameters {
   vector<lower=0, upper=pi()/2>[q_X] u_zeta;
 
   matrix[n_X, q_X] W;
-  matrix[n_X, q_X] W_soil;
+  matrix[n_X_soil, q_X] W_soil;
 
   vector[q_X] beta;       // climate latent coefficients
   vector[q_X] beta_soil;  // soil latent coefficients

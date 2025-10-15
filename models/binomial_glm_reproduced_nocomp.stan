@@ -76,7 +76,7 @@ parameters {
   vector<lower=0, upper=1.57079632679>[q_X] u_zeta;
   vector<lower=0, upper=1.57079632679>[q_X] u_zeta_soil;
   matrix[n_X, q_X] W;
-  matrix[n_X, q_X] W_soil;
+  matrix[n_X_soil, q_X] W_soil;
 vector[n_site_year_train] site_year_effect_train_raw;
 real<lower=0> sigma_site_year;
 vector[n_plot] eta_plot_raw;
