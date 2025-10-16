@@ -6,9 +6,7 @@
 ############ created 8-19-25 #############
 ############ last modified 10-15-25 ##########################
 
-## to do: add genotype code equivalent for all of WNA from Diana
-### check that glment works and that k_all aligns with names of snps
-
+## throughout the code "SNPS" refers to each individual genotype
 
 rm(list = ls())
 

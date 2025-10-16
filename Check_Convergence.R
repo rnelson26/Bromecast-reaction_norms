@@ -50,163 +50,60 @@ fit_rep <- mod_rep$sample(
 #pathfinder_fec <- mod_fec$pathfinder(data = stan_data_fec_full, init = 0, num_paths = 1)
 #init_fec <- pathfinder_fec$draws(format = "list")
 
-init_fun <- function() list(
-  beta = matrix(0, nrow = data$P, ncol = data$T),
-  L_Omega = diag(1, data$T),
-  tau_trait = rep(1, data$T),
-  sigma_g_env = rep(1, data$E),
-  u = array(0, dim = c(data$E, data$G, data$T)),
-  u_mat = array(0, dim = c(data$G * data$T, data$E)),
-  sigma = matrix(1, nrow = data$T, ncol = data$E),
-  sigma_sigma = rep(0.1, data$T),
-  mu_sigma = rep(0, data$T)
-)
-pathfinder_fit <- mod$pathfinder(
-  data = data,
-  num_paths = 1,
-  init = init_fun
-)
-#just got to make sure names and dimension match will the model statement in stan.
-
-# 1. Extract parameter names and dimensions from the compiled Stan model
-stan_pars_dims <- lapply(mod_rep$metadata()$stan_variable_dims, function(d) {
-  if (length(d) == 0) return(NULL) else d
-})
-
-# 2. Create a function to generate mean-based initial values
-make_mean_init_auto <- function(prev_values, stan_dims) {
-  # Split previous draws by base parameter name
-  params_split <- split(prev_values, gsub("\\[.*\\]", "", names(prev_values)))
+## with warmup based on empirical values:
+init_fec <- function() {
+  data <- stan_data_fec_full
   
-  init_list <- lapply(names(params_split), function(param_name) {
-    param_vals <- as.numeric(params_split[[param_name]])
-    
-    dims <- stan_dims[[param_name]]
-    
-    if (is.null(dims)) {
-      # scalar or vector
-      rep(mean(param_vals, na.rm = TRUE), length(param_vals))
-    } else {
-      # array or matrix
-      array(mean(param_vals, na.rm = TRUE), dim = dims)
-    }
-  })
-  names(init_list) <- names(params_split)
-  init_list
+  y_mean <- mean(data$y_train)
+  y_var <- var(data$y_train)
+  disp_guess <- max(1, y_mean^2 / (y_var - y_mean))  # rough NB dispersion estimate
+  
+## warm up 
+  lm_fit <- lm(log(data$y_train + 1) ~ data$neighbors_train + data$annual_train + 
+                 data$perennial_train + data$shrub_train)
+  coefs <- coef(lm_fit)
+  
+  alpha_init <- unname(coefs[1])
+  beta_neighbors_init <- if ("neighbors_train" %in% names(coefs)) coefs["neighbors_train"] else 0
+  beta_annual_init <- if ("annual_train" %in% names(coefs)) coefs["annual_train"] else 0
+  beta_perennial_init <- if ("perennial_train" %in% names(coefs)) coefs["perennial_train"] else 0
+  beta_shrub_init <- if ("shrub_train" %in% names(coefs)) coefs["shrub_train"] else 0
+  
+  list(
+    beta_raw = matrix(0, nrow = data$n_g, ncol = data$q_X),
+    mu_beta = rep(0, data$q_X),
+    beta_soil_raw = matrix(0, nrow = data$n_g, ncol = data$q_X_soil),
+    mu_beta_soil = rep(0, data$q_X_soil),
+    u_sigma = rep(atan(0.5), data$p_X),
+    u_sigma_soil = rep(atan(0.5), data$s_X),
+    u_zeta = rep(atan(0.5), data$q_X),
+    u_zeta_soil = rep(atan(0.5), data$q_X_soil),
+    W = matrix(rnorm(data$n_X * data$q_X, 0, 0.1), data$n_X, data$q_X),
+    W_soil = matrix(rnorm(data$n_X_soil * data$q_X_soil, 0, 0.1), data$n_X_soil, data$q_X_soil),
+    beta_neighbors = beta_neighbors_init,
+    beta_annual = beta_annual_init,
+    beta_perennial = beta_perennial_init,
+    beta_shrub = beta_shrub_init,
+    theta = disp_guess,
+    site_year_effect_train_raw = rep(0, data$n_site_year_train),
+    sigma_site_year = 1,
+    eta_plot_raw = rep(0, data$n_plot),
+    sigma_plot = 1,
+    alpha = alpha_init,
+    beta_0_raw = rep(0, data$n_g),
+    u_zeta_0 = atan(0.5)
+  )
 }
 
-# 3. Apply function to create a single-chain init
-init_chain <- list(make_mean_init_auto(values_prev, stan_pars_dims))
 
-# 4. Run Pathfinder with these mean-based initial values
-pathfinder_rep <- mod_rep$pathfinder(
-  data = stan_data_rep_full,
-  init = init_chain,
-  num_paths = 1
-)
+#init_fec <- pathfinder_fec$draws(format = "list")
 
-
-
-params_split <- split(values_prev, gsub("\\[.*\\]", "", names(values_prev)))
-init_fec_list <- lapply(params_split, function(x) as.numeric(x))
-make_mean_init <- function(init_list) {
-  lapply(init_list, function(param) {
-    if (is.numeric(param)) {
-      # replace all entries with the mean of that parameter
-      rep(mean(param, na.rm = TRUE), length(param))
-    } else {
-      param  # leave non-numeric parameters as is
-    }
-  })
-}
-# wrap as a single chain
-init_fec_chain_mean <- list(make_mean_init(init_fec_list))
-pathfinder_fec <- mod_fec$pathfinder(
+pathfinder_fit <- mod_fec$pathfinder(
   data = stan_data_fec_full,
-  init = init_fec_chain_mean,
-  num_paths = 1
+  num_paths = 1,
+  init = init_fec
 )
 
-
-
-
-
-
-
-### prev
-
-# 1. Split previous draws by base parameter name
-params_split <- split(values_prev, gsub("\\[.*\\]", "", names(values_prev)))
-
-# 2. Convert each group to numeric (vector or scalar)
-init_fec_list <- lapply(params_split, function(x) as.numeric(x))
-
-# 3. Wrap as a list for each chain
-# For example, 1 chain here
-init_fec_chain <- list(init_fec_list)
-
-# Function to create mean-based initial values
-mean_init <- function(init_list) {
-  lapply(init_list, function(chain) {
-    lapply(chain, function(param) {
-      if (is.numeric(param)) {
-        # Replace all entries with the mean of the original vector
-        rep(mean(param, na.rm = TRUE), length(param))
-      } else {
-        param  # leave non-numeric parameters as is
-      }
-    })
-  })
-}
-
-# Apply to your existing init_fec_chain
-init_fec_chain_mean <- mean_init(init_fec_chain)
-
-
-# 4. Now pass to pathfinder
-pathfinder_fec <- mod_fec$pathfinder(
-  data = stan_data_fec_full,
-  init = init_fec_chain,
-  num_paths = 1
-)
-
-# 3. Wrap as a list for chains
-init_fec_chain <- list(init_fec_list)
-
-# 4. Pass to pathfinder
-pathfinder_fec <- mod_fec$pathfinder(
-  data = stan_data_fec_full,
-  init = init_fec_chain,
-  num_paths = 1
-)
-
-init_fec_chain <- make_init_from_values(values_prev)
-
-pathfinder_fec <- mod_fec$pathfinder(
-  data = stan_data_fec_full,
-  init = init_fec_chain,
-  num_paths = 1
-)
-
-
-
-# Now you can pass this to pathfinder
-pathfinder_fec <- mod_fec$pathfinder(
-  data = stan_data_fec_full,
-  init = init_fec,
-  num_paths = 1
-)
-
-# Extract draws for sampling
-init_fec_draws <- pathfinder_fec$draws(format = "list")
-
-init_fun <- function() as.list(values_prev)
-pathfinder_fec <- mod_fec$pathfinder(
-  data = stan_data_fec_full,
-  init = init_fun,       
-  num_paths = 1
-)
-init_fec <- pathfinder_fec$draws(format = "list")
 
 fit_fec <- mod_fec$sample(
   data = stan_data_fec_full,
@@ -241,7 +138,7 @@ p + facet_text(size = 15)
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = c("beta[20,1]","beta[20,2]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
-## chains look funky when widening priors
+
 
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior_rep,  pars = c("beta[20,1]","beta[20,2]"), n_warmup = iter_warmup)
@@ -256,7 +153,7 @@ p + facet_text(size = 15)
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = paste0("sigma[", 1:ncol(X), "]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
-## chains look funky
+
 
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior_rep,  pars = paste0("sigma[", 1:ncol(X), "]"), n_warmup = iter_warmup)
@@ -273,7 +170,7 @@ p + facet_text(size = 15)
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = paste0("zeta[", 1:q_X, "]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
-#chains are funky
+
 
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior_rep,  pars = paste0("zeta[", 1:q_X, "]"), n_warmup = iter_warmup)
@@ -288,7 +185,7 @@ p + facet_text(size = 15)
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = c("W[1,1]","W[1,2]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
-#chains funky
+
 
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior_rep,  pars = c("W[1,1]","W[1,2]"), n_warmup = iter_warmup)
@@ -306,7 +203,7 @@ p + facet_text(size = 15)
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior,  pars = c("W_soil[1,1]","W_soil[1,2]"), n_warmup = iter_warmup)
 p + facet_text(size = 15)
-#chains look funky
+
 
 color_scheme_set("mix-blue-pink")
 p <- mcmc_trace(posterior_rep,  pars = c("W_soil[1,1]","W_soil[1,2]"), n_warmup = iter_warmup)
@@ -377,7 +274,7 @@ library(posterior)
 # Fecundity model
 rhat_fec <- fit_fec$summary() |> dplyr::select(variable, rhat)
 print(head(rhat_fec, 10))  #first 10
-mean(rhat_fec$rhat, na.rm = TRUE)  # mean Rhat = 1.743881
+mean(rhat_fec$rhat, na.rm = TRUE)  # mean Rhat = 1.00271
 hist(rhat_fec$rhat)
 
 # Reproduction model
