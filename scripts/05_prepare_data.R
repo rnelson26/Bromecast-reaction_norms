@@ -1,9 +1,10 @@
 ################# Bromecast: 01.Prepare Data ##########################
 ############# created 3-25-25 ######################
-############# Last modified: 9-4-25 ##########################
+############# Last modified: 10-16-25 ##########################
 ######## Prepares all data for model fitting ################################
 ##add source for soils and merge data 
-#source("scripts/03_landscape_genomics.R")
+
+source("scripts/03_landscape_genomics_GLMNET.R")
 source("scripts/04_setup.R")
 
 
@@ -88,8 +89,8 @@ data <- data %>%
 
 
 ####### Prepare data for model ########
-#K_all ## updated kinship matrix
-#genotype_index_new ## list of synthetic genotype names for satellite sites
+K_all ## updated kinship matrix
+genotype_index_new ## list of synthetic genotype names for satellite sites, should I split by site instead of site year 
 
 ### Genotypes info ##########
 

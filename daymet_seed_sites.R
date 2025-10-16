@@ -1,7 +1,7 @@
 ##########################################
 ### Extract Daymet daily data for seed source & sat sites ###########
 ### Date created: 9/24/25 #########
-## last modified: 10/15/25 ###########
+## last modified: 10/16/25 ###########
 ##########################################
 ## to do: satellite sites 
 
@@ -40,7 +40,7 @@ write_csv(gps_clean, "data/gps_sites.csv") ## list of coordinates for seed sourc
 sat_list <- sat_list %>%
   dplyr::select(site = site_year, lat = Lat, lon = Lon) %>%
   distinct()   
-write_csv(sat_list, "data/gps_sat_sites.csv") #
+write_csv(sat_list, "data/gps_sat_sites.csv") #list of coordinates for satellite sites 
 
 # Get daymet data for coordinates of interest for seed source sites
 df_batch <- download_daymet_batch(file_location = "data/gps_sites.csv",
@@ -147,9 +147,9 @@ store_bioclim_sat <- matrix(NA, nrow = length(unique(for_bioclim_sat$site)), nco
 unique_sites <- unique(for_bioclim_sat$site)
 
 for (i in 1:nrow(store_bioclim_sat)){
-  test <- for_bioclim %>% filter(site == unique_sites[i])
+  test <- for_bioclim_sat %>% filter(site == unique_sites[i])
   
-  store_bioclim[i,] <- biovars(prec = test$precip_total_mean,
+  store_bioclim_sat[i,] <- biovars(prec = test$precip_total_mean,
                                tmin = test$tmin_avg_mean,
                                tmax = test$tmax_avg_mean)
 }
@@ -168,10 +168,13 @@ df_bioclim %>%
 coord <- full_list %>% dplyr::select(NewSiteCode, PopNum, Latitude, Longitude, ibs_id) %>% distinct()
 coord$site_code <- coord$NewSiteCode
 
+sat_list$site_code <- sat_list$site
+
 df_seed <- left_join(df_bioclim_source, coord, by = "site_code")
+df_sat <- left_join(df_bioclim_sat, sat_list, by = "site_code")
 
 write_csv(df_seed, "data/seed_climate_info.csv")
-write_csv(df_seed, "data/seed_climate_info.csv")
+write_csv(df_sat, "data/sat_climate_info.csv") 
 
 # Repeat process for site years for common garden
 # Write csv to current location
