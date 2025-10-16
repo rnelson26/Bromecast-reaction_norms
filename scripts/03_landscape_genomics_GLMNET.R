@@ -6,7 +6,6 @@
 ############ created 8-19-25 #############
 ############ last modified 10-16-25 ##########################
 
-## questions: split sat clim by site instead of site year? or use climate averages by year 
 
 ## throughout the code "SNPS" refers to each individual genotype
 
@@ -28,12 +27,24 @@ library(glmnet)
 library(purrr)
 library(dplyr)
 library(Matrix)
+library(stringr)
 
 ######## Part 1: PC Exp Decay Method with known source sites ###########
 ######## Load data ###################
 ## seed source daymet (all WNA seed source sites except for 4 that were too far north in BC for daymet)
 clim <- read.csv("data/seed_climate_info.csv", header = TRUE)
-sat_clim <- read.csv("data/sat_climate_info.csv", header = TRUE)
+sat_clim_raw <- read.csv("data/sat_climate_info.csv", header = TRUE)
+
+
+# do to level of site
+sat_clim <- sat_clim_raw %>%
+  distinct(lat, lon, .keep_all = TRUE) %>%       # one row per location
+  mutate(
+    site_simple = str_remove(site_code, "\\s\\d{4}$")  # remove space + 4-digit year at end
+  )
+
+
+
 
 ### Get genotype key matrix for connecting with genotype matrix 
 genotype_codes <- read.csv("https://raw.githubusercontent.com/pbadler/bromecast-data/main/traits/data/rawdata/gamba_growthchamber/BRTEcg_genotypesCode.csv", header = TRUE) %>%
@@ -201,6 +212,125 @@ ggplot(df, aes(x = value, fill = Method)) +
   ) +
   theme(legend.position = "bottom")
 
+########## Figures ####################
+### geographic map
+library(maps)
+
+# Get US state boundaries
+state_map <- map_data("state")
+
+state_map_filtered <- state_map %>%
+  filter(long >= -128 & long <= -95 & lat >= 30 & lat <= 52)
+
+# Combine seed source and satellite locations
+map_df <- bind_rows(
+  clim_with_geno %>% distinct(Latitude, Longitude, .keep_all = TRUE) %>% mutate(Type = "Seed Source"),
+  sat_clim %>% mutate(Type = "Satellite")
+)
+
+# Plot map
+ggplot() +
+  geom_polygon(data = state_map_filtered, aes(x = long, y = lat, group = group),
+               fill = "gray90", color = "black") +
+  geom_point(data = map_df, aes(x = Longitude, y = Latitude, color = Type),
+             size = 3, alpha = 0.7) +
+  scale_color_manual(values = c("Seed Source" = "blue", "Satellite" = "red")) +
+  coord_cartesian(xlim = c(-128, -95), ylim = c(30, 52)) +
+  theme_minimal() +
+  labs(title = "Seed Source vs Satellite Locations in Western North America",
+       x = "Longitude", y = "Latitude") +
+  theme(legend.position = "bottom")
+
+### bioclimatic heatmap
+# Combine datasets and mark type
+bio_df <- bind_rows(
+  clim_with_geno %>% distinct(NewSiteCode, .keep_all = TRUE) %>%
+    mutate(Type = "Seed Source") %>%
+    dplyr::select(site_code = NewSiteCode, Type, starts_with("bioclim_")),
+  sat_clim %>%
+    mutate(Type = "Satellite") %>%
+    dplyr::select(site_code = site_code, Type, starts_with("bioclim_"))
+)
+
+bio_long <- bio_df %>%
+  pivot_longer(cols = starts_with("bioclim_"), names_to = "Bioclim", values_to = "Value")
+
+# Heatmap
+ggplot(bio_long, aes(x = Bioclim, y = site_code, fill = Value)) +
+  geom_tile() +
+  facet_wrap(~Type, scales = "free_y") +
+  scale_fill_viridis_c(option = "C") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 6)) +
+  labs(title = "Bioclimatic Variables: Seed Source vs Satellite",
+       x = "Bioclim Variable",
+       y = "Site",
+       fill = "Value")
+
+#### Geographic map + heatmap
+
+map_df <- bind_rows(
+  clim_with_geno %>% 
+    distinct(Latitude, Longitude, .keep_all = TRUE) %>% 
+    mutate(Type = "Seed Source"),
+  sat_clim %>% 
+    mutate(Type = "Satellite")
+)
+
+# List of bioclimatic variables
+bioclim_vars <- paste0("bioclim_", 1:19)
+
+# create one map per bioclim variable
+bioclim_maps <- purrr::map(bioclim_vars, function(var) {
+  ggplot() +
+    geom_polygon(data = state_map_filtered, 
+                 aes(x = long, y = lat, group = group),
+                 fill = "gray90", color = "black") +
+    geom_point(data = map_df,
+               aes(x = Longitude, y = Latitude, shape = Type, color = .data[[var]]),
+               size = 3, alpha = 0.8) +
+    scale_shape_manual(values = c("Seed Source" = 16, "Satellite" = 17)) +
+    scale_color_viridis_c(option = "plasma", na.value = "gray80") +
+    coord_cartesian(xlim = c(-128, -95), ylim = c(30, 52)) +
+    theme_minimal() +
+    labs(title = paste("Bioclimatic variable:", var),
+         x = "Longitude", y = "Latitude", color = var) +
+    theme(legend.position = "bottom")
+})
+
+# preview the first map
+bioclim_maps[[12]]
+##key to what climate variables the numbers correspond to: https://www.worldclim.org/data/bioclim.html
+
+#walk2(bioclim_maps, bioclim_vars, ~ ggsave(filename = paste0("maps/", .y, ".png"), plot = .x, width = 7, height = 5))
+
+####### Save graphs as combined pdf:
+# Open PDF
+pdf("all_maps_combined.pdf", width = 8, height = 6)
+
+# 1. Seed source vs satellite locations map
+print(
+  ggplot() +
+    geom_polygon(data = state_map_filtered, aes(x = long, y = lat, group = group),
+                 fill = "gray90", color = "black") +
+    geom_point(data = map_df, aes(x = Longitude, y = Latitude, color = Type, shape = Type),
+               size = 3, alpha = 0.8) +
+    scale_color_manual(values = c("Seed Source" = "blue", "Satellite" = "red")) +
+    scale_shape_manual(values = c("Seed Source" = 16, "Satellite" = 17)) +
+    coord_cartesian(xlim = c(-128, -95), ylim = c(30, 52)) +
+    theme_minimal() +
+    labs(title = "Seed Source vs Satellite Locations in WNA",
+         x = "Longitude", y = "Latitude", color = "Type", shape = "Type") +
+    theme(legend.position = "bottom")
+)
+
+# 2. Bioclimatic maps (1 per variable)
+for (i in seq_along(bioclim_maps)) {
+  print(bioclim_maps[[i]])
+}
+
+# Close PDF
+dev.off()
 
 
 
