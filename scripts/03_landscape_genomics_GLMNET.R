@@ -4,7 +4,7 @@
 ######## Create K and assign genotypes ##########
 ######## code by Justin Van Ee and Becca Nelson ###############
 ############ created 8-19-25 #############
-############ last modified 10-16-25 ##########################
+############ last modified 10-17-25 ##########################
 
 
 ## throughout the code "SNPS" refers to each individual genotype
@@ -112,7 +112,7 @@ Y <- as.matrix(data[, paste0("PC", 1:n_pc)])     # response PCs
 ### Fit glmnet models for each PC (all data)
 ### and store them for prediction on satellite sites
 ###
-glmnet_models <- map(1:n_pc, function(l) {
+glmnet_models <- purrr::map(1:n_pc, function(l) {
   y <- Y[, l]
   cv_fit <- cv.glmnet(X, y, alpha = 0)  # Ridge regression, switch to 1 for lasso, ridge seemed slightly better at reducing rmse
   return(cv_fit)                        # Keep the fitted model for prediction
@@ -121,6 +121,7 @@ glmnet_models <- map(1:n_pc, function(l) {
 ###
 ### Predict PCs for satellite sites
 ###
+
 # Standardize satellite predictors the same as training data
 colnames(sat_clim)[colnames(sat_clim) == "lat"] <- "Latitude"
 colnames(sat_clim)[colnames(sat_clim) == "lon"] <- "Longitude"
@@ -131,7 +132,7 @@ sat_X <- sat_clim %>%
   as.matrix()
 
 # Predict PCs
-predPC_list <- map(glmnet_models, function(model) {
+predPC_list <- purrr::map(glmnet_models, function(model) {
   predict(model, newx = sat_X, s = "lambda.min") %>% as.vector()
 })
 
@@ -170,7 +171,7 @@ summary(c(abs(K_all - K_new_raw)))
 
 # Step 8: Combine genotype index
 genotype_index_new <- tibble(
-  site     = sat_clim$site_code,
+  site     = sat_clim$site,
   genotype = new_ids
 )
 

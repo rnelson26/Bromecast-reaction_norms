@@ -91,15 +91,50 @@ data <- data %>%
 ####### Prepare data for model ########
 K_all ## updated kinship matrix
 genotype_index_new ## list of synthetic genotype names for satellite sites, should I split by site instead of site year 
+genotype_index_all ## all the genotypes in K_all
+
+genotype_index_new$site <- gsub(" [0-9]{4}$", "", genotype_index_new$site)
+genotype_index_all$site <- gsub(" [0-9]{4}$", "", genotype_index_all$site)
+
+valid_genotypes <- genotype_index_all$genotype   
+genotype_lookup <- setNames(seq_along(valid_genotypes), valid_genotypes)
+
+### add genotype assignments to satellite sites:
+data$genotype <- as.character(data$genotype)
+genotype_index_new$genotype <- as.character(genotype_index_new$genotype)
+
+
+# ensure genotype columns are character
+site_geno_map <- genotype_index_new %>%
+  group_by(site) %>%
+  slice(1) %>%  
+  ungroup() %>%
+  mutate(genotype = as.character(genotype)) %>%
+  select(site, genotype_map = genotype)  
+
+# fill NAs in data$genotype using site mapping
+data <- data %>%
+  left_join(site_geno_map, by = "site") %>%
+  mutate(genotype = coalesce(genotype, genotype_map)) %>%
+  select(-genotype_map) %>%
+  mutate(genotype = as.factor(genotype))  
+
+
+ data %>%
+  group_by(site) %>%
+  summarise(genotypes = paste(unique(genotype), collapse = ", ")) %>%
+  arrange(site)
+
 
 ### Genotypes info ##########
 
 
-BRTE <- left_join(BRTE, tips, by = "PopNum") 
+### using the original common garden genotypes:
+#BRTE <- left_join(BRTE, tips, by = "PopNum") 
 
-BRTE <- BRTE %>% dplyr::select(PopNum, NewSiteCode, tip.label, IBS.id)
+#BRTE <- BRTE %>% dplyr::select(PopNum, NewSiteCode, tip.label, IBS.id)
 
-assigned_genotypes <- left_join(assigned_genotypes, BRTE, by = "NewSiteCode") 
+#assigned_genotypes <- left_join(assigned_genotypes, BRTE, by = "NewSiteCode") 
 
 
 #genotypes_common_gardens <- 
@@ -108,17 +143,17 @@ assigned_genotypes <- left_join(assigned_genotypes, BRTE, by = "NewSiteCode")
 # filter(genotype %in% unique(data$genotype)) %>%
 #  arrange(NewSiteCode)
 
-assigned_genotypes$kinshipID
+#assigned_genotypes$kinshipID
 
-genotypes_all <- kinshipIDs %>%
-  mutate(source = as.factor(source)) %>%
-  filter(genotype %in% unique(c(data$genotype, assigned_genotypes$genotype))) %>%  # Include assigned genotypes
-  arrange(NewSiteCode)
+#genotypes_all <- kinshipIDs %>%
+ # mutate(source = as.factor(source)) %>%
+  #filter(genotype %in% unique(c(data$genotype, assigned_genotypes$genotype))) %>%  # Include assigned genotypes
+  #arrange(NewSiteCode)
 
 
 # Filter for common garden genotypes 
 #K_common_garden <- as.matrix(K[genotypes_all$kinshipID,genotypes_all$kinshipID])
-K_common_garden <- as.matrix(kinship[genotypes_all$kinshipID,genotypes_all$kinshipID])
+#K_common_garden <- as.matrix(kinship[genotypes_all$kinshipID,genotypes_all$kinshipID])
 #use kinship for actual matrix 
 
 #K_common_garden <- as.matrix(kinship[assigned_genotypes$PopNumD,assigned_genotypes$IBS.id]) #doesn't work
@@ -126,14 +161,14 @@ K_common_garden <- as.matrix(kinship[genotypes_all$kinshipID,genotypes_all$kinsh
 #Diana: if you go with PopNum and corresponding IBS.id (row and column number in BRTE307_IBSmatrix.txt) you should get the correct genotypes from for the new kinship matrix.
 
 # Put genotype numbers on rows and columns
-colnames(K_common_garden) <- rownames(K_common_garden) <- as.factor(genotypes_all$genotype)
+#colnames(K_common_garden) <- rownames(K_common_garden) <- as.factor(genotypes_all$genotype)
 
 
 ######## Demography info #########
-assigned_genotypes$site <- as.factor(assigned_genotypes$site)
-assigned_genotypes$genotype <- as.integer(assigned_genotypes$genotype)
-assigned_genotypes$NewSiteCode <- as.factor(assigned_genotypes$NewSiteCode)
-kinshipIDs$NewSiteCode <- as.factor(kinshipIDs$NewSiteCode)
+#assigned_genotypes$site <- as.factor(assigned_genotypes$site)
+#assigned_genotypes$genotype <- as.integer(assigned_genotypes$genotype)
+#assigned_genotypes$NewSiteCode <- as.factor(assigned_genotypes$NewSiteCode)
+#kinshipIDs$NewSiteCode <- as.factor(kinshipIDs$NewSiteCode)
 
 ## make site year column 
 data$site <- as.factor(data$site)
@@ -280,10 +315,10 @@ df_emg <- df_emg %>%
   filter(!is.na(genotype))
 
 
-valid_genotypes <- rownames(K_common_garden)
-df <- df %>% filter(genotype %in% valid_genotypes)
-df_rep <- df_rep %>% filter(genotype %in% valid_genotypes)
-df_emg <- df_emg %>% filter(genotype %in% valid_genotypes)
+#valid_genotypes <- rownames(K_common_garden)
+#df <- df %>% filter(genotype %in% valid_genotypes)
+#df_rep <- df_rep %>% filter(genotype %in% valid_genotypes)
+#df_emg <- df_emg %>% filter(genotype %in% valid_genotypes)
 
 ### reassign NAs to zero in emerged
 df_emg$Reproduced <- ifelse(df_emg$Emerged == "N", "N", df_emg$Reproduced)
@@ -635,55 +670,79 @@ training_df_emg <- training_df_emg %>% left_join(site_index_emg, by = "site")
 testing_df_emg  <- testing_df_emg %>% left_join(site_index_emg, by = "site")
 
 ### genotype indices
+## filter to only include valid genotypes
+datasets <- list(training_df, testing_df,
+                 training_df_rep, testing_df_rep,
+                 training_df_emg, testing_df_emg)
 
-training_df$NewSiteCode <- as.character(training_df$NewSiteCode)
-training_df$NewSiteCode[is.na(training_df$NewSiteCode)] <- "Unknown"
-training_df$NewSiteCode <- as.factor(training_df$NewSiteCode) 
+datasets <- lapply(datasets, function(df) {
+  df %>% filter(genotype %in% valid_genotypes)
+})
 
-training_df_rep$NewSiteCode <- as.character(training_df_rep$NewSiteCode)
-training_df_rep$NewSiteCode[is.na(training_df_rep$NewSiteCode)] <- "Unknown"
-training_df_rep$NewSiteCode <- as.factor(training_df_rep$NewSiteCode)
+training_df <- datasets[[1]]
+testing_df  <- datasets[[2]]
+training_df_rep <- datasets[[3]]
+testing_df_rep <- datasets[[4]]
+training_df_emg <- datasets[[5]]
+testing_df_emg <- datasets[[6]]
 
-training_df_emg$NewSiteCode <- as.character(training_df_emg$NewSiteCode)
-training_df_emg$NewSiteCode[is.na(training_df_emg$NewSiteCode)] <- "Unknown"
-training_df_emg$NewSiteCode <- as.factor(training_df_emg$NewSiteCode)
 
-valid_genotypes <- rownames(K_common_garden)
-genotype_lookup <- setNames(seq_along(valid_genotypes), valid_genotypes)
+genotype_plant_train      <- as.integer(genotype_lookup[as.character(training_df$genotype)])
+genotype_plant_test       <- as.integer(genotype_lookup[as.character(testing_df$genotype)])
+genotype_plant_train_rep  <- as.integer(genotype_lookup[as.character(training_df_rep$genotype)])
+genotype_plant_test_rep   <- as.integer(genotype_lookup[as.character(testing_df_rep$genotype)])
+genotype_plant_train_emg  <- as.integer(genotype_lookup[as.character(training_df_emg$genotype)])
+genotype_plant_test_emg   <- as.integer(genotype_lookup[as.character(testing_df_emg$genotype)])
+
+
+#training_df$NewSiteCode <- as.character(training_df$NewSiteCode)
+#training_df$NewSiteCode[is.na(training_df$NewSiteCode)] <- "Unknown"
+#training_df$NewSiteCode <- as.factor(training_df$NewSiteCode) 
+
+#training_df_rep$NewSiteCode <- as.character(training_df_rep$NewSiteCode)
+#training_df_rep$NewSiteCode[is.na(training_df_rep$NewSiteCode)] <- "Unknown"
+#training_df_rep$NewSiteCode <- as.factor(training_df_rep$NewSiteCode)
+
+#training_df_emg$NewSiteCode <- as.character(training_df_emg$NewSiteCode)
+#training_df_emg$NewSiteCode[is.na(training_df_emg$NewSiteCode)] <- "Unknown"
+#training_df_emg$NewSiteCode <- as.factor(training_df_emg$NewSiteCode)
+
+#valid_genotypes <- rownames(K_common_garden)
+#genotype_lookup <- setNames(seq_along(valid_genotypes), valid_genotypes)
 
 # Filter df to only rows with genotypes in K
-training_df <- training_df %>% filter(genotype %in% valid_genotypes)
+#training_df <- training_df %>% filter(genotype %in% valid_genotypes)
 
-training_df_rep <- training_df_rep %>% filter(genotype %in% valid_genotypes)
+#training_df_rep <- training_df_rep %>% filter(genotype %in% valid_genotypes)
 
-training_df_emg <- training_df_emg %>% filter(genotype %in% valid_genotypes)
+#training_df_emg <- training_df_emg %>% filter(genotype %in% valid_genotypes)
 
-testing_df <- testing_df %>% filter(genotype %in% valid_genotypes)
-testing_df_rep <- testing_df_rep %>% filter(genotype %in% valid_genotypes)
+#testing_df <- testing_df %>% filter(genotype %in% valid_genotypes)
+#testing_df_rep <- testing_df_rep %>% filter(genotype %in% valid_genotypes)
 
-testing_df_emg <- testing_df_emg %>% filter(genotype %in% valid_genotypes)
+#testing_df_emg <- testing_df_emg %>% filter(genotype %in% valid_genotypes)
 
-genotype_plant_train <- as.integer(genotype_lookup[as.character(training_df$genotype)])
+#genotype_plant_train <- as.integer(genotype_lookup[as.character(training_df$genotype)])
 
-genotype_plant_test <- as.integer(genotype_lookup[as.character(testing_df$genotype)])
+#genotype_plant_test <- as.integer(genotype_lookup[as.character(testing_df$genotype)])
 
-genotype_plant_train_rep <- as.integer(genotype_lookup[as.character(training_df_rep$genotype)])
+#genotype_plant_train_rep <- as.integer(genotype_lookup[as.character(training_df_rep$genotype)])
 
-genotype_plant_test_rep <- as.integer(genotype_lookup[as.character(testing_df_rep$genotype)])
+#genotype_plant_test_rep <- as.integer(genotype_lookup[as.character(testing_df_rep$genotype)])
 
-genotype_plant_train_emg <- as.integer(genotype_lookup[as.character(training_df_emg$genotype)])
+#genotype_plant_train_emg <- as.integer(genotype_lookup[as.character(training_df_emg$genotype)])
 
-genotype_plant_test_emg <- as.integer(genotype_lookup[as.character(testing_df_emg$genotype)])
+#genotype_plant_test_emg <- as.integer(genotype_lookup[as.character(testing_df_emg$genotype)])
 
 
 # Check again
-range(genotype_plant_train)  # should be 1 to 93
+range(genotype_plant_train)  
 length(genotype_plant_train)  
 
-range(genotype_plant_train_rep)  # should be 1 to 93
+range(genotype_plant_train_rep)  
 length(genotype_plant_train_rep) 
 
-range(genotype_plant_train_emg)  # should be 1 to 93
+range(genotype_plant_train_emg)  
 length(genotype_plant_train_emg) 
 
 range(genotype_plant_test) 

@@ -18,8 +18,8 @@ stan_data_fec_full <- list(
   X_soil = X_soil,
   Lambda = Lambda_SOS,
   Lambda_soil = Lambda_soil,
-  n_g = length(unique(genotype_plant_train)),
-  K = K_common_garden,
+  n_g = nrow(K_all), #previously length(unique(genotype_plant_train_emg)),
+  K = K_all, #K_common_garden just common garden genotypes, K_all from landscape genomics
   n_plot = max(training_df$plot_index),
   n_site_year = length(unique(c(training_df$site_year, testing_df$site_year))),
   
