@@ -15,8 +15,8 @@ stan_data_emg_full <- list(
   X_soil = X_soil_emg,
   Lambda = Lambda_emg_SOS,
   Lambda_soil = Lambda_soil_emg,
-  n_g = length(unique(genotype_plant_train_emg)),
-  K = K_all, #K_common_garden just common garden genotypes, K_all from landscape genomics
+ # n_g = length(unique(genotype_plant_train_emg)),
+  #K = K_all, #K_common_garden just common garden genotypes, K_all from landscape genomics
   n_plot = max(training_df_emg$plot_index),
   n_site_year = length(unique(c(training_df_emg$site_year, testing_df_emg$site_year))),
   

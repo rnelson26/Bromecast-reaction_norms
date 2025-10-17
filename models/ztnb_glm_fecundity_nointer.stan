@@ -149,13 +149,13 @@ vector[n_g] beta_0_centered;
     zeta_soil[l] = tan(u_zeta_soil[l]);
 
   for (l in 1:q_X) {
-    beta[, l] = mu_beta[l] + cholesky_decompose(K) * (sqrt(zeta[l]) * beta_raw[, l]);
+    beta[, l] = mu_beta[l] + cholesky_decompose(K) * (zeta[l] * beta_raw[, l]);
   }
    beta_0 = zeta_0 * (cholesky_decompose(K) * beta_0_raw);  
    beta_0_centered = beta_0 - mean(beta_0);
    
   for (l in 1:q_X_soil) {
-    beta_soil[, l] = mu_beta_soil[l] + cholesky_decompose(K) * (sqrt(zeta_soil[l]) * beta_soil_raw[, l]);
+    beta_soil[, l] = mu_beta_soil[l] + cholesky_decompose(K) * (zeta_soil[l] * beta_soil_raw[, l]);
 }
 }
  //use same structure for genotype random intercepts, start normal 0,1 and then get decomposed here with K and square root of variance parameter 

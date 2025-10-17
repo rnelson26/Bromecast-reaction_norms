@@ -25,7 +25,7 @@ project_root/
 |   ├── 00_Merge.R ## merge common garden and satellite data
 |   ├── 01_soils.R ## load and extract soil information 
 |   ├── 02_Coefs.R ## generate coefficients for common garden gravel temperature offset 
-│   ├── 03_landscape_genomics.R ## kinship information & synthetic genotypes 
+│   ├── 03_landscape_genomics_GLMNET.R ## kinship information & synthetic genotypes 
 |   ├── 04_setup.R ## load packages and finals for main analysis 
 │   ├── 05_prepare_data.R ## prepare data for main analysis
 │   ├── 06_prepare_standata_emg.R ##assign stan data objects for emergence       
