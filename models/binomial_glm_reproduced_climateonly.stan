@@ -106,11 +106,11 @@ model {
   to_vector(W) ~ normal(0, 1);
   to_vector(W_soil) ~ normal(0, 1);
 
-  site_year_effect_train_raw ~ normal(0, 1);
-  sigma_site_year ~ normal(0, 1);
-  eta_plot_raw ~ normal(0, 1);
-  sigma_plot ~ normal(0, 1);
-  alpha ~ normal(0, 1);
+  site_year_effect_train_raw ~ normal(0, 100);
+  sigma_site_year ~ normal(0, 100);
+  eta_plot_raw ~ normal(0, 100);
+  sigma_plot ~ normal(0, 100);
+  alpha ~ normal(0, 100);
 
   beta ~ normal(0, 1);
   beta_soil ~ normal(0, 1);

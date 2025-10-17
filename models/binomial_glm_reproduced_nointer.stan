@@ -168,16 +168,16 @@ for (l in 1:q_X_soil) {
 
 
       // Priors for random intercept of site_year_effect and for common garden plot random effect
-site_year_effect_train_raw ~ normal(0, 1);
-sigma_site_year ~ normal(0, 1);
-eta_plot_raw ~ normal(0, 1);
-sigma_plot ~ normal(0, 1); 
+site_year_effect_train_raw ~ normal(0, 100);
+sigma_site_year ~ normal(0, 100);
+eta_plot_raw ~ normal(0, 100);
+sigma_plot ~ normal(0, 100); 
 beta_0_raw ~ normal(0, 1); 
-alpha ~ normal(0, 1);
+alpha ~ normal(0, 100);
 
 
 // Priors for competition
-beta_neighbors ~ normal(0, 1);
+beta_neighbors ~ normal(0, 100);
 
 // likelihood for climate and W
   for (i in 1:n_X) {

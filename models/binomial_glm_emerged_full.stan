@@ -154,19 +154,19 @@ for (l in 1:q_X_soil) {
 
       // Priors for random intercept of site_year_effect and for common garden plot random effect
       // try changing priors to 0, 100 and see if it affects model and if it is needed. if not stable say used strong priors. can't change multivariate normal random variables, z beta/cholesky part, all below you can back off and widen  
-site_year_effect_train_raw ~ normal(0, 1);
-sigma_site_year ~ normal(0, 1);
-eta_plot_raw ~ normal(0, 1);
-sigma_plot ~ normal(0, 1); 
+site_year_effect_train_raw ~ normal(0, 100);
+sigma_site_year ~ normal(0, 100);
+eta_plot_raw ~ normal(0, 100);
+sigma_plot ~ normal(0, 100); 
 beta_0_raw ~ normal(0, 1); //do not change this prior 
-alpha ~ normal(0, 1);
+alpha ~ normal(0, 100);
 
 
 // Priors for competition
-beta_neighbors ~ normal(0, 1);
-beta_annual ~ normal(0, 1);
-beta_perennial ~ normal(0, 1);
-beta_shrub ~ normal(0, 1);
+beta_neighbors ~ normal(0, 100);
+beta_annual ~ normal(0, 100);
+beta_perennial ~ normal(0, 100);
+beta_shrub ~ normal(0, 100);
 
 // likelihood for climate and W
   for (i in 1:n_X) {
