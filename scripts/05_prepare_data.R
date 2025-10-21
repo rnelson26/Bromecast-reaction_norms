@@ -1,6 +1,6 @@
 ################# Bromecast: 01.Prepare Data ##########################
 ############# created 3-25-25 ######################
-############# Last modified: 10-16-25 ##########################
+############# Last modified: 10-21-25 ##########################
 ######## Prepares all data for model fitting ################################
 ##add source for soils and merge data 
 
@@ -110,13 +110,13 @@ site_geno_map <- genotype_index_new %>%
   slice(1) %>%  
   ungroup() %>%
   mutate(genotype = as.character(genotype)) %>%
-  select(site, genotype_map = genotype)  
+  dplyr::select(site, genotype_map = genotype)  
 
 # fill NAs in data$genotype using site mapping
 data <- data %>%
   left_join(site_geno_map, by = "site") %>%
   mutate(genotype = coalesce(genotype, genotype_map)) %>%
-  select(-genotype_map) %>%
+  dplyr::select(-genotype_map) %>%
   mutate(genotype = as.factor(genotype))  
 
 
@@ -569,170 +569,307 @@ plot_levels <- levels(factor(training_df_rep$plot[training_df_rep$Type == "Commo
 training_df_emg$plot_index <- ifelse(training_df_emg$Type == "Common_Garden", training_df_emg$plot[training_df_emg$Type == "Common_Garden"], 0)
 plot_levels <- levels(factor(training_df_emg$plot[training_df_emg$Type == "Common_Garden"]))
 
+## make relevant variables factors
 training_df$site_year <- factor(training_df$site_year)
-testing_df$site_year <- factor(testing_df$site_year)
+testing_df$site_year  <- factor(testing_df$site_year, levels = levels(training_df$site_year))
+
+training_df$site <- factor(training_df$site)
+testing_df$site  <- factor(testing_df$site, levels = levels(training_df$site))
 
 training_df_rep$site_year <- factor(training_df_rep$site_year)
-testing_df_rep$site_year <- factor(testing_df_rep$site_year)
+testing_df_rep$site_year  <- factor(testing_df_rep$site_year, levels = levels(training_df_rep$site_year))
+training_df_rep$site <- factor(training_df_rep$site)
+testing_df_rep$site  <- factor(testing_df_rep$site, levels = levels(training_df_rep$site))
 
 training_df_emg$site_year <- factor(training_df_emg$site_year)
-testing_df_emg$site_year <- factor(testing_df_emg$site_year)
-
-# Create index for training site-years 
-training_site_years <- sort(unique(training_df$site_year))
-site_year_index_train <- data.frame(
-  site_year = training_site_years,
-  idx = seq_along(training_site_years)  
-)
-
-training_site_years_rep <- sort(unique(training_df_rep$site_year))
-site_year_index_train_rep <- data.frame(
-  site_year = training_site_years_rep,
-  idx = seq_along(training_site_years_rep)  
-)
-
-training_site_years_emg <- sort(unique(training_df_emg$site_year))
-site_year_index_train_emg <- data.frame(
-  site_year = training_site_years_emg,
-  idx = seq_along(training_site_years_emg)  
-)
-
-# Create index for testing site-years 
-testing_site_years <- sort(unique(testing_df$site_year))
-site_year_index_test <- data.frame(
-  site_year = testing_site_years,
-  idx = seq_along(testing_site_years) + length(training_site_years)  # Start from 40
-)
-
-testing_site_years_rep <- sort(unique(testing_df_rep$site_year))
-site_year_index_test_rep <- data.frame(
-  site_year = testing_site_years_rep,
-  idx = seq_along(testing_site_years_rep) + length(training_site_years_rep)  # Start from 40
-)
-
-testing_site_years_emg <- sort(unique(testing_df_emg$site_year))
-site_year_index_test_emg <- data.frame(
-  site_year = testing_site_years_emg,
-  idx = seq_along(testing_site_years_emg) + length(training_site_years_emg)  # Start from 40
-)
-
-# Merge site-year indices into the original dataframes
-training_df <- left_join(training_df, site_year_index_train, by = "site_year")
-testing_df <- left_join(testing_df, site_year_index_test, by = "site_year")
-
-training_df_rep <- left_join(training_df_rep, site_year_index_train_rep, by = "site_year")
-testing_df_rep <- left_join(testing_df_rep, site_year_index_test_rep, by = "site_year")
-
-training_df_emg <- left_join(training_df_emg, site_year_index_train_emg, by = "site_year")
-testing_df_emg <- left_join(testing_df_emg, site_year_index_test_emg, by = "site_year")
-
-#### site level index for soil PCA
-training_df$site <- factor(training_df$site)
-testing_df$site <- factor(testing_df$site)
-
-training_df_rep$site <- factor(training_df_rep$site)
-testing_df_rep$site <- factor(testing_df_rep$site)
-
+testing_df_emg$site_year  <- factor(testing_df_emg$site_year, levels = levels(training_df_emg$site_year))
 training_df_emg$site <- factor(training_df_emg$site)
-testing_df_emg$site <- factor(testing_df_emg$site)
+testing_df_emg$site  <- factor(testing_df_emg$site, levels = levels(training_df_emg$site))
 
-## fecundity 
+##### ----------------------------
+##### 1. Combine site-years for indexing
+##### ----------------------------
+
+# Plant/site-year indices (unique across train + test)
+all_site_years <- sort(unique(c(training_df$site_year, testing_df$site_year)))
+site_year_index <- setNames(seq_along(all_site_years), all_site_years)
+
+training_df$idx_plant <- site_year_index[as.character(training_df$site_year)]
+testing_df$idx_plant  <- site_year_index[as.character(testing_df$site_year)]
+
+training_df_rep$idx_plant <- site_year_index[as.character(training_df_rep$site_year)]
+testing_df_rep$idx_plant  <- site_year_index[as.character(testing_df_rep$site_year)]
+
+training_df_emg$idx_plant <- site_year_index[as.character(training_df_emg$site_year)]
+testing_df_emg$idx_plant  <- site_year_index[as.character(testing_df_emg$site_year)]
+
+##### ----------------------------
+##### 2. Site indices (unique across train + test)
+##### ----------------------------
+
 all_sites <- sort(unique(c(training_df$site, testing_df$site)))
+site_index <- setNames(seq_along(all_sites), all_sites)
 
-site_index <- data.frame(
-  site = all_sites,
-  idx_site = seq_along(all_sites)
-)
+training_df$idx_site <- site_index[as.character(training_df$site)]
+testing_df$idx_site  <- site_index[as.character(testing_df$site)]
 
-training_df <- training_df %>% left_join(site_index, by = "site")
-testing_df  <- testing_df %>% left_join(site_index, by = "site")
+training_df_rep$idx_site <- site_index[as.character(training_df_rep$site)]
+testing_df_rep$idx_site <- site_index[as.character(testing_df_rep$site)]
 
-### reproduced
+training_df_emg$idx_site <- site_index[as.character(training_df_emg$site)]
+testing_df_emg$idx_site <- site_index[as.character(testing_df_emg$site)]
+
+##### ----------------------------
+##### 3. Genotype indices (unique across train + test)
+##### ----------------------------
+
+# All genotypes seen in train or test
+all_genotypes <- sort(unique(c(training_df$genotype, testing_df$genotype)))
+genotype_index <- setNames(seq_along(all_genotypes), all_genotypes)
+
+training_df$idx_genotype <- genotype_index[as.character(training_df$genotype)]
+testing_df$idx_genotype  <- genotype_index[as.character(testing_df$genotype)]
+
+training_df_rep$idx_genotype <- genotype_index[as.character(training_df_rep$genotype)]
+testing_df_rep$idx_genotype  <- genotype_index[as.character(testing_df_rep$genotype)]
+
+training_df_emg$idx_genotype <- genotype_index[as.character(training_df_emg$genotype)]
+testing_df_emg$idx_genotype  <- genotype_index[as.character(testing_df_emg$genotype)]
+
+##### ----------------------------
+##### 4. Quick checks
+##### ----------------------------
+
+# Site-year indices
+range(training_df$idx_plant)
+range(testing_df$idx_plant)
+
+# Site indices
+range(training_df$idx_site)
+range(testing_df$idx_site)
+
+# Genotype indices
+range(training_df$idx_genotype)
+range(testing_df$idx_genotype)
+
+# NAs?
+any(is.na(training_df$idx_plant))
+any(is.na(testing_df$idx_plant))
+any(is.na(training_df$idx_genotype))
+any(is.na(testing_df$idx_genotype))
+
+
+# ------------------------------
+# 1. Site-year indices
+# ------------------------------
+
+# Training site-years
+training_site_years <- sort(unique(training_df$site_year))
+site_year_index_train <- setNames(seq_along(training_site_years), training_site_years)
+training_df$idx_plant <- site_year_index_train[as.character(training_df$site_year)]
+
+# Test site-years (new levels get indices after training)
+testing_site_years <- sort(unique(testing_df$site_year))
+new_test_levels <- setdiff(testing_site_years, training_site_years)
+site_year_index_test <- c(site_year_index_train,
+                          setNames(seq(length(training_site_years) + 1,
+                                       length(training_site_years) + length(new_test_levels)),
+                                   new_test_levels))
+testing_df$idx_plant <- site_year_index_test[as.character(testing_df$site_year)]
+
+# Repeat for reproductive and emerged datasets
+training_site_years_rep <- sort(unique(training_df_rep$site_year))
+training_site_years_emg <- sort(unique(training_df_emg$site_year))
+testing_site_years_rep <- sort(unique(testing_df_rep$site_year))
+testing_site_years_emg <- sort(unique(testing_df_emg$site_year))
+
+training_df_rep$idx_plant <- setNames(seq_along(training_site_years_rep), training_site_years_rep)[as.character(training_df_rep$site_year)]
+training_df_emg$idx_plant <- setNames(seq_along(training_site_years_emg), training_site_years_emg)[as.character(training_df_emg$site_year)]
+
+new_test_levels_rep <- setdiff(testing_site_years_rep, training_site_years_rep)
+new_test_levels_emg <- setdiff(testing_site_years_emg, training_site_years_emg)
+
+site_year_index_test_rep <- c(setNames(seq_along(training_site_years_rep), training_site_years_rep),
+                              setNames(seq(length(training_site_years_rep)+1,
+                                           length(training_site_years_rep)+length(new_test_levels_rep)),
+                                       new_test_levels_rep))
+testing_df_rep$idx_plant <- site_year_index_test_rep[as.character(testing_df_rep$site_year)]
+
+site_year_index_test_emg <- c(setNames(seq_along(training_site_years_emg), training_site_years_emg),
+                              setNames(seq(length(training_site_years_emg)+1,
+                                           length(training_site_years_emg)+length(new_test_levels_emg)),
+                                       new_test_levels_emg))
+testing_df_emg$idx_plant <- site_year_index_test_emg[as.character(testing_df_emg$site_year)]
+
+
+# ------------------------------
+# 2. Site indices (for soil/climate PCA)
+# ------------------------------
+all_sites <- sort(unique(c(training_df$site, testing_df$site)))
+site_index <- setNames(seq_along(all_sites), all_sites)
+training_df$idx_site <- site_index[as.character(training_df$site)]
+testing_df$idx_site <- site_index[as.character(testing_df$site)]
+
 all_sites_rep <- sort(unique(c(training_df_rep$site, testing_df_rep$site)))
+site_index_rep <- setNames(seq_along(all_sites_rep), all_sites_rep)
+training_df_rep$idx_site <- site_index_rep[as.character(training_df_rep$site)]
+testing_df_rep$idx_site <- site_index_rep[as.character(testing_df_rep$site)]
 
-site_index_rep <- data.frame(
-  site = all_sites_rep,
-  idx_site = seq_along(all_sites_rep)
-)
-
-training_df_rep <- training_df_rep %>% left_join(site_index_rep, by = "site")
-testing_df_rep  <- testing_df_rep %>% left_join(site_index_rep, by = "site")
-
-### Emerged
 all_sites_emg <- sort(unique(c(training_df_emg$site, testing_df_emg$site)))
+site_index_emg <- setNames(seq_along(all_sites_emg), all_sites_emg)
+training_df_emg$idx_site <- site_index_emg[as.character(training_df_emg$site)]
+testing_df_emg$idx_site <- site_index_emg[as.character(testing_df_emg$site)]
 
-site_index_emg <- data.frame(
-  site = all_sites_emg,
-  idx_site = seq_along(all_sites_emg)
-)
+# ------------------------------
+# 3. Genotype indices
+# ------------------------------
+valid_genotypes <- genotype_index_all$genotype
+genotype_lookup <- setNames(seq_along(valid_genotypes), valid_genotypes)
 
-training_df_emg <- training_df_emg %>% left_join(site_index_emg, by = "site")
-testing_df_emg  <- testing_df_emg %>% left_join(site_index_emg, by = "site")
+training_df$idx_genotype <- genotype_lookup[as.character(training_df$genotype)]
+testing_df$idx_genotype <- genotype_lookup[as.character(testing_df$genotype)]
 
-### genotype indices
-## filter to only include valid genotypes
+training_df_rep$idx_genotype <- genotype_lookup[as.character(training_df_rep$genotype)]
+testing_df_rep$idx_genotype <- genotype_lookup[as.character(testing_df_rep$genotype)]
+
+training_df_emg$idx_genotype <- genotype_lookup[as.character(training_df_emg$genotype)]
+testing_df_emg$idx_genotype <- genotype_lookup[as.character(testing_df_emg$genotype)]
+
+### check
+# Site-year indices
+range(training_df$idx_plant)      # should be 1:N_training
+range(testing_df$idx_plant)       # can be > N_training if you allow new levels
+# Site indices
+range(training_df$idx_site)       # should be 1:N_sites
+range(testing_df$idx_site)        # 1:N_sites
+# Genotype indices
+range(training_df$idx_genotype)   # should be 1:N_genotypes
+range(testing_df$idx_genotype)    # same as above
+
+any(is.na(training_df$idx_plant))     # FALSE
+any(is.na(testing_df$idx_plant))      # FALSE
+any(is.na(training_df$idx_genotype))  # FALSE
+any(is.na(testing_df$idx_genotype))   # FALSE
+
+
+
+### other
+# 1. Combine all genotypes from training and test
+all_genotypes <- unique(c(training_df$genotype, testing_df$genotype))
+genotype_lookup <- setNames(seq_along(all_genotypes), all_genotypes)
+
+# 2. Map integer genotype indices
+training_df$genotype_idx <- as.integer(genotype_lookup[as.character(training_df$genotype)])
+testing_df$genotype_idx <- as.integer(genotype_lookup[as.character(testing_df$genotype)])
+
+training_df_rep$genotype_idx <- as.integer(genotype_lookup[as.character(training_df_rep$genotype)])
+testing_df_rep$genotype_idx <- as.integer(genotype_lookup[as.character(testing_df_rep$genotype)])
+
+training_df_emg$genotype_idx <- as.integer(genotype_lookup[as.character(training_df_emg$genotype)])
+testing_df_emg$genotype_idx <- as.integer(genotype_lookup[as.character(testing_df_emg$genotype)])
+
+# 3. Site-year indices
+train_site_years <- sort(unique(training_df$site_year))
+test_site_years <- sort(unique(testing_df$site_year))
+
+site_year_lookup <- setNames(seq_along(unique(c(train_site_years, test_site_years))),
+                             unique(c(train_site_years, test_site_years)))
+
+training_df$site_year_idx <- as.integer(site_year_lookup[as.character(training_df$site_year)])
+testing_df$site_year_idx <- as.integer(site_year_lookup[as.character(testing_df$site_year)])
+
+training_df_rep$site_year_idx <- as.integer(site_year_lookup[as.character(training_df_rep$site_year)])
+testing_df_rep$site_year_idx <- as.integer(site_year_lookup[as.character(testing_df_rep$site_year)])
+
+training_df_emg$site_year_idx <- as.integer(site_year_lookup[as.character(training_df_emg$site_year)])
+testing_df_emg$site_year_idx <- as.integer(site_year_lookup[as.character(testing_df_emg$site_year)])
+
+# 4. Site indices (similar logic)
+train_sites <- sort(unique(training_df$site))
+site_lookup <- setNames(seq_along(unique(c(train_sites, testing_df$site))),
+                        unique(c(train_sites, testing_df$site)))
+
+training_df$site_idx <- as.integer(site_lookup[as.character(training_df$site)])
+testing_df$site_idx <- as.integer(site_lookup[as.character(testing_df$site)])
+
+training_df_rep$site_idx <- as.integer(site_lookup[as.character(training_df_rep$site)])
+testing_df_rep$site_idx <- as.integer(site_lookup[as.character(testing_df_rep$site)])
+
+training_df_emg$site_idx <- as.integer(site_lookup[as.character(training_df_emg$site)])
+testing_df_emg$site_idx <- as.integer(site_lookup[as.character(testing_df_emg$site)])
+
+
+####### site-year indices
+#training site-year indices
+site_year_index_train <- setNames(seq_along(levels(training_df$site_year)), levels(training_df$site_year))
+training_df$idx_plant_train <- site_year_index_train[as.character(training_df$site_year)]
+
+
+test_new_levels <- setdiff(levels(testing_df$site_year), levels(training_df$site_year))
+
+
+site_year_index_test <- c(site_year_index_train,
+                          setNames(seq(length(site_year_index_train)+1,
+                                       length(site_year_index_train)+length(test_new_levels)),
+                                   test_new_levels))
+# testing site-yer indices
+testing_df$idx_plant_test <- site_year_index_test[as.character(testing_df$site_year)]
+
+site_year_index_train_rep <- setNames(seq_along(levels(training_df_rep$site_year)), levels(training_df_rep$site_year))
+training_df_rep$idx_plant_train <- site_year_index_train_rep[as.character(training_df_rep$site_year)]
+
+test_new_levels_rep <- setdiff(levels(testing_df_rep$site_year), levels(training_df_rep$site_year))
+site_year_index_test_rep <- c(site_year_index_train_rep,
+                              setNames(seq(length(site_year_index_train_rep)+1,
+                                           length(site_year_index_train_rep)+length(test_new_levels_rep)),
+                                       test_new_levels_rep))
+testing_df_rep$idx_plant_test <- site_year_index_test_rep[as.character(testing_df_rep$site_year)]
+
+site_year_index_train_emg <- setNames(seq_along(levels(training_df_emg$site_year)), levels(training_df_emg$site_year))
+training_df_emg$idx_plant_train <- site_year_index_train_emg[as.character(training_df_emg$site_year)]
+
+test_new_levels_emg <- setdiff(levels(testing_df_emg$site_year), levels(training_df_emg$site_year))
+site_year_index_test_emg <- c(site_year_index_train_emg,
+                              setNames(seq(length(site_year_index_train_emg)+1,
+                                           length(site_year_index_train_emg)+length(test_new_levels_emg)),
+                                       test_new_levels_emg))
+testing_df_emg$idx_plant_test <- site_year_index_test_emg[as.character(testing_df_emg$site_year)]
+
+
+
+####### site indices 
+site_index_train       <- setNames(seq_along(levels(training_df$site)), levels(training_df$site))
+site_index_train_rep   <- setNames(seq_along(levels(training_df_rep$site)), levels(training_df_rep$site))
+site_index_train_emg   <- setNames(seq_along(levels(training_df_emg$site)), levels(training_df_emg$site))
+
+training_df$idx_plant_train_site     <- site_index_train[as.character(training_df$site)]
+testing_df$idx_plant_test_site       <- site_index_train[as.character(testing_df$site)]
+training_df_rep$idx_plant_train_site <- site_index_train_rep[as.character(training_df_rep$site)]
+testing_df_rep$idx_plant_test_site   <- site_index_train_rep[as.character(testing_df_rep$site)]
+training_df_emg$idx_plant_train_site <- site_index_train_emg[as.character(training_df_emg$site)]
+testing_df_emg$idx_plant_test_site   <- site_index_train_emg[as.character(testing_df_emg$site)]
+
+####### genotype indices
 datasets <- list(training_df, testing_df,
                  training_df_rep, testing_df_rep,
                  training_df_emg, testing_df_emg)
 
-datasets <- lapply(datasets, function(df) {
-  df %>% filter(genotype %in% valid_genotypes)
-})
+datasets <- lapply(datasets, function(df) df %>% filter(genotype %in% valid_genotypes))
 
-training_df <- datasets[[1]]
-testing_df  <- datasets[[2]]
-training_df_rep <- datasets[[3]]
-testing_df_rep <- datasets[[4]]
-training_df_emg <- datasets[[5]]
-testing_df_emg <- datasets[[6]]
+training_df       <- datasets[[1]]
+testing_df        <- datasets[[2]]
+training_df_rep   <- datasets[[3]]
+testing_df_rep    <- datasets[[4]]
+training_df_emg   <- datasets[[5]]
+testing_df_emg    <- datasets[[6]]
 
-
+# Map genotypes to integer indices
 genotype_plant_train      <- as.integer(genotype_lookup[as.character(training_df$genotype)])
 genotype_plant_test       <- as.integer(genotype_lookup[as.character(testing_df$genotype)])
 genotype_plant_train_rep  <- as.integer(genotype_lookup[as.character(training_df_rep$genotype)])
 genotype_plant_test_rep   <- as.integer(genotype_lookup[as.character(testing_df_rep$genotype)])
 genotype_plant_train_emg  <- as.integer(genotype_lookup[as.character(training_df_emg$genotype)])
 genotype_plant_test_emg   <- as.integer(genotype_lookup[as.character(testing_df_emg$genotype)])
-
-
-#training_df$NewSiteCode <- as.character(training_df$NewSiteCode)
-#training_df$NewSiteCode[is.na(training_df$NewSiteCode)] <- "Unknown"
-#training_df$NewSiteCode <- as.factor(training_df$NewSiteCode) 
-
-#training_df_rep$NewSiteCode <- as.character(training_df_rep$NewSiteCode)
-#training_df_rep$NewSiteCode[is.na(training_df_rep$NewSiteCode)] <- "Unknown"
-#training_df_rep$NewSiteCode <- as.factor(training_df_rep$NewSiteCode)
-
-#training_df_emg$NewSiteCode <- as.character(training_df_emg$NewSiteCode)
-#training_df_emg$NewSiteCode[is.na(training_df_emg$NewSiteCode)] <- "Unknown"
-#training_df_emg$NewSiteCode <- as.factor(training_df_emg$NewSiteCode)
-
-#valid_genotypes <- rownames(K_common_garden)
-#genotype_lookup <- setNames(seq_along(valid_genotypes), valid_genotypes)
-
-# Filter df to only rows with genotypes in K
-#training_df <- training_df %>% filter(genotype %in% valid_genotypes)
-
-#training_df_rep <- training_df_rep %>% filter(genotype %in% valid_genotypes)
-
-#training_df_emg <- training_df_emg %>% filter(genotype %in% valid_genotypes)
-
-#testing_df <- testing_df %>% filter(genotype %in% valid_genotypes)
-#testing_df_rep <- testing_df_rep %>% filter(genotype %in% valid_genotypes)
-
-#testing_df_emg <- testing_df_emg %>% filter(genotype %in% valid_genotypes)
-
-#genotype_plant_train <- as.integer(genotype_lookup[as.character(training_df$genotype)])
-
-#genotype_plant_test <- as.integer(genotype_lookup[as.character(testing_df$genotype)])
-
-#genotype_plant_train_rep <- as.integer(genotype_lookup[as.character(training_df_rep$genotype)])
-
-#genotype_plant_test_rep <- as.integer(genotype_lookup[as.character(testing_df_rep$genotype)])
-
-#genotype_plant_train_emg <- as.integer(genotype_lookup[as.character(training_df_emg$genotype)])
-
-#genotype_plant_test_emg <- as.integer(genotype_lookup[as.character(testing_df_emg$genotype)])
 
 
 # Check again
@@ -783,4 +920,172 @@ testing_df_emg$e_test <- ifelse(testing_df_emg$Emerged == "Y", 1L, 0L)
 
 training_df_rep$r_train <- ifelse(training_df_rep$Reproduced == "Y", 1L, 0L)
 testing_df_rep$r_test <- ifelse(testing_df_rep$Reproduced == "Y", 1L, 0L)
+
+
+### older code
+
+#training_df$site_year <- factor(training_df$site_year)
+#testing_df$site_year <- factor(testing_df$site_year)
+
+#training_df_rep$site_year <- factor(training_df_rep$site_year)
+#testing_df_rep$site_year <- factor(testing_df_rep$site_year)
+
+#training_df_emg$site_year <- factor(training_df_emg$site_year)
+#testing_df_emg$site_year <- factor(testing_df_emg$site_year)
+
+# Create index for training site-years 
+#training_site_years <- sort(unique(training_df$site_year))
+#site_year_index_train <- data.frame(
+ # site_year = training_site_years,
+#  idx = seq_along(training_site_years)  
+#)
+
+#training_site_years_rep <- sort(unique(training_df_rep$site_year))
+#site_year_index_train_rep <- data.frame(
+#  site_year = training_site_years_rep,
+#  idx = seq_along(training_site_years_rep)  
+#)
+
+#training_site_years_emg <- sort(unique(training_df_emg$site_year))
+#site_year_index_train_emg <- data.frame(
+#  site_year = training_site_years_emg,
+#  idx = seq_along(training_site_years_emg)  
+#)
+
+# Create index for testing site-years 
+#testing_site_years <- sort(unique(testing_df$site_year))
+#site_year_index_test <- data.frame(
+ # site_year = testing_site_years,
+  #idx = seq_along(testing_site_years) + length(training_site_years)  # Start from 40
+#)
+
+#testing_site_years_rep <- sort(unique(testing_df_rep$site_year))
+#site_year_index_test_rep <- data.frame(
+#  site_year = testing_site_years_rep,
+#  idx = seq_along(testing_site_years_rep) + length(training_site_years_rep)  # Start from 40
+#)
+
+#testing_site_years_emg <- sort(unique(testing_df_emg$site_year))
+#site_year_index_test_emg <- data.frame(
+ # site_year = testing_site_years_emg,
+  #idx = seq_along(testing_site_years_emg) + length(training_site_years_emg)  # Start from 40
+#)
+
+# Merge site-year indices into the original dataframes
+#training_df <- left_join(training_df, site_year_index_train, by = "site_year")
+#testing_df <- left_join(testing_df, site_year_index_test, by = "site_year")
+
+#training_df_rep <- left_join(training_df_rep, site_year_index_train_rep, by = "site_year")
+#testing_df_rep <- left_join(testing_df_rep, site_year_index_test_rep, by = "site_year")
+
+#training_df_emg <- left_join(training_df_emg, site_year_index_train_emg, by = "site_year")
+#testing_df_emg <- left_join(testing_df_emg, site_year_index_test_emg, by = "site_year")
+
+#### site level index for soil PCA
+#training_df$site <- factor(training_df$site)
+#testing_df$site <- factor(testing_df$site)
+
+#training_df_rep$site <- factor(training_df_rep$site)
+#testing_df_rep$site <- factor(testing_df_rep$site)
+
+#training_df_emg$site <- factor(training_df_emg$site)
+#testing_df_emg$site <- factor(testing_df_emg$site)
+
+## fecundity 
+#all_sites <- sort(unique(c(training_df$site, testing_df$site)))
+
+#site_index <- data.frame(
+ # site = all_sites,
+  #idx_site = seq_along(all_sites)
+#)
+
+#training_df <- training_df %>% left_join(site_index, by = "site")
+#testing_df  <- testing_df %>% left_join(site_index, by = "site")
+
+### reproduced
+#all_sites_rep <- sort(unique(c(training_df_rep$site, testing_df_rep$site)))
+
+#site_index_rep <- data.frame(
+ # site = all_sites_rep,
+  #idx_site = seq_along(all_sites_rep)
+#)
+
+#training_df_rep <- training_df_rep %>% left_join(site_index_rep, by = "site")
+#testing_df_rep  <- testing_df_rep %>% left_join(site_index_rep, by = "site")
+
+### Emerged
+#all_sites_emg <- sort(unique(c(training_df_emg$site, testing_df_emg$site)))
+
+#site_index_emg <- data.frame(
+ # site = all_sites_emg,
+  #idx_site = seq_along(all_sites_emg)
+#)
+
+#training_df_emg <- training_df_emg %>% left_join(site_index_emg, by = "site")
+#testing_df_emg  <- testing_df_emg %>% left_join(site_index_emg, by = "site")
+
+### genotype indices
+## filter to only include valid genotypes
+#datasets <- list(training_df, testing_df,
+ #                training_df_rep, testing_df_rep,
+  #               training_df_emg, testing_df_emg)
+
+#datasets <- lapply(datasets, function(df) {
+ # df %>% filter(genotype %in% valid_genotypes)
+#})
+
+#training_df <- datasets[[1]]
+#testing_df  <- datasets[[2]]
+#training_df_rep <- datasets[[3]]
+#testing_df_rep <- datasets[[4]]
+#training_df_emg <- datasets[[5]]
+#testing_df_emg <- datasets[[6]]
+
+
+#genotype_plant_train      <- as.integer(genotype_lookup[as.character(training_df$genotype)])
+#genotype_plant_test       <- as.integer(genotype_lookup[as.character(testing_df$genotype)])
+#genotype_plant_train_rep  <- as.integer(genotype_lookup[as.character(training_df_rep$genotype)])
+#genotype_plant_test_rep   <- as.integer(genotype_lookup[as.character(testing_df_rep$genotype)])
+#genotype_plant_train_emg  <- as.integer(genotype_lookup[as.character(training_df_emg$genotype)])
+#genotype_plant_test_emg   <- as.integer(genotype_lookup[as.character(testing_df_emg$genotype)])
+
+
+#training_df$NewSiteCode <- as.character(training_df$NewSiteCode)
+#training_df$NewSiteCode[is.na(training_df$NewSiteCode)] <- "Unknown"
+#training_df$NewSiteCode <- as.factor(training_df$NewSiteCode) 
+
+#training_df_rep$NewSiteCode <- as.character(training_df_rep$NewSiteCode)
+#training_df_rep$NewSiteCode[is.na(training_df_rep$NewSiteCode)] <- "Unknown"
+#training_df_rep$NewSiteCode <- as.factor(training_df_rep$NewSiteCode)
+
+#training_df_emg$NewSiteCode <- as.character(training_df_emg$NewSiteCode)
+#training_df_emg$NewSiteCode[is.na(training_df_emg$NewSiteCode)] <- "Unknown"
+#training_df_emg$NewSiteCode <- as.factor(training_df_emg$NewSiteCode)
+
+#valid_genotypes <- rownames(K_common_garden)
+#genotype_lookup <- setNames(seq_along(valid_genotypes), valid_genotypes)
+
+# Filter df to only rows with genotypes in K
+#training_df <- training_df %>% filter(genotype %in% valid_genotypes)
+
+#training_df_rep <- training_df_rep %>% filter(genotype %in% valid_genotypes)
+
+#training_df_emg <- training_df_emg %>% filter(genotype %in% valid_genotypes)
+
+#testing_df <- testing_df %>% filter(genotype %in% valid_genotypes)
+#testing_df_rep <- testing_df_rep %>% filter(genotype %in% valid_genotypes)
+
+#testing_df_emg <- testing_df_emg %>% filter(genotype %in% valid_genotypes)
+
+#genotype_plant_train <- as.integer(genotype_lookup[as.character(training_df$genotype)])
+
+#genotype_plant_test <- as.integer(genotype_lookup[as.character(testing_df$genotype)])
+
+#genotype_plant_train_rep <- as.integer(genotype_lookup[as.character(training_df_rep$genotype)])
+
+#genotype_plant_test_rep <- as.integer(genotype_lookup[as.character(testing_df_rep$genotype)])
+
+#genotype_plant_train_emg <- as.integer(genotype_lookup[as.character(training_df_emg$genotype)])
+
+#genotype_plant_test_emg <- as.integer(genotype_lookup[as.character(testing_df_emg$genotype)])
 
