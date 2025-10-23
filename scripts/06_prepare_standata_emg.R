@@ -23,7 +23,7 @@ stan_data_emg_full <- list(
   
   # genotype info
   n_g = length(all_genotypes),   # J_genotype_all
-  K = K_all,
+  K = K_all, ## need to adjust so that it is only the genotypes actually used 
   
   # plot and site-year
   n_plot = max(training_df_emg$plot_id),

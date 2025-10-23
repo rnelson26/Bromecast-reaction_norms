@@ -1,6 +1,6 @@
 ################# Bromecast: 01.Prepare Data ##########################
 ############# created 3-25-25 ######################
-############# Last modified: 10-22-25 ##########################
+############# Last modified: 10-23-25 ##########################
 ######## Prepares all data for model fitting ################################
 ##add source for soils and merge data 
 
@@ -90,7 +90,7 @@ data <- data %>%
 
 ####### Prepare data for model ########
 K_all ## updated kinship matrix
-genotype_index_new ## list of synthetic genotype names for satellite sites, should I split by site instead of site year 
+genotype_index_new ## list of synthetic genotype names for satellite sites
 genotype_index_all ## all the genotypes in K_all
 
 genotype_index_new$site <- gsub(" [0-9]{4}$", "", genotype_index_new$site)
@@ -119,12 +119,17 @@ data <- data %>%
   dplyr::select(-genotype_map) %>%
   mutate(genotype = as.factor(genotype))  
 
-
- data %>%
+## check for NAs in genotype 
+ test_list <- data %>%
   group_by(site) %>%
   summarise(genotypes = paste(unique(genotype), collapse = ", ")) %>%
   arrange(site)
-
+ 
+ ### assign PMR Pine the same genotype as PMR Brome
+ data$genotype[data$site == "PMR- Pine" & is.na(data$genotype)] <- "G226"
+ 
+## check assignments 
+ data %>% select(site, genotype, Type) %>% filter(Type == "Satellite") %>% distinct()
 
 ### Genotypes info ##########
 
@@ -196,6 +201,7 @@ data <- data %>%
 data$Fecundity <- as.integer(data$Fecundity)
 
 
+
 df <- data %>%
   dplyr::filter(Emerged == "Y", Reproduced == "Y") %>%
   mutate(
@@ -203,17 +209,6 @@ df <- data %>%
     site_year_numeric = as.numeric(as.factor(site_year)),
     year_numeric = as.numeric(as.factor(year)) - 1
   ) %>%
-  left_join(assigned_genotypes %>% 
-              dplyr::select(site, genotype_assigned = genotype, 
-                            NewSiteCode, SeedSource, sample.id), 
-            by = "site") %>%
-  # Replace NA genotypes from training_data with those from assigned_genotypes
-  mutate(
-    genotype = ifelse(is.na(genotype), genotype_assigned, genotype)  # Ensure type consistency
-  ) %>%
-  dplyr::select(-genotype_assigned) %>%  # Remove temporary column
-  # Join with kinshipIDs using the newly assigned genotype
-  left_join(kinshipIDs, by = c("genotype", "NewSiteCode")) %>%
   dplyr::filter(!is.na(Fecundity)) %>%
   dplyr::filter(!is.na(genotype)) %>%
   dplyr::filter(!is.na(neighbors)) %>%
@@ -222,15 +217,7 @@ df <- data %>%
   dplyr::filter(!is.na(shrub)) %>%
   dplyr::filter(Fecundity > 0) ## compare to flagged column, hopefully any zeros should be flagged 
 
-## scale competition variables
-df <- df %>%
-  mutate(
-    neighbors.s = scale(neighbors)[,1],
-    perennial.s = scale(perennial)[,1],
-    shrub.s = scale(shrub)[,1],
-    annual.s = scale(annual)[,1],
-  )
-
+## need to make sure genotypes are somehow linked to kinship id
 
 df_rep <- data %>%
   dplyr::filter(Emerged %in% c("Y")) %>%  ## comment out if you don't reproduced to be conditional on Emerged 
@@ -240,16 +227,6 @@ df_rep <- data %>%
     site_year_numeric = as.numeric(as.factor(site_year)),
     year_numeric = as.numeric(as.factor(year)) - 1
   ) %>%
-  left_join(assigned_genotypes %>% 
-              dplyr::select(site, genotype_assigned = genotype, 
-                            NewSiteCode, SeedSource, sample.id), 
-            by = "site") %>%
-  mutate(
-    genotype = ifelse(is.na(genotype), genotype_assigned, genotype)  # Ensure type consistency
-  ) %>%
-  dplyr::select(-genotype_assigned) %>%  # Remove temporary column
-  # Join with kinshipIDs using the newly assigned genotype
-  left_join(kinshipIDs, by = c("genotype", "NewSiteCode")) %>%
   dplyr::filter(!is.na(genotype)) %>%
   dplyr::filter(!is.na(neighbors)) %>%
   dplyr::filter(!is.na(annual)) %>%
@@ -263,16 +240,6 @@ df_emg <- data %>%
     site_year_numeric = as.numeric(as.factor(site_year)),
     year_numeric = as.numeric(as.factor(year)) - 1
   ) %>%
-  left_join(assigned_genotypes %>% 
-              dplyr::select(site, genotype_assigned = genotype, 
-                            NewSiteCode, SeedSource, sample.id), 
-            by = "site") %>%
-  mutate(
-    genotype = ifelse(is.na(genotype), genotype_assigned, genotype)  # Ensure type consistency
-  ) %>%
-  dplyr::select(-genotype_assigned) %>%  # Remove temporary column
-  # Join with kinshipIDs using the newly assigned genotype
-  left_join(kinshipIDs, by = c("genotype", "NewSiteCode")) %>%
   dplyr::filter(!is.na(genotype)) %>%
   dplyr::filter(!is.na(neighbors)) %>%
   dplyr::filter(!is.na(annual)) %>%
@@ -305,14 +272,14 @@ df_emg <- df_emg %>%
   )
 
 
-df <- df %>%
-  filter(!is.na(genotype)) 
+#df <- df %>%
+ # filter(!is.na(genotype)) 
 
-df_rep <- df_rep %>%
-  filter(!is.na(genotype))
+#df_rep <- df_rep %>%
+ # filter(!is.na(genotype))
 
-df_emg <- df_emg %>%
-  filter(!is.na(genotype))
+#df_emg <- df_emg %>%
+ # filter(!is.na(genotype))
 
 
 #valid_genotypes <- rownames(K_common_garden)
@@ -323,7 +290,6 @@ df_emg <- df_emg %>%
 ### reassign NAs to zero in emerged
 df_emg$Reproduced <- ifelse(df_emg$Emerged == "N", "N", df_emg$Reproduced)
 df_emg$Fecundity <- ifelse(df_emg$Emerged == "N", 0L, df_emg$Fecundity)
-
 df_emg$Fecundity <- ifelse(df_emg$Reproduced == "N", 0L, df_emg$Fecundity)
 
 
@@ -559,171 +525,6 @@ e <-
   c()
 
 
-##### Indices ########
-all_df <- dplyr::bind_rows(
-  training_df_emg %>% dplyr::mutate(source = "train"),
-  testing_df_emg %>% dplyr::mutate(source = "test")
-) %>%
-  dplyr::mutate(
-    site_year = as.character(site_year),
-    site      = as.character(site),
-    genotype  = as.character(genotype)
-  )
-
-# Generate lookup indices
-all_site_years <- sort(unique(all_df$site_year))
-all_sites      <- sort(unique(all_df$site))
-all_genotypes  <- sort(unique(all_df$genotype))
-
-site_year_index <- setNames(seq_along(all_site_years), all_site_years)
-site_index      <- setNames(seq_along(all_sites), all_sites)
-genotype_index  <- setNames(seq_along(all_genotypes), all_genotypes)
-
-assign_indices <- function(df) {
-  df %>%
-    dplyr::mutate(
-      site_year_id = as.integer(site_year_index[as.character(site_year)]),
-      site_id      = as.integer(site_index[as.character(site)]),
-      genotype_id  = as.integer(genotype_index[as.character(genotype)])
-    )
-}
-
-# Apply to all datasets
-training_df     <- assign_indices(training_df)
-testing_df      <- assign_indices(testing_df)
-training_df_emg <- assign_indices(training_df_emg)
-training_df_rep <- assign_indices(training_df_rep)
-testing_df_emg  <- assign_indices(testing_df_emg)
-testing_df_rep  <- assign_indices(testing_df_rep)
-
-# Common garden plots
-cg_plots <- sort(unique(training_df$plot[training_df$Type == "Common_Garden"]))
-plot_index_map <- setNames(seq_along(cg_plots), cg_plots)
-
-assign_plot_index <- function(df) {
-  df %>%
-    dplyr::mutate(
-      plot_id = ifelse(Type == "Common_Garden",
-                       as.integer(plot_index_map[as.character(plot)]),
-                       0L)
-    )
-}
-
-training_df     <- assign_plot_index(training_df)
-testing_df      <- assign_plot_index(testing_df)
-training_df_emg <- assign_plot_index(training_df_emg)
-training_df_rep <- assign_plot_index(training_df_rep)
-testing_df_emg  <- assign_plot_index(testing_df_emg)
-testing_df_rep  <- assign_plot_index(testing_df_rep)
-
-# Sequential plant IDs
-training_df$plant_id     <- seq_len(nrow(training_df))
-testing_df$plant_id      <- seq_len(nrow(testing_df))
-training_df_emg$plant_id <- seq_len(nrow(training_df_emg))
-training_df_rep$plant_id <- seq_len(nrow(training_df_rep))
-testing_df_emg$plant_id  <- seq_len(nrow(testing_df_emg))
-testing_df_rep$plant_id  <- seq_len(nrow(testing_df_rep))
-
-# Checks
-check_indices <- function(df, name) {
-  if (any(is.na(df$site_year_id))) stop(name, ": missing site_year_id")
-  if (any(is.na(df$site_id)))      stop(name, ": missing site_id")
-  if (any(is.na(df$genotype_id)))  stop(name, ": missing genotype_id")
-  if (any(is.na(df$plot_id)))      stop(name, ": missing plot_id")
-}
-
-check_indices(training_df, "training_df")
-check_indices(testing_df, "testing_df")
-check_indices(training_df_emg, "training_df_emg")
-check_indices(testing_df_emg, "testing_df_emg")
-check_indices(training_df_rep, "training_df_rep")
-check_indices(testing_df_rep, "testing_df_rep")
-##### Indices ########
-
-# Ensure site, site_year, genotype are character
-for(df in list(training_df_emg, testing_df_emg,
-               training_df_rep, testing_df_rep,
-               training_df, testing_df)) {
-  df$site_year <- as.character(df$site_year)
-  df$site      <- as.character(df$site)
-  df$genotype  <- as.character(df$genotype)
-}
-
-# 1. Site-year IDs: training first, then testing
-training_site_years <- sort(unique(training_df$site_year))
-testing_site_years  <- sort(unique(testing_df$site_year))
-
-site_year_index_train <- setNames(seq_along(training_site_years), training_site_years)
-site_year_index_test  <- setNames(seq_along(testing_site_years) + length(training_site_years),
-                                  testing_site_years)
-
-assign_site_year_id <- function(df, dataset_type) {
-  if(dataset_type == "train") {
-    df %>% mutate(site_year_id = as.integer(site_year_index_train[site_year]))
-  } else {
-    df %>% mutate(site_year_id = as.integer(site_year_index_test[site_year]))
-  }
-}
-
-# 2. Sites: global across all datasets
-all_sites <- sort(unique(c(training_df$site, testing_df$site)))
-site_index <- setNames(seq_along(all_sites), all_sites)
-assign_site_id <- function(df) {
-  df %>% mutate(site_id = as.integer(site_index[site]))
-}
-
-# 3. Genotypes: global across all datasets
-all_genotypes <- sort(unique(c(training_df$genotype, testing_df$genotype)))
-genotype_index <- setNames(seq_along(all_genotypes), all_genotypes)
-assign_genotype_id <- function(df) {
-  df %>% mutate(genotype_id = as.integer(genotype_index[genotype]))
-}
-
-# 4. Apply to all datasets
-training_df     <- training_df %>% assign_site_year_id("train") %>% assign_site_id() %>% assign_genotype_id()
-testing_df      <- testing_df %>% assign_site_year_id("test")  %>% assign_site_id() %>% assign_genotype_id()
-training_df_emg <- training_df_emg %>% assign_site_year_id("train") %>% assign_site_id() %>% assign_genotype_id()
-testing_df_emg  <- testing_df_emg %>% assign_site_year_id("test")  %>% assign_site_id() %>% assign_genotype_id()
-training_df_rep <- training_df_rep %>% assign_site_year_id("train") %>% assign_site_id() %>% assign_genotype_id()
-testing_df_rep  <- testing_df_rep %>% assign_site_year_id("test")  %>% assign_site_id() %>% assign_genotype_id()
-
-# 5. Common garden plots
-cg_plots <- sort(unique(training_df$plot[training_df$Type == "Common_Garden"]))
-plot_index_map <- setNames(seq_along(cg_plots), cg_plots)
-assign_plot_index <- function(df) {
-  df %>% mutate(plot_id = ifelse(Type == "Common_Garden",
-                                 as.integer(plot_index_map[plot]),
-                                 0L))
-}
-training_df     <- assign_plot_index(training_df)
-testing_df      <- assign_plot_index(testing_df)
-training_df_emg <- assign_plot_index(training_df_emg)
-testing_df_emg  <- assign_plot_index(testing_df_emg)
-training_df_rep <- assign_plot_index(training_df_rep)
-testing_df_rep  <- assign_plot_index(testing_df_rep)
-
-# 6. Sequential plant IDs
-for(df_name in c("training_df", "testing_df",
-                 "training_df_emg", "testing_df_emg",
-                 "training_df_rep", "testing_df_rep")) {
-  df <- get(df_name)
-  df$plant_id <- seq_len(nrow(df))
-  assign(df_name, df)
-}
-
-# 7. Checks
-check_indices <- function(df, name) {
-  if (any(is.na(df$site_year_id))) stop(name, ": missing site_year_id")
-  if (any(is.na(df$site_id)))      stop(name, ": missing site_id")
-  if (any(is.na(df$genotype_id)))  stop(name, ": missing genotype_id")
-  if (any(is.na(df$plot_id)))      stop(name, ": missing plot_id")
-}
-
-for(df_name in c("training_df", "testing_df",
-                 "training_df_emg", "testing_df_emg",
-                 "training_df_rep", "testing_df_rep")) {
-  check_indices(get(df_name), df_name)
-}
 
 ######## binary variables ###########
 training_df_emg$r_train <- ifelse(training_df_emg$Reproduced == "Y", 1L, 0L)
@@ -734,6 +535,84 @@ testing_df_emg$e_test <- ifelse(testing_df_emg$Emerged == "Y", 1L, 0L)
 
 training_df_rep$r_train <- ifelse(training_df_rep$Reproduced == "Y", 1L, 0L)
 testing_df_rep$r_test <- ifelse(testing_df_rep$Reproduced == "Y", 1L, 0L)
+
+####### Indices ############
+
+train_site_years <- sort(unique(training_df_emg$site_year))
+test_site_years  <- sort(unique(testing_df_emg$site_year))
+
+site_year_index_train <- setNames(seq_along(train_site_years), train_site_years)
+site_year_index_test  <- setNames(seq_along(test_site_years) + length(train_site_years), test_site_years)
+
+training_df$site_year_id     <- site_year_index_train[training_df$site_year]
+training_df_emg$site_year_id <- site_year_index_train[training_df_emg$site_year]
+training_df_rep$site_year_id <- site_year_index_train[training_df_rep$site_year]
+
+testing_df$site_year_id      <- site_year_index_test[testing_df$site_year]
+testing_df_emg$site_year_id  <- site_year_index_test[testing_df_emg$site_year]
+testing_df_rep$site_year_id  <- site_year_index_test[testing_df_rep$site_year]
+
+
+all_sites     <- sort(unique(c(training_df_emg$site, testing_df_emg$site)))
+all_genotypes <- sort(unique(c(training_df_emg$genotype, testing_df_emg$genotype)))
+
+site_index     <- setNames(seq_along(all_sites), all_sites)
+genotype_index <- setNames(seq_along(all_genotypes), all_genotypes)
+
+assign_site_genotype <- function(df) {
+  df %>% mutate(
+    site_id     = as.integer(site_index[as.character(site)]),
+    genotype_id = as.integer(genotype_index[as.character(genotype)])
+  )
+}
+
+training_df     <- assign_site_genotype(training_df)
+training_df_emg <- assign_site_genotype(training_df_emg)
+training_df_rep <- assign_site_genotype(training_df_rep)
+testing_df      <- assign_site_genotype(testing_df)
+testing_df_emg  <- assign_site_genotype(testing_df_emg)
+testing_df_rep  <- assign_site_genotype(testing_df_rep)
+
+
+cg_plots <- sort(unique(training_df_emg$plot[training_df_emg$Type == "Common_Garden"]))
+plot_index_map <- setNames(seq_along(cg_plots), cg_plots)
+
+assign_plot_index <- function(df) {
+  df %>% mutate(
+    plot_id = ifelse(Type == "Common_Garden",
+                     as.integer(plot_index_map[as.character(plot)]),
+                     0L)
+  )
+}
+
+training_df     <- assign_plot_index(training_df)
+training_df_emg <- assign_plot_index(training_df_emg)
+training_df_rep <- assign_plot_index(training_df_rep)
+testing_df      <- assign_plot_index(testing_df)
+testing_df_emg  <- assign_plot_index(testing_df_emg)
+testing_df_rep  <- assign_plot_index(testing_df_rep)
+
+
+training_df$plant_id     <- seq_len(nrow(training_df))
+training_df_emg$plant_id <- seq_len(nrow(training_df_emg))
+training_df_rep$plant_id <- seq_len(nrow(training_df_rep))
+testing_df$plant_id      <- seq_len(nrow(testing_df))
+testing_df_emg$plant_id  <- seq_len(nrow(testing_df_emg))
+testing_df_rep$plant_id  <- seq_len(nrow(testing_df_rep))
+
+check_indices <- function(df, name) {
+  if (any(is.na(df$site_year_id))) stop(name, ": missing site_year_id")
+  if (any(is.na(df$site_id)))      stop(name, ": missing site_id")
+  if (any(is.na(df$genotype_id)))  stop(name, ": missing genotype_id")
+  if (any(is.na(df$plot_id)))      stop(name, ": missing plot_id")
+}
+
+check_indices(training_df, "training_df")
+check_indices(training_df_emg, "training_df_emg")
+check_indices(training_df_rep, "training_df_rep")
+check_indices(testing_df, "testing_df")
+check_indices(testing_df_emg, "testing_df_emg")
+check_indices(testing_df_rep, "testing_df_rep")
 
 
 ### older code
