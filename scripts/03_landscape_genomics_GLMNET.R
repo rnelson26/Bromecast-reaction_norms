@@ -6,8 +6,24 @@
 ############ created 8-19-25 #############
 ############ last modified 10-17-25 ##########################
 
+### use row and column names that correspond to actual genotypes in kinship matrix
+
+## row.names  <- (c") and colnames
+
+## at end of landscape genomics code go ahead and assign row vs column and then remove seed source sites 
 
 ## throughout the code "SNPS" refers to each individual genotype
+
+## then input a K where the seed source sites not common garden are filtered out 
+
+## keeps <- m(c, a)
+
+#mat <- matrix(1:16, nrow = 4, ncol = 4)
+#mat
+#row.names(mat) <- c("a", "b", "c", "d")
+#colnames(mat) <- c("a", "b", "c", "d")
+#keeps <- c("a", "b")
+#mat[keeps, keeps ]
 
 rm(list = ls())
 
