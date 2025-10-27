@@ -20,8 +20,8 @@ stan_data_fec_full <- list(
   Lambda_soil = Lambda_soil,
   
   # genotype info
-  n_g = nrow(K_all),
-  K = K_all,
+  n_g = 121,   # str(K_all_filtered)
+  K = K_all_filtered, 
   
   # plot and site-year indices
   n_plot = max(training_df$plot_id),

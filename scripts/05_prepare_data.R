@@ -1,8 +1,8 @@
 ################# Bromecast: 01.Prepare Data ##########################
 ############# created 3-25-25 ######################
-############# Last modified: 10-23-25 ##########################
+############# Last modified: 10-27-25 ##########################
 ######## Prepares all data for model fitting ################################
-##add source for soils and merge data 
+
 
 source("scripts/03_landscape_genomics_GLMNET.R")
 source("scripts/04_setup.R")
@@ -89,7 +89,7 @@ data <- data %>%
 
 
 ####### Prepare data for model ########
-K_all ## updated kinship matrix
+K_all_filtered ## updated kinship matrix
 genotype_index_new ## list of synthetic genotype names for satellite sites
 genotype_index_all ## all the genotypes in K_all
 
@@ -538,25 +538,40 @@ testing_df_rep$r_test <- ifelse(testing_df_rep$Reproduced == "Y", 1L, 0L)
 
 ####### Indices ############
 
+####### 0. Filter genotypes to match kinship ########
+valid_genotypes <- rownames(K_all_filtered)
+
+filter_genotypes <- function(df) {
+  df %>% filter(as.character(genotype) %in% valid_genotypes)
+}
+
+training_df     <- filter_genotypes(training_df)
+training_df_emg <- filter_genotypes(training_df_emg)
+training_df_rep <- filter_genotypes(training_df_rep)
+testing_df      <- filter_genotypes(testing_df)
+testing_df_emg  <- filter_genotypes(testing_df_emg)
+testing_df_rep  <- filter_genotypes(testing_df_rep)
+
+####### 1. Site-year indices ########
 train_site_years <- sort(unique(training_df_emg$site_year))
 test_site_years  <- sort(unique(testing_df_emg$site_year))
 
 site_year_index_train <- setNames(seq_along(train_site_years), train_site_years)
 site_year_index_test  <- setNames(seq_along(test_site_years) + length(train_site_years), test_site_years)
 
-training_df$site_year_id     <- site_year_index_train[training_df$site_year]
-training_df_emg$site_year_id <- site_year_index_train[training_df_emg$site_year]
-training_df_rep$site_year_id <- site_year_index_train[training_df_rep$site_year]
+training_df$site_year_id     <- site_year_index_train[as.character(training_df$site_year)]
+training_df_emg$site_year_id <- site_year_index_train[as.character(training_df_emg$site_year)]
+training_df_rep$site_year_id <- site_year_index_train[as.character(training_df_rep$site_year)]
 
-testing_df$site_year_id      <- site_year_index_test[testing_df$site_year]
-testing_df_emg$site_year_id  <- site_year_index_test[testing_df_emg$site_year]
-testing_df_rep$site_year_id  <- site_year_index_test[testing_df_rep$site_year]
+testing_df$site_year_id      <- site_year_index_test[as.character(testing_df$site_year)]
+testing_df_emg$site_year_id  <- site_year_index_test[as.character(testing_df_emg$site_year)]
+testing_df_rep$site_year_id  <- site_year_index_test[as.character(testing_df_rep$site_year)]
 
+####### 2. Sites and genotype indices ########
+all_sites <- sort(unique(c(training_df_emg$site, testing_df_emg$site)))
+site_index <- setNames(seq_along(all_sites), all_sites)
 
-all_sites     <- sort(unique(c(training_df_emg$site, testing_df_emg$site)))
-all_genotypes <- sort(unique(c(training_df_emg$genotype, testing_df_emg$genotype)))
-
-site_index     <- setNames(seq_along(all_sites), all_sites)
+all_genotypes <- sort(valid_genotypes)  # only keep valid genotypes
 genotype_index <- setNames(seq_along(all_genotypes), all_genotypes)
 
 assign_site_genotype <- function(df) {
@@ -573,7 +588,7 @@ testing_df      <- assign_site_genotype(testing_df)
 testing_df_emg  <- assign_site_genotype(testing_df_emg)
 testing_df_rep  <- assign_site_genotype(testing_df_rep)
 
-
+####### 3. Plot indices ########
 cg_plots <- sort(unique(training_df_emg$plot[training_df_emg$Type == "Common_Garden"]))
 plot_index_map <- setNames(seq_along(cg_plots), cg_plots)
 
@@ -592,7 +607,7 @@ testing_df      <- assign_plot_index(testing_df)
 testing_df_emg  <- assign_plot_index(testing_df_emg)
 testing_df_rep  <- assign_plot_index(testing_df_rep)
 
-
+####### 4. Plant IDs ########
 training_df$plant_id     <- seq_len(nrow(training_df))
 training_df_emg$plant_id <- seq_len(nrow(training_df_emg))
 training_df_rep$plant_id <- seq_len(nrow(training_df_rep))
@@ -600,6 +615,7 @@ testing_df$plant_id      <- seq_len(nrow(testing_df))
 testing_df_emg$plant_id  <- seq_len(nrow(testing_df_emg))
 testing_df_rep$plant_id  <- seq_len(nrow(testing_df_rep))
 
+####### 5. Integrity check ########
 check_indices <- function(df, name) {
   if (any(is.na(df$site_year_id))) stop(name, ": missing site_year_id")
   if (any(is.na(df$site_id)))      stop(name, ": missing site_id")
@@ -607,12 +623,12 @@ check_indices <- function(df, name) {
   if (any(is.na(df$plot_id)))      stop(name, ": missing plot_id")
 }
 
-check_indices(training_df, "training_df")
-check_indices(training_df_emg, "training_df_emg")
-check_indices(training_df_rep, "training_df_rep")
-check_indices(testing_df, "testing_df")
-check_indices(testing_df_emg, "testing_df_emg")
-check_indices(testing_df_rep, "testing_df_rep")
+for(df_name in c("training_df","training_df_emg","training_df_rep",
+                 "testing_df","testing_df_emg","testing_df_rep")) {
+  check_indices(get(df_name), df_name)
+}
+
+message("✅ All indices correctly assigned and aligned with filtered kinship matrix.")
 
 
 ### older code

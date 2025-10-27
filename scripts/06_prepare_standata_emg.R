@@ -22,12 +22,12 @@ stan_data_emg_full <- list(
   Lambda_soil = Lambda_soil_emg,
   
   # genotype info
-  n_g = length(all_genotypes),   # J_genotype_all
-  K = K_all, ## need to adjust so that it is only the genotypes actually used 
+  n_g = 121,   # str(K_all_filtered)
+  K = K_all_filtered, ## need to adjust so that it is only the genotypes actually used 
   
   # plot and site-year
   n_plot = max(training_df_emg$plot_id),
-  n_site_year = length(all_site_years),
+  n_site_year = max(c(training_df_emg$site_year_id, testing_df_emg$site_year_id)),
   
   # training data
   n_train = nrow(training_df_emg),

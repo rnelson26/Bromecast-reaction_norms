@@ -4,15 +4,13 @@
 ######## Create K and assign genotypes ##########
 ######## code by Justin Van Ee and Becca Nelson ###############
 ############ created 8-19-25 #############
-############ last modified 10-17-25 ##########################
+############ last modified 10-27-25 ##########################
 
 ### use row and column names that correspond to actual genotypes in kinship matrix
 
 ## row.names  <- (c") and colnames
 
-## at end of landscape genomics code go ahead and assign row vs column and then remove seed source sites 
-
-## throughout the code "SNPS" refers to each individual genotype
+## at end of landscape genomics code go ahead and assign row vs column and then remove seed source sites
 
 ## then input a K where the seed source sites not common garden are filtered out 
 
@@ -24,6 +22,9 @@
 #colnames(mat) <- c("a", "b", "c", "d")
 #keeps <- c("a", "b")
 #mat[keeps, keeps ]
+
+
+## throughout the code "SNPS" refers to each individual genotype
 
 rm(list = ls())
 
@@ -164,28 +165,69 @@ rownames(PCs_new) <- new_ids
 rownames(PCs) <- as.character(clim_with_geno$genotype)
 PCs_all <- rbind(PCs, PCs_new)
 
-# Step 4: Compute pairwise Euclidean distances in PC space
+#  Compute pairwise Euclidean distances in PC space
 D_all <- as.matrix(dist(PCs_all, method = "euclidean"))
 
-# Step 5: Calculate kinship from original SNPs
-K <- SNPs[,-c(1:3)] %>% t() %>% kinship(method="IBS", MAF=0.10) %>% cov2cor()
-D <- dist(PCs, method = "euclidean", diag = TRUE, upper = TRUE) %>% as.matrix()
-log_kinship <- c(log(K))
-distance <- c(D)
+
+####  make sure kinship and PC row/col names correspond to genotype IDs,
+#### then remove seed-source genotypes not used in the common garden (keeps)
+
+# ---------- compute IBS kinship from SNPs (original genotypes in SNP matrix) ----------
+# The SNPs data frame has columns:
+#   1:3 metadata, and then one column per genotype in the SNPmatrix order.
+# We already constructed SNPs <- SNPs[, c(1:3, clim_with_geno$SNPmatrix_column)]
+
+# create genotype id vector matching the SNP columns (the same order as columns 4:ncol(SNPs))
+geno_ids_in_snp_cols <- as.character(clim_with_geno$genotype)    # order should match clim_with_geno$SNPmatrix_column
+stopifnot(length(geno_ids_in_snp_cols) == (ncol(SNPs) - 3))
+
+# compute kinship on SNP matrix (transpose so rows = individuals)
+K_raw <- SNPs[ , -c(1:3) ] %>% t() %>% kinship(method = "IBS", MAF = 0.10) %>% cov2cor()
+
+# assign row/col names so K_raw's dimensions are labelled by the genotype IDs
+rownames(K_raw) <- colnames(K_raw) <- geno_ids_in_snp_cols
+
+# ---------- assign rownames for the original PCs (observed genotypes) ----------
+# You already set rownames(PCs) <- as.character(clim_with_geno$genotype) earlier; ensure it matches:
+rownames(PCs) <- as.character(clim_with_geno$genotype)
+stopifnot(all(rownames(PCs) == rownames(K_raw)))  # sanity: same set & order for observed genotypes
+
+# ---------- fit exponential decay model in PC distance vs log(kinship) ----------
+D_obs <- as.matrix(dist(PCs, method = "euclidean"))    # pairwise distances among observed genotypes
+# ensure D_obs has same row/col names
+rownames(D_obs) <- colnames(D_obs) <- rownames(PCs)
+
+# vectorize and fit
+log_kinship <- c(log(K_raw))
+distance    <- c(D_obs)
 opt_range <- lm(log_kinship ~ distance + I(distance^2) - 1)
 
-# Step 6: Predict kinship for all genotypes including synthetic
+# ---------- predict kinship for all genotypes (observed + synthetic) ----------
+# Make sure PCs_all rownames are already set:
+# earlier you created PCs_new with rownames new_ids
+rownames(PCs)       <- as.character(clim_with_geno$genotype)  # observed
+rownames(PCs_new)   <- new_ids                               # synthetic
+PCs_all <- rbind(PCs, PCs_new)                               # all genotypes (observed then synthetic)
+# ensure PCs_all rownames are unique
+stopifnot(any(duplicated(rownames(PCs_all))) == FALSE)
+
+# compute pairwise distances for all genotypes
+D_all <- as.matrix(dist(PCs_all, method = "euclidean"))
+rownames(D_all) <- colnames(D_all) <- rownames(PCs_all)
+
+# predict kinship for every pair using the fitted relationship (distance -> kinship)
 K_new_raw <- matrix(
   exp(predict(opt_range, newdata = data.frame(distance = c(D_all)))),
   nrow = nrow(D_all),
-  ncol = ncol(D_all)
+  ncol = ncol(D_all),
+  dimnames = list(rownames(D_all), colnames(D_all))
 )
 
-# Step 7: Enforce positive definiteness
+# ---------- ensure positive definiteness and retain names ----------
 K_all <- Matrix::nearPD(K_new_raw)$mat %>% as.matrix()
-summary(c(abs(K_all - K_new_raw)))
+rownames(K_all) <- colnames(K_all) <- rownames(D_all)  # preserve genotype IDs
 
-# Step 8: Combine genotype index
+# ---------- create genotype index (observed + synthetic) ----------
 genotype_index_new <- tibble(
   site     = sat_clim$site,
   genotype = new_ids
@@ -194,40 +236,83 @@ genotype_index_new <- tibble(
 genotype_index_all <- bind_rows(
   tibble(
     site = clim_with_geno$NewSiteCode,
-    genotype = as.character(clim_with_geno$genotype)  
+    genotype = as.character(clim_with_geno$genotype)
   ),
   genotype_index_new
 )
 
+# ---------- identify genotypes to keep ----------
 
-# Optional checks
-stopifnot(all(rownames(PCs_all) == genotype_index_all$genotype))
-stopifnot(all(rownames(K_all) == genotype_index_all$genotype))
+### ----------- KEEP ONLY COMMON GARDEN + SYNTHETIC GENOTYPES -----------
 
-#### Step 9: Save for analysis
-# Save as .RData (can save multiple objects)
-save(K_all, genotype_index_all, PCs_all, file = "data/K_all_genotypes.RData")
-write.csv(K_all, "data/K_all_genotypes.csv", row.names = TRUE)
+keeps_common_garden <- c(
+  1, 2, 3, 5, 6, 7, 8, 9, 12, 13, 14, 16, 17, 18, 19, 20, 21, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+  33, 34, 35, 36, 37, 38, 39, 40, 42, 43, 44, 45, 46, 47, 48, 49, 51, 52, 53, 54, 55, 56, 57, 58,
+  59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 79, 81, 82, 83, 84,
+  86, 87, 88, 89, 90, 91, 92, 93, 95, 96, 97, 98, 99, 100, 102, 103, 104, 105, 150
+)
 
-# Plot kinship distributions
-K_off <- K[upper.tri(K)]
-Knew_off <- K_all[upper.tri(K_all)]
+# Convert to character so matches rownames in K_all (which are characters)
+keeps_common_garden <- as.character(keeps_common_garden)
+
+# Add synthetic genotype IDs (all the new ones generated for satellites)
+keeps_synthetic <- new_ids  #synthetic genotypes always start with "G"
+
+# Combine both
+keeps <- c(keeps_common_garden, keeps_synthetic)
+
+# Make sure the IDs actually exist in K_all
+keeps <- intersect(keeps, rownames(K_all))
+length(keeps)
+cat("Number of genotypes retained in filtered kinship matrix:", length(keeps), "\n")
+
+# ----------- Filter matrices and index objects -----------
+K_all_filtered <- K_all[keeps, keeps, drop = FALSE]
+PCs_all_filtered <- PCs_all[keeps, , drop = FALSE]
+
+genotype_index_all_filtered <- genotype_index_all %>%
+  filter(genotype %in% keeps) %>%
+  arrange(match(genotype, keeps))
+
+# Sanity checks
+stopifnot(all(rownames(K_all_filtered) == colnames(K_all_filtered)))
+stopifnot(all(rownames(K_all_filtered) == rownames(PCs_all_filtered)))
+stopifnot(all(rownames(K_all_filtered) == genotype_index_all_filtered$genotype))
+
+# ----------- Save filtered outputs -----------
+save(
+  K_all_filtered,
+  genotype_index_all_filtered,
+  PCs_all_filtered,
+  file = "data/K_all_genotypes_filtered_common_garden_plus_satellites.RData"
+)
+write.csv(K_all_filtered, "data/K_all_genotypes_filtered_common_garden_plus_satellites.csv", row.names = TRUE)
+
+cat("✅ Saved filtered kinship matrix and genotype index for common garden + synthetic genotypes.\n")
+
+
+
+
+
+
+
+# ---------- small plot to compare distributions (optional, keep your existing plot code if you like) ----------
+K_obs_off <- K_raw[upper.tri(K_raw)]
+Knew_off_filtered <- K_all_filtered[upper.tri(K_all_filtered)]
 
 df <- data.frame(
-  value = c(K_off, Knew_off),
-  Method = rep(c("IBS", "PC - Exponential Decay"),
-               times = c(length(K_off), length(Knew_off)))
+  value = c(K_obs_off, Knew_off_filtered),
+  Method = rep(c("IBS (observed)", "PC - Exponential Decay (filtered)"),
+               times = c(length(K_obs_off), length(Knew_off_filtered)))
 )
 
 ggplot(df, aes(x = value, fill = Method)) +
   geom_density(alpha = 0.5, position = "identity") +
   theme_bw() +
-  labs(
-    x = "Kinship",
-    y = "Density",
-    title = "Distribution of Kinship Coefficients"
-  ) +
-  theme(legend.position = "bottom")
+  labs(x = "Kinship", y = "Density", title = "Kinship distribution: observed vs predicted (filtered)")
+
+
+
 
 ########## Figures ####################
 ### geographic map
