@@ -32,16 +32,16 @@ stan_data_emg_full <- list(
   # training data
   n_train = nrow(training_df_emg),
   e_train = training_df_emg$e_train,
-  idx_plant_train = training_df_emg$plant_id,
-  idx_plant_train_site = training_df_emg$site_id,
-  genotype_plant_train = training_df_emg$genotype_id,
+  idx_plant_train = training_df_emg$plant_id, ### individual plant id within each site-year
+  idx_plant_train_site = training_df_emg$site_id, ### site id
+  genotype_plant_train = training_df_emg$genotype_id,## genotype id
   neighbors_train = training_df_emg$neighbors.s,
   annual_train = training_df_emg$annual.s,
   perennial_train = training_df_emg$perennial.s,
   shrub_train = training_df_emg$shrub.s,
-  plot_index_train = training_df_emg$plot_id,
+  plot_index_train = training_df_emg$plot_id, ## plot id 
   n_site_year_train = length(unique(training_df_emg$site_year_id)),
-  site_year_id_train = training_df_emg$site_year_id,
+  site_year_id_train = training_df_emg$site_year_id, ## site year id
   
   # testing data
   n_test = nrow(testing_df_emg),

@@ -46,7 +46,7 @@ stan_data_rep_full <- list(
   n_train = nrow(training_df_rep),
   r_train = training_df_rep$r_train,
   idx_plant_train = training_df_rep$plant_id,
-  idx_plant_train_site = training_df_rep$site_year_plant_id,
+  idx_plant_train_site = training_df_rep$plant_id,
   genotype_plant_train = training_df_rep$genotype_id,
   site_year_id_train = training_df_rep$site_year_id,
   plot_index_train = training_df_rep$plot_id,
@@ -59,7 +59,7 @@ stan_data_rep_full <- list(
   # training full (with emerged)
   n_train_full = nrow(training_df_emg),
   idx_plant_train_full = training_df_emg$plant_id,
-  idx_plant_train_site_full = training_df_emg$site_year_id,
+  idx_plant_train_site_full = training_df_emg$site_id,
   genotype_plant_train_full = training_df_emg$genotype_id,
   site_year_id_train_full = training_df_emg$site_year_id,
   plot_index_train_full = training_df_emg$plot_id,

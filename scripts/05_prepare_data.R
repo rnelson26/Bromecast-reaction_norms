@@ -3,6 +3,7 @@
 ############# Last modified: 10-27-25 ##########################
 ######## Prepares all data for model fitting ################################
 
+## check alignment of n_X
 
 source("scripts/03_landscape_genomics_GLMNET.R")
 source("scripts/04_setup.R")
@@ -129,7 +130,7 @@ data <- data %>%
  data$genotype[data$site == "PMR- Pine" & is.na(data$genotype)] <- "G226"
  
 ## check assignments 
- data %>% select(site, genotype, Type) %>% filter(Type == "Satellite") %>% distinct()
+ data %>% dplyr::select(site, genotype, Type) %>% filter(Type == "Satellite") %>% distinct()
 
 ### Genotypes info ##########
 
@@ -553,6 +554,8 @@ testing_df_emg  <- filter_genotypes(testing_df_emg)
 testing_df_rep  <- filter_genotypes(testing_df_rep)
 
 ####### 1. Site-year indices ########
+## each site-year has a numeric index associated with it:
+
 train_site_years <- sort(unique(training_df_emg$site_year))
 test_site_years  <- sort(unique(testing_df_emg$site_year))
 
@@ -568,6 +571,8 @@ testing_df_emg$site_year_id  <- site_year_index_test[as.character(testing_df_emg
 testing_df_rep$site_year_id  <- site_year_index_test[as.character(testing_df_rep$site_year)]
 
 ####### 2. Sites and genotype indices ########
+## each site and genotype has a unique index associated with it 
+
 all_sites <- sort(unique(c(training_df_emg$site, testing_df_emg$site)))
 site_index <- setNames(seq_along(all_sites), all_sites)
 
@@ -589,6 +594,8 @@ testing_df_emg  <- assign_site_genotype(testing_df_emg)
 testing_df_rep  <- assign_site_genotype(testing_df_rep)
 
 ####### 3. Plot indices ########
+## each common garden plot has a unique index, with satellite sites given a plot index of 0 because this only applies to common garden plots 
+
 cg_plots <- sort(unique(training_df_emg$plot[training_df_emg$Type == "Common_Garden"]))
 plot_index_map <- setNames(seq_along(cg_plots), cg_plots)
 
@@ -608,12 +615,23 @@ testing_df_emg  <- assign_plot_index(testing_df_emg)
 testing_df_rep  <- assign_plot_index(testing_df_rep)
 
 ####### 4. Plant IDs ########
-training_df$plant_id     <- seq_len(nrow(training_df))
-training_df_emg$plant_id <- seq_len(nrow(training_df_emg))
-training_df_rep$plant_id <- seq_len(nrow(training_df_rep))
-testing_df$plant_id      <- seq_len(nrow(testing_df))
-testing_df_emg$plant_id  <- seq_len(nrow(testing_df_emg))
-testing_df_rep$plant_id  <- seq_len(nrow(testing_df_rep))
+
+## assigns a unique plant identifer with each site-year
+
+assign_plant_id <- function(df) {
+  df %>%
+    group_by(site_year) %>%           # group by site-year
+    mutate(plant_id = row_number()) %>%  # assign sequential IDs within each site-year
+    ungroup()
+}
+
+training_df     <- assign_plant_id(training_df)
+testing_df      <- assign_plant_id(testing_df)
+training_df_rep <- assign_plant_id(training_df_rep)
+testing_df_rep  <- assign_plant_id(testing_df_rep)
+training_df_emg <- assign_plant_id(training_df_emg)
+testing_df_emg  <- assign_plant_id(testing_df_emg)
+
 
 ####### 5. Integrity check ########
 check_indices <- function(df, name) {
@@ -630,171 +648,5 @@ for(df_name in c("training_df","training_df_emg","training_df_rep",
 
 message("✅ All indices correctly assigned and aligned with filtered kinship matrix.")
 
-
-### older code
-
-#training_df$site_year <- factor(training_df$site_year)
-#testing_df$site_year <- factor(testing_df$site_year)
-
-#training_df_rep$site_year <- factor(training_df_rep$site_year)
-#testing_df_rep$site_year <- factor(testing_df_rep$site_year)
-
-#training_df_emg$site_year <- factor(training_df_emg$site_year)
-#testing_df_emg$site_year <- factor(testing_df_emg$site_year)
-
-# Create index for training site-years 
-#training_site_years <- sort(unique(training_df$site_year))
-#site_year_index_train <- data.frame(
- # site_year = training_site_years,
-#  idx = seq_along(training_site_years)  
-#)
-
-#training_site_years_rep <- sort(unique(training_df_rep$site_year))
-#site_year_index_train_rep <- data.frame(
-#  site_year = training_site_years_rep,
-#  idx = seq_along(training_site_years_rep)  
-#)
-
-#training_site_years_emg <- sort(unique(training_df_emg$site_year))
-#site_year_index_train_emg <- data.frame(
-#  site_year = training_site_years_emg,
-#  idx = seq_along(training_site_years_emg)  
-#)
-
-# Create index for testing site-years 
-#testing_site_years <- sort(unique(testing_df$site_year))
-#site_year_index_test <- data.frame(
- # site_year = testing_site_years,
-  #idx = seq_along(testing_site_years) + length(training_site_years)  # Start from 40
-#)
-
-#testing_site_years_rep <- sort(unique(testing_df_rep$site_year))
-#site_year_index_test_rep <- data.frame(
-#  site_year = testing_site_years_rep,
-#  idx = seq_along(testing_site_years_rep) + length(training_site_years_rep)  # Start from 40
-#)
-
-#testing_site_years_emg <- sort(unique(testing_df_emg$site_year))
-#site_year_index_test_emg <- data.frame(
- # site_year = testing_site_years_emg,
-  #idx = seq_along(testing_site_years_emg) + length(training_site_years_emg)  # Start from 40
-#)
-
-# Merge site-year indices into the original dataframes
-#training_df <- left_join(training_df, site_year_index_train, by = "site_year")
-#testing_df <- left_join(testing_df, site_year_index_test, by = "site_year")
-
-#training_df_rep <- left_join(training_df_rep, site_year_index_train_rep, by = "site_year")
-#testing_df_rep <- left_join(testing_df_rep, site_year_index_test_rep, by = "site_year")
-
-#training_df_emg <- left_join(training_df_emg, site_year_index_train_emg, by = "site_year")
-#testing_df_emg <- left_join(testing_df_emg, site_year_index_test_emg, by = "site_year")
-
-#### site level index for soil PCA
-#training_df$site <- factor(training_df$site)
-#testing_df$site <- factor(testing_df$site)
-
-#training_df_rep$site <- factor(training_df_rep$site)
-#testing_df_rep$site <- factor(testing_df_rep$site)
-
-#training_df_emg$site <- factor(training_df_emg$site)
-#testing_df_emg$site <- factor(testing_df_emg$site)
-
-## fecundity 
-#all_sites <- sort(unique(c(training_df$site, testing_df$site)))
-
-#site_index <- data.frame(
- # site = all_sites,
-  #idx_site = seq_along(all_sites)
-#)
-
-#training_df <- training_df %>% left_join(site_index, by = "site")
-#testing_df  <- testing_df %>% left_join(site_index, by = "site")
-
-### reproduced
-#all_sites_rep <- sort(unique(c(training_df_rep$site, testing_df_rep$site)))
-
-#site_index_rep <- data.frame(
- # site = all_sites_rep,
-  #idx_site = seq_along(all_sites_rep)
-#)
-
-#training_df_rep <- training_df_rep %>% left_join(site_index_rep, by = "site")
-#testing_df_rep  <- testing_df_rep %>% left_join(site_index_rep, by = "site")
-
-### Emerged
-#all_sites_emg <- sort(unique(c(training_df_emg$site, testing_df_emg$site)))
-
-#site_index_emg <- data.frame(
- # site = all_sites_emg,
-  #idx_site = seq_along(all_sites_emg)
-#)
-
-#training_df_emg <- training_df_emg %>% left_join(site_index_emg, by = "site")
-#testing_df_emg  <- testing_df_emg %>% left_join(site_index_emg, by = "site")
-
-### genotype indices
-## filter to only include valid genotypes
-#datasets <- list(training_df, testing_df,
- #                training_df_rep, testing_df_rep,
-  #               training_df_emg, testing_df_emg)
-
-#datasets <- lapply(datasets, function(df) {
- # df %>% filter(genotype %in% valid_genotypes)
-#})
-
-#training_df <- datasets[[1]]
-#testing_df  <- datasets[[2]]
-#training_df_rep <- datasets[[3]]
-#testing_df_rep <- datasets[[4]]
-#training_df_emg <- datasets[[5]]
-#testing_df_emg <- datasets[[6]]
-
-
-#genotype_plant_train      <- as.integer(genotype_lookup[as.character(training_df$genotype)])
-#genotype_plant_test       <- as.integer(genotype_lookup[as.character(testing_df$genotype)])
-#genotype_plant_train_rep  <- as.integer(genotype_lookup[as.character(training_df_rep$genotype)])
-#genotype_plant_test_rep   <- as.integer(genotype_lookup[as.character(testing_df_rep$genotype)])
-#genotype_plant_train_emg  <- as.integer(genotype_lookup[as.character(training_df_emg$genotype)])
-#genotype_plant_test_emg   <- as.integer(genotype_lookup[as.character(testing_df_emg$genotype)])
-
-
-#training_df$NewSiteCode <- as.character(training_df$NewSiteCode)
-#training_df$NewSiteCode[is.na(training_df$NewSiteCode)] <- "Unknown"
-#training_df$NewSiteCode <- as.factor(training_df$NewSiteCode) 
-
-#training_df_rep$NewSiteCode <- as.character(training_df_rep$NewSiteCode)
-#training_df_rep$NewSiteCode[is.na(training_df_rep$NewSiteCode)] <- "Unknown"
-#training_df_rep$NewSiteCode <- as.factor(training_df_rep$NewSiteCode)
-
-#training_df_emg$NewSiteCode <- as.character(training_df_emg$NewSiteCode)
-#training_df_emg$NewSiteCode[is.na(training_df_emg$NewSiteCode)] <- "Unknown"
-#training_df_emg$NewSiteCode <- as.factor(training_df_emg$NewSiteCode)
-
-#valid_genotypes <- rownames(K_common_garden)
-#genotype_lookup <- setNames(seq_along(valid_genotypes), valid_genotypes)
-
-# Filter df to only rows with genotypes in K
-#training_df <- training_df %>% filter(genotype %in% valid_genotypes)
-
-#training_df_rep <- training_df_rep %>% filter(genotype %in% valid_genotypes)
-
-#training_df_emg <- training_df_emg %>% filter(genotype %in% valid_genotypes)
-
-#testing_df <- testing_df %>% filter(genotype %in% valid_genotypes)
-#testing_df_rep <- testing_df_rep %>% filter(genotype %in% valid_genotypes)
-
-#testing_df_emg <- testing_df_emg %>% filter(genotype %in% valid_genotypes)
-
-#genotype_plant_train <- as.integer(genotype_lookup[as.character(training_df$genotype)])
-
-#genotype_plant_test <- as.integer(genotype_lookup[as.character(testing_df$genotype)])
-
-#genotype_plant_train_rep <- as.integer(genotype_lookup[as.character(training_df_rep$genotype)])
-
-#genotype_plant_test_rep <- as.integer(genotype_lookup[as.character(testing_df_rep$genotype)])
-
-#genotype_plant_train_emg <- as.integer(genotype_lookup[as.character(training_df_emg$genotype)])
-
-#genotype_plant_test_emg <- as.integer(genotype_lookup[as.character(testing_df_emg$genotype)])
+check <- data %>% filter(Type == "Satellite") %>% dplyr::select(site_year, genotype) %>% distinct()
 
