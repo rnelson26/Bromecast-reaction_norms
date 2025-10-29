@@ -105,6 +105,33 @@ run_model <- function(config) {
 }
 
 ######## 1. Run models in parallel on rstudio server ############
+# Define all models
+model_configs <- list(
+  # Emergence models
+  list(name = "emerged_full",    file = "binomial_glm_emerged_full.stan",       data = stan_data_emg_full),
+  list(name = "emerged_climate", file = "binomial_glm_emerged_climateonly.stan", data = stan_data_climate_only_emg),
+  list(name = "emerged_nogene",  file = "binomial_glm_emerged_nogene.stan",     data = stan_data_nogen_emg),
+  list(name = "emerged_nocomp",  file = "binomial_glm_emerged_nocomp.stan",     data = stan_data_nocomp_emg),
+  list(name = "emerged_nointer", file = "binomial_glm_emerged_nointer.stan",    data = stan_data_intra_emg),
+  list(name = "emerged_null",    file = "binomial_glm_emerged_null.stan",       data = stan_data_emg_full),
+  
+  # Reproduction models
+  list(name = "reproduced_full",    file = "binomial_glm_reproduced_full.stan",       data = stan_data_rep_full),
+  list(name = "reproduced_climate", file = "binomial_glm_reproduced_climateonly.stan", data = stan_data_climate_only_rep),
+  list(name = "reproduced_nogene",  file = "binomial_glm_reproduced_nogene.stan",     data = stan_data_nogen_rep),
+  list(name = "reproduced_nocomp",  file = "binomial_glm_reproduced_nocomp.stan",     data = stan_data_nocomp_rep),
+  list(name = "reproduced_nointer", file = "binomial_glm_reproduced_nointer.stan",    data = stan_data_intra_rep),
+  list(name = "reproduced_null",    file = "binomial_glm_reproduced_null.stan",       data = stan_data_rep_full),
+  
+  # Fecundity models
+  list(name = "fecundity_full",    file = "ztnb_glm_fecundity_full.stan",       data = stan_data_fec_full),
+  list(name = "fecundity_climate", file = "ztnb_glm_fecundity_climateonly.stan", data = stan_data_climate_only_fec),
+  list(name = "fecundity_nogene",  file = "ztnb_glm_fecundity_nogene.stan",     data = stan_data_nogen_fec),
+  list(name = "fecundity_nocomp",  file = "ztnb_glm_fecundity_nocomp.stan",     data = stan_data_nocomp_fec),
+  list(name = "fecundity_nointer", file = "ztnb_glm_fecundity_nointer.stan",    data = stan_data_intra_fec),
+  list(name = "fecundity_null",    file = "ztnb_glm_fecundity_null.stan",       data = stan_data_fec_full)
+)
+
 
 # Run in parallel on R studio server 
 library(future.apply)

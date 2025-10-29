@@ -110,11 +110,7 @@ for (l in 1:q_X_soil)
    beta_0 = zeta_0 * (cholesky_decompose(K) * beta_0_raw);  
    beta_0_centered = beta_0 - mean(beta_0);
    
-   for (l in 1:q_X_soil) {
-  beta_soil[, l] = mu_beta_soil[l] + cholesky_decompose(K) * (zeta_soil[l] * beta_soil_raw[, l]);
 }
-}
-
  //use same structure for genotype random intercepts, start normal 0,1 and then get decomposed here with K and square root of variance parameter 
 
 
@@ -143,7 +139,7 @@ u_zeta_soil ~ uniform(0, 1.57079632679);
     int idx_site = idx_plant_train_site[i];  
     int idx_genotype = genotype_plant_train[i];
     //separate a beta_soil[idx_genotype] with separate prior indentiical to beta for climate with prior defined similarly for beta_soil
-    real logit_p = alpha + dot_product(W[idx, ], beta[idx_genotype, ])  + dot_product(W_soil[idx_site, ], beta_soil[idx_genotype, ]) +
+    real logit_p = alpha + dot_product(W[idx, ], beta[idx_genotype, ])  + dot_product(W_soil[idx_site, ], mu_beta_soil) +
                    site_year_effect_train_scaled_centered[site_year_id_train[i]] + 
                    beta_neighbors * neighbors_train[i] +
                    beta_annual * annual_train[i] +
