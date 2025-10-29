@@ -5,9 +5,7 @@
 
 
 # Full reproduction Stan data
-
 stan_data_rep_full <- list(
-  # dimensions
   n_X = nrow(X_rep_SOS),
   n_X_soil = nrow(X_soil_rep),
   p_X = ncol(X_rep_SOS),
@@ -18,16 +16,12 @@ stan_data_rep_full <- list(
   X_soil = X_soil_rep,
   Lambda = Lambda_rep_SOS,
   Lambda_soil = Lambda_soil_rep,
+  n_g = 121,
+  K = K_all_filtered,
+  n_plot = max(training_df_rep$plot_index),
+  n_site_year = length(unique(c(training_df_rep$site_year, testing_df_rep$site_year))),
   
-  # genotype info
-  n_g = 121,   # str(K_all_filtered)
-  K = K_all_filtered, 
-  
-  # plot and site-year indices
-  n_plot = max(training_df_rep$plot_id),
-  n_site_year = max(c(training_df_rep$site_year_id, testing_df_rep$site_year_id)),
-  
-  # emergence info for posterior predictive
+  # Full emerged data for posterior checks
   n_X_full = nrow(X_emg_SOS),
   n_X_soil_full = nrow(X_soil_emg),
   p_X_full = ncol(X_emg_SOS),
@@ -38,112 +32,92 @@ stan_data_rep_full <- list(
   X_soil_full = X_soil_emg,
   Lambda_full = Lambda_emg_SOS,
   Lambda_soil_full = Lambda_soil_emg,
-  n_g_full = nrow(K_all),
-  n_plot_full = max(training_df_emg$plot_id),
-  n_site_year_full = max(c(training_df_emg$site_year_id, testing_df_emg$site_year_id)),
+  n_g_full = length(unique(genotype_plant_train_emg)),
+  n_plot_full = max(training_df_emg$plot_index),
+  n_site_year_full = length(unique(c(training_df_emg$site_year, testing_df_emg$site_year))),
   
-  # training data
+  # Training data
   n_train = nrow(training_df_rep),
   r_train = training_df_rep$r_train,
-  idx_plant_train = training_df_rep$plant_id,
-  idx_plant_train_site = training_df_rep$plant_id,
-  genotype_plant_train = training_df_rep$genotype_id,
-  site_year_id_train = training_df_rep$site_year_id,
-  plot_index_train = training_df_rep$plot_id,
+  idx_plant_train = idx_plant_train_rep,
+  idx_plant_train_site = idx_plant_train_site_rep,
+  genotype_plant_train = genotype_plant_train_rep,
   neighbors_train = training_df_rep$neighbors.s,
   annual_train = training_df_rep$annual.s,
   perennial_train = training_df_rep$perennial.s,
   shrub_train = training_df_rep$shrub.s,
-  n_site_year_train = length(unique(training_df_rep$site_year_id)),
+  plot_index_train = training_df_rep$plot_index,
+  n_site_year_train = length(unique(as.integer(as.factor(training_df_rep$site_year)))),
+  site_year_id_train = training_df_rep$idx,
   
-  # training full (with emerged)
+  # Training full (emerged)
   n_train_full = nrow(training_df_emg),
-  idx_plant_train_full = training_df_emg$plant_id,
-  idx_plant_train_site_full = training_df_emg$site_id,
-  genotype_plant_train_full = training_df_emg$genotype_id,
-  site_year_id_train_full = training_df_emg$site_year_id,
-  plot_index_train_full = training_df_emg$plot_id,
+  idx_plant_train_full = idx_plant_train_emg,
+  idx_plant_train_site_full = idx_plant_train_site_emg,
+  genotype_plant_train_full = genotype_plant_train_emg,
   neighbors_train_full = training_df_emg$neighbors.s,
   annual_train_full = training_df_emg$annual.s,
   perennial_train_full = training_df_emg$perennial.s,
   shrub_train_full = training_df_emg$shrub.s,
-  n_site_year_train_full = length(unique(training_df_emg$site_year_id)),
+  plot_index_train_full = training_df_emg$plot_index,
+  n_site_year_train_full = length(unique(as.integer(as.factor(training_df_emg$site_year)))),
+  site_year_id_train_full = training_df_emg$idx,
   
-  # testing data
+  # Testing data
   n_test = nrow(testing_df_rep),
-  idx_plant_test = testing_df_rep$plant_id,
-  idx_plant_test_site = testing_df_rep$site_id,
-  genotype_plant_test = testing_df_rep$genotype_id,
-  site_year_id_test = testing_df_rep$site_year_id,
-  plot_index_test = rep(0, nrow(testing_df_rep)),
+  idx_plant_test = idx_plant_test_rep,
+  idx_plant_test_site = idx_plant_test_site_rep,
+  genotype_plant_test = genotype_plant_test_rep,
   neighbors_test = testing_df_rep$neighbors.s,
   annual_test = testing_df_rep$annual.s,
   perennial_test = testing_df_rep$perennial.s,
   shrub_test = testing_df_rep$shrub.s,
-  n_site_year_test = length(unique(testing_df_rep$site_year_id)),
+  site_year_id_test = testing_df_rep$idx,
+  plot_index_test = rep(0, nrow(testing_df_rep)),
+  n_site_year_test = length(unique(as.integer(as.factor(testing_df_rep$site_year)))),
   
-  # testing full (with emerged)
+  # Testing full (emerged)
   n_test_full = nrow(testing_df_emg),
-  idx_plant_test_full = testing_df_emg$plant_id,
-  idx_plant_test_site_full = testing_df_emg$site_id,
-  genotype_plant_test_full = testing_df_emg$genotype_id,
-  site_year_id_test_full = testing_df_emg$site_year_id,
-  plot_index_test_full = rep(0, nrow(testing_df_emg)),
+  idx_plant_test_full = idx_plant_test_emg,
+  idx_plant_test_site_full = idx_plant_test_site_emg,
+  genotype_plant_test_full = genotype_plant_test_emg,
   neighbors_test_full = testing_df_emg$neighbors.s,
   annual_test_full = testing_df_emg$annual.s,
   perennial_test_full = testing_df_emg$perennial.s,
   shrub_test_full = testing_df_emg$shrub.s,
-  n_site_year_test_full = length(unique(testing_df_emg$site_year_id))
+  site_year_id_test_full = testing_df_emg$idx,
+  plot_index_test_full = rep(0, nrow(testing_df_emg)),
+  n_site_year_test_full = length(unique(as.integer(as.factor(testing_df_emg$site_year))))
 )
 
-#submodels
+# Submodels
 stan_data_nocomp_rep <- stan_data_rep_full
-stan_data_nocomp_rep[c(
-  "neighbors_train","neighbors_train_full","neighbors_test","neighbors_test_full",
-  "annual_train","annual_train_full","annual_test","annual_test_full",
-  "perennial_train","perennial_train_full","perennial_test","perennial_test_full",
-  "shrub_train","shrub_train_full","shrub_test","shrub_test_full"
-)] <- NULL
+stan_data_nocomp_rep[c("neighbors_train","neighbors_train_full",
+                       "neighbors_test","neighbors_test_full",
+                       "annual_train","annual_train_full",
+                       "annual_test","annual_test_full",
+                       "perennial_train","perennial_train_full",
+                       "perennial_test","perennial_test_full",
+                       "shrub_train","shrub_train_full",
+                       "shrub_test","shrub_test_full")] <- NULL
 
 stan_data_intra_rep <- stan_data_rep_full
-stan_data_intra_rep[c(
-  "annual_train","annual_train_full","annual_test","annual_test_full",
-  "perennial_train","perennial_train_full","perennial_test","perennial_test_full",
-  "shrub_train","shrub_train_full","shrub_test","shrub_test_full"
-)] <- NULL
+stan_data_intra_rep[c("annual_train","annual_train_full","annual_test","annual_test_full",
+                      "perennial_train","perennial_train_full","perennial_test","perennial_test_full",
+                      "shrub_train","shrub_train_full","shrub_test","shrub_test_full")] <- NULL
 
 stan_data_nogen_rep <- stan_data_rep_full
-stan_data_nogen_rep[c(
-  "n_g","K",
-  "genotype_plant_train","genotype_plant_train_full",
-  "genotype_plant_test","genotype_plant_test_full"
-)] <- NULL
+stan_data_nogen_rep[c("n_g","K","genotype_plant_train","genotype_plant_train_full",
+                      "genotype_plant_test","genotype_plant_test_full")] <- NULL
 
 stan_data_climate_only_rep <- stan_data_rep_full
-stan_data_climate_only_rep[c(
-  "n_g","K",
-  "genotype_plant_train","genotype_plant_train_full",
-  "genotype_plant_test","genotype_plant_test_full",
-  "neighbors_train","neighbors_train_full","neighbors_test","neighbors_test_full",
-  "annual_train","annual_train_full","annual_test","annual_test_full",
-  "perennial_train","perennial_train_full","perennial_test","perennial_test_full",
-  "shrub_train","shrub_train_full","shrub_test","shrub_test_full"
-)] <- NULL
-
-# checks
-cat("✅ Reproduction Stan data constructed\n")
-
-cat("Training plants:", stan_data_rep_full$n_train, 
-    "| Testing plants:", stan_data_rep_full$n_test, "\n")
-
-cat("Site-years (train/test/all):", 
-    stan_data_rep_full$n_site_year_train, "/", 
-    stan_data_rep_full$n_site_year_test, "/", 
-    stan_data_rep_full$n_site_year, "\n")
-
-cat("Full training (emerged) plants:", stan_data_rep_full$n_train_full, 
-    "| Full testing (emerged) plants:", stan_data_rep_full$n_test_full, "\n")
-cat("Full site-years (train/test/all):",
-    stan_data_rep_full$n_site_year_train_full, "/", 
-    stan_data_rep_full$n_site_year_test_full, "/", 
-    stan_data_rep_full$n_site_year_full, "\n")
+stan_data_climate_only_rep[c("n_g","K","genotype_plant_train","genotype_plant_train_full",
+                             "genotype_plant_test","genotype_plant_test_full",
+                             "neighbors_train","neighbors_train_full",
+                             "neighbors_test","neighbors_test_full",
+                             "annual_train","annual_train_full",
+                             "annual_test","annual_test_full",
+                             "perennial_train","perennial_train_full",
+                             "perennial_test","perennial_test_full",
+                             "shrub_train","shrub_train_full",
+                             "shrub_test","shrub_test_full")] <- NULL

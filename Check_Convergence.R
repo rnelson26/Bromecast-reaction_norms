@@ -50,25 +50,44 @@ fit_rep <- mod_rep$sample(
 #pathfinder_fec <- mod_fec$pathfinder(data = stan_data_fec_full, init = 0, num_paths = 1)
 #init_fec <- pathfinder_fec$draws(format = "list")
 
-## with warmup based on empirical values:
+
 init_fec <- function() {
   data <- stan_data_fec_full
   
+  # Rough dispersion estimate
   y_mean <- mean(data$y_train)
   y_var <- var(data$y_train)
-  disp_guess <- max(1, y_mean^2 / (y_var - y_mean))  # rough NB dispersion estimate
+  disp_guess <- max(1, y_mean^2 / (y_var - y_mean))  
   
-## warm up 
-  lm_fit <- lm(log(data$y_train + 1) ~ data$neighbors_train + data$annual_train + 
-                 data$perennial_train + data$shrub_train)
-  coefs <- coef(lm_fit)
+  # Only use rows where all predictors exist
+  n_pred <- min(length(data$y_train), length(data$neighbors_train),
+                length(data$annual_train), length(data$perennial_train),
+                length(data$shrub_train))
   
-  alpha_init <- unname(coefs[1])
-  beta_neighbors_init <- if ("neighbors_train" %in% names(coefs)) coefs["neighbors_train"] else 0
-  beta_annual_init <- if ("annual_train" %in% names(coefs)) coefs["annual_train"] else 0
-  beta_perennial_init <- if ("perennial_train" %in% names(coefs)) coefs["perennial_train"] else 0
-  beta_shrub_init <- if ("shrub_train" %in% names(coefs)) coefs["shrub_train"] else 0
+  if (n_pred > 0) {
+    y_train <- data$y_train[1:n_pred]
+    neighbors <- data$neighbors_train[1:n_pred]
+    annual <- data$annual_train[1:n_pred]
+    perennial <- data$perennial_train[1:n_pred]
+    shrub <- data$shrub_train[1:n_pred]
+    
+    lm_fit <- lm(log(y_train + 1) ~ neighbors + annual + perennial + shrub)
+    coefs <- coef(lm_fit)
+    
+    alpha_init <- unname(coefs[1])
+    beta_neighbors_init <- if ("neighbors" %in% names(coefs)) coefs["neighbors"] else 0
+    beta_annual_init <- if ("annual" %in% names(coefs)) coefs["annual"] else 0
+    beta_perennial_init <- if ("perennial" %in% names(coefs)) coefs["perennial"] else 0
+    beta_shrub_init <- if ("shrub" %in% names(coefs)) coefs["shrub"] else 0
+  } else {
+    alpha_init <- 0
+    beta_neighbors_init <- 0
+    beta_annual_init <- 0
+    beta_perennial_init <- 0
+    beta_shrub_init <- 0
+  }
   
+  # Return Stan init list
   list(
     beta_raw = matrix(0, nrow = data$n_g, ncol = data$q_X),
     mu_beta = rep(0, data$q_X),
@@ -96,6 +115,7 @@ init_fec <- function() {
 }
 
 
+
 #init_fec <- pathfinder_fec$draws(format = "list")
 
 pathfinder_fit <- mod_fec$pathfinder(
@@ -114,6 +134,8 @@ fit_fec <- mod_fec$sample(
   iter_sampling = 1000,
   seed = 123
 )
+
+
 
 ####### Traceplots ##################
 # Extract posterior samples
