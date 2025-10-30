@@ -1,9 +1,9 @@
 ################# Bromecast: 10.CRPS_and_figures.R ##########################
 ############# created 3-25-25 ######################
-############# Last modified: 10-13-25 ##########################
+############# Last modified: 10-29-25 ##########################
 ######## CRPS & Skill Scores for all model variants ################################
 
-# ========== SETUP ==========
+# ####### load packages and data
 library(cmdstanr)
 library(posterior)
 library(scoringRules)
@@ -12,24 +12,19 @@ library(dplyr)
 library(readr)
 
 
-# ---------- Observed test data ----------
+# Observed test data
 obs_test <- list(
   emerged    = testing_df_emg$e_test,
   reproduced = testing_df_emg$r_test,
   fecund     = testing_df_emg$Fecundity
 )
 
-# ---------- Manual fallback for missing null ----------
-null_manual_stage <- c(
-  emerged    = 0.332,
-  reproduced = 0.489,
-  fecund     = 0.365
-)
 
-# ---------- Get actual existing files ----------
+
+# load in outputs
 all_files <- list.files("output", pattern = "^gqs_.*\\.rds$", full.names = TRUE)
 
-# Extract stage and variant from filename
+# Extract file information 
 file_info <- tibble(
   file_path = all_files
 ) %>%
@@ -39,7 +34,7 @@ file_info <- tibble(
     variant = sub("^gqs_.*?_(.*?)\\.rds$", "\\1", file_name)
   )
 
-# ---------- Initialize result columns ----------
+# set up result column structure 
 file_info <- file_info %>%
   mutate(
     crps_full  = NA_real_,
@@ -47,7 +42,7 @@ file_info <- file_info %>%
     skill_score = NA_real_
   )
 
-# ---------- Loop through existing files ----------
+#### function to calculate CRPS ##############
 for (i in seq_len(nrow(file_info))) {
   stage   <- file_info$stage[i]
   variant <- file_info$variant[i]
@@ -91,11 +86,11 @@ for (i in seq_len(nrow(file_info))) {
     }
   }
   
-  # ---- Skill score ----
+  # Skill score
   file_info$skill_score[i] <- 1 - (file_info$crps_full[i] / file_info$crps_null[i])
 }
 
-# ---------- Final output ----------
+# Calculate CRPS and save results ########################
 crps_df <- file_info %>%
   select(Stage = stage, Variant = variant, CRPS_Full = crps_full, CRPS_Null = crps_null, Skill_Score = skill_score) %>%
   mutate(across(c(CRPS_Full, CRPS_Null, Skill_Score), ~round(., 3)))
@@ -103,8 +98,6 @@ crps_df <- file_info %>%
 print(crps_df)
 write_csv(crps_df, "output/crps_skill_scores.csv")
 
-
-# ========== OPTIONAL: COMBINE ACROSS LIFE STAGES ==========
 crps_summary <- crps_df %>%
   tidyr::separate(Model, into = c("Stage", "Variant"), sep = "_") %>%
   group_by(Variant) %>%
@@ -116,131 +109,772 @@ crps_summary <- crps_df %>%
 print(crps_summary)
 write_csv(crps_summary, "output/crps_skill_summary.csv")
 
-# ===================== CALCULATE FITNESS (unchanged) =====================
-# [Your fitness computation code starts here, same as in your current workflow]
+########### Calculate Fitness ################################
 
-#source("scripts/09_Fit_Models.R")
+#training_df_emg$r_train <- ifelse(training_df_emg$Reproduced == "Y", 1L, 0L)
+#testing_df_emg$r_test <- ifelse(testing_df_emg$Reproduced == "Y", 1L, 0L)
 
-# ===================== FIGURE GENERATION =====================
+## calculate observed fitness 
+testing_df_emg <- testing_df_emg %>% dplyr::mutate(Obs_Fitness = e_test * r_test * Fecundity)
+training_df_emg <- training_df_emg %>% mutate(Obs_Fitness = e_train * r_train * Fecundity)
+
+testing_df_emg$Obs_Fitness_log <- log(testing_df_emg$Obs_Fitness)
+training_df_emg$Obs_Fitness_log <- log(training_df_emg$Obs_Fitness)
+
+
+##### with draws
+### posterior 
+p_emg_test <- fit_emg_full$draws("p_test", format = "draws_matrix")  
+p_emg_train <- fit_emg_full$draws("p_train", format = "draws_matrix") 
+
+p_rep_test <- fit_rep$draws("p_test_full", format = "draws_matrix")  
+p_rep_train <- fit_rep$draws("p_train_full", format = "draws_matrix") 
+
+p_fec_test <- fit$draws("mu_test_full", format = "draws_matrix")  
+p_fec_train <- fit$draws("mu_train_full", format = "draws_matrix")
+
+## don't do both distributions at same time because of vector memory limit 
+### posterior predictive 
+e_emg_test <- fit_emg_full$draws("e_test_pred", format = "draws_matrix")  
+e_emg_train <- fit_emg_full$draws("e_train_pred", format = "draws_matrix") 
+
+r_rep_test <- fit_rep$draws("r_test_full", format = "draws_matrix")  
+r_rep_train <- fit_rep$draws("r_train_full", format = "draws_matrix") 
+
+y_fec_test <- fit$draws("y_test_pred_full", format = "draws_matrix")  
+y_fec_train <- fit$draws("y_train_pred_full", format = "draws_matrix")
+
+###### fixed effects only for training data
+### posterior 
+p_emg_train_fixed <- fit_emg_full$draws("p_train_fixed", format = "draws_matrix") 
+
+p_rep_train_fixed <- fit_rep$draws("p_train_full_fixed", format = "draws_matrix") 
+
+p_fec_train_fixed <- fit$draws("mu_train_full_fixed", format = "draws_matrix")
+
+## don't do both distributions at same time because of vector memory limit 
+### posterior predictive 
+e_emg_train_fixed <- fit_emg_full$draws("e_train_pred_fixed", format = "draws_matrix") 
+
+r_rep_train_fixed <- fit_rep$draws("r_train_full_fixed", format = "draws_matrix") 
+
+y_fec_train_fixed <- fit$draws("y_train_pred_full_fixed", format = "draws_matrix")
+
+
+## posterior 
+fitness_draws_test <- p_emg_test * p_rep_test * p_fec_test
+fitness_draws_train <- p_emg_train * p_rep_train * p_fec_train
+fitness_draws_train_fixed <- p_emg_train_fixed * p_rep_train_fixed * p_fec_train_fixed
+
+log_fitness_draws_test =log(p_emg_test) + log(p_rep_test) + log(p_fec_test)
+log_fitness_draws_train =log(p_emg_train) + log(p_rep_train) + log(p_fec_train)
+log_fitness_draws_train_fixed =log(p_emg_train_fixed) + log(p_rep_train_fixed) + log(p_fec_train_fixed)
+#transform each realization to take e off, either fitness or log draws lines good --> plot this
+
+
+
+
+mean_fitness_test <- apply(fitness_draws_test, 2, mean)
+mean_fitness_train <- apply(fitness_draws_train, 2, mean)
+mean_fitness_test_log <- apply(log_fitness_draws_test, 2, mean)
+mean_fitness_train_log <- apply(log_fitness_draws_train, 2, mean)
+mean_fitness_train_fixed <- apply(fitness_draws_train_fixed, 2, mean)
+mean_fitness_train_log_fixed <- apply(log_fitness_draws_train_fixed, 2, mean)
+
+testing_df_emg$Predicted_Fitness <- mean_fitness_test
+training_df_emg$Predicted_Fitness <- mean_fitness_train
+training_df_emg$Predicted_Fitness_fixed <- mean_fitness_train_fixed
+
+testing_df_emg$Predicted_Fitness_log <- mean_fitness_test_log
+training_df_emg$Predicted_Fitness_log <- mean_fitness_train_log
+training_df_emg$Predicted_Fitness_log_fixed <- mean_fitness_train_log_fixed
+
+#testing_df_emg$Predicted_Fitness_log <- log(mean_fitness_test + 1)
+#testing_df_emg$Predicted_Fitness_log <- log(mean_fitness_test + 1)
+
+## posteior predictive 
+fitness_draws_test_pred <- e_emg_test * r_rep_test * y_fec_test
+fitness_draws_train_pred <- e_emg_train * r_rep_train * y_fec_train
+fitness_draws_train_pred_fixed <- e_emg_train_fixed * r_rep_train_fixed * y_fec_train_fixed
+
+log_fitness_draws_test_pred  = log(e_emg_test) + log(r_rep_test) + log(y_fec_test)
+log_fitness_draws_train_pred = log(e_emg_train) + log(r_rep_train) + log(y_fec_train)
+log_fitness_draws_train_pred_fixed = log(e_emg_train_fixed) + log(r_rep_train_fixed) + log(y_fec_train_fixed)
+
+#transform each realization to take e off, either fitness or log draws lines good --> plot this
+
+mean_fitness_test_pred <- apply(fitness_draws_test_pred, 2, mean)
+mean_fitness_train_pred <- apply(fitness_draws_train_pred, 2, mean)
+mean_fitness_test_log_pred <- apply(log_fitness_draws_test_pred, 2, mean)
+mean_fitness_train_log_pred <- apply(log_fitness_draws_train_pred, 2, mean)
+mean_fitness_train_pred_fixed <- apply(fitness_draws_train_pred_fixed, 2, mean)
+mean_fitness_train_log_pred_fixed <- apply(log_fitness_draws_train_pred_fixed, 2, mean)
+
+testing_df_emg$Predicted_Fitness_PostPred <- mean_fitness_test_pred
+training_df_emg$Predicted_Fitness_PostPred <- mean_fitness_train_pred
+training_df_emg$Predicted_Fitness_PostPred_fixed <- mean_fitness_train_pred_fixed
+
+testing_df_emg$Predicted_Fitness_log_PostPred <- mean_fitness_test_log_pred
+training_df_emg$Predicted_Fitness_log_PostPred <- mean_fitness_train_log_pred
+training_df_emg$Predicted_Fitness_log_PostPred_fixed <- mean_fitness_train_log_pred_fixed
+
+
+### from Mevin
+## apply transformation first before summary
+#fitness_draws <- draws_mu * draws_p_rep * draws_p_emg  # dim: [n_draws x n_ind]
+#log_fitness_draws =log(draw_mu) + log(draws_p_rep) + log(draws_p_emg) #transform each realization to take e off, either fitness or log draws lines good --> plot this
+#apply(log_fitness_draws, 2, mean) ## posterior mean of log fitness by ind plant
+## could get individual plant variance/CI here but won't work for site-year subsets
+
+## mean by individuals in site-year
+#mean(of individual mean from apply) --> okay for visualization
+## would still be inference on a log scale 
+## could messier with non-mean things like variance which is special derived quantity, would have to first make additional derived quantities from which to subset 
+
+#testing_df_emg$PosteriorFitness_drawAvg <- fitness_mean
+#testing_df_emg$PosteriorFitness_log <- log(fitness_mean)  # avoids -Inf for 0s
+
+## discrete distribution
+
+### save .csv with model predictions
+write.csv(training_df_emg, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/training_fitness.csv", row.names = FALSE)
+write.csv(testing_df_emg, "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/testing_fitness.csv", row.names = FALSE)
+
+###### Fitness Graphs ######
+training_fitness <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/training_fitness.csv")
+testing_fitness <- read.csv("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/testing_fitness.csv")
+
+### posterior
+ggplot(training_fitness, aes(x = Predicted_Fitness_log, y = Obs_Fitness_log, color = Type)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
+
+ggplot(training_fitness, aes(x = Predicted_Fitness_log_fixed, y = Obs_Fitness_log, color = Type)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
+
+ggplot(testing_fitness, aes(x = Predicted_Fitness_log, y = Obs_Fitness_log, color = Type)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
+
+### posterior Pred
+ggplot(training_fitness, aes(x = log(Predicted_Fitness_PostPred + 1), y = log(Obs_Fitness + 1), color = Type)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
+
+ggplot(training_fitness, aes(x = log(Predicted_Fitness_PostPred_fixed + 1), y = log(Obs_Fitness + 1), color = Type)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
+
+ggplot(testing_fitness, aes(x = log(Predicted_Fitness_PostPred + 1), y = log(Obs_Fitness + 1), color = Type)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() + scale_color_manual(values = c("Satellite" = "blue", "Common_Garden"  = "lightblue"))
+
+### heat map
+
+
+## Posterior - training
+ggplot(training_fitness, aes(x = Predicted_Fitness_log, y = Obs_Fitness_log)) +
+  stat_density_2d_filled(contour = TRUE, bins = 20, alpha = 0.8) +
+  facet_wrap(~Type) +  # split by Type
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() +
+  labs(title = "Training - Posterior", fill = "Point Density")
+
+## Posterior - testing
+ggplot(testing_fitness, aes(x = Predicted_Fitness_log, y = Obs_Fitness_log)) +
+  stat_density_2d_filled(contour = TRUE, bins = 20, alpha = 0.8) +
+  facet_wrap(~Type) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() +
+  labs(title = "Testing - Posterior", fill = "Point Density")
+
+## Posterior Predictive - training
+ggplot(training_fitness, aes(x = log(Predicted_Fitness_PostPred + 1), y = log(Obs_Fitness + 1))) +
+  stat_density_2d_filled(contour = TRUE, bins = 20, alpha = 0.8) +
+  facet_wrap(~Type) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() +
+  labs(title = "Training - Posterior Predictive", fill = "Point Density")
+
+## Posterior Predictive - testing
+ggplot(testing_fitness, aes(x = log(Predicted_Fitness_PostPred + 1), y = log(Obs_Fitness + 1))) +
+  stat_density_2d_filled(contour = TRUE, bins = 20, alpha = 0.8) +
+  facet_wrap(~Type) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() +
+  labs(title = "Testing - Posterior Predictive", fill = "Point Density")
+
+##### heatmap graphs with points themselves colored ##############
 library(ggplot2)
 library(ggpointdensity)
-library(viridis)
-library(dplyr)
-library(tidyr)
-library(patchwork)
 
-# Create figures directory if it doesn't exist
-if (!dir.exists("figures")) dir.create("figures")
-
-# --------- Figure 2: Heatmap of Predicted vs Observed Fitness (Full Model) ----------
-# Training
-pdf("figures/Figure2_Training_Fitness_Heatmap.pdf", width = 7, height = 6)
-ggplot(training_df_emg, aes(x = Predicted_Fitness_log_PostPred, y = Obs_Fitness_log)) +
+## Posterior - training
+ggplot(training_fitness, aes(x = Predicted_Fitness_log, y = Obs_Fitness_log)) +
   geom_pointdensity(adjust = 0.5) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
   scale_color_viridis_c(option = "C", name = "Point Density") +
-  labs(title = "Training: Predicted vs Observed Fitness (Full Model)",
-       x = "Predicted Fitness (log)", y = "Observed Fitness (log)") +
-  theme_minimal()
-dev.off()
+  theme_minimal() +
+  labs(title = "Training - Posterior")
 
-# Testing
-pdf("figures/Figure2_Test_Fitness_Heatmap.pdf", width = 7, height = 6)
-ggplot(testing_df_emg, aes(x = Predicted_Fitness_log_PostPred, y = Obs_Fitness_log)) +
+ggplot(training_fitness, aes(x = Predicted_Fitness_log_fixed, y = Obs_Fitness_log)) +
   geom_pointdensity(adjust = 0.5) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
   scale_color_viridis_c(option = "C", name = "Point Density") +
-  labs(title = "Testing: Predicted vs Observed Fitness (Full Model)",
-       x = "Predicted Fitness (log)", y = "Observed Fitness (log)") +
-  theme_minimal()
-dev.off()
+  theme_minimal() +
+  labs(title = "Training Fixed Only - Posterior")
 
-# --------- Figure 3: Predicted vs Observed by Life Stage & Submodel ----------
-# Combine draws for each life stage (posterior predictive)
-stages <- c("Emerged" = "e_emg_train", 
-            "Reproduced" = "r_rep_train",
-            "Fecundity" = "y_fec_train")
+## Posterior - testing
+ggplot(testing_fitness, aes(x = Predicted_Fitness_log, y = Obs_Fitness_log)) +
+  geom_pointdensity(adjust = 0.5) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  scale_color_viridis_c(option = "C", name = "Point Density") +
+  theme_minimal() +
+  labs(title = "Testing - Posterior")
 
-for(stage in names(stages)) {
-  stage_train <- get(stages[stage])
-  stage_test  <- get(sub("train", "test", stages[stage]))
-  
-  # Compute mean predictions
-  mean_train <- apply(stage_train, 2, mean)
-  mean_test  <- apply(stage_test, 2, mean)
-  
-  df_train <- tibble(Stage = stage, Type = "Training",
-                     Predicted = mean_train,
-                     Observed = if(stage=="Emerged") training_df_emg$e_train else if(stage=="Reproduced") training_df_emg$r_train else training_df_emg$Fecundity)
-  
-  df_test <- tibble(Stage = stage, Type = "Testing",
-                    Predicted = mean_test,
-                    Observed = if(stage=="Emerged") testing_df_emg$e_test else if(stage=="Reproduced") testing_df_emg$r_test else testing_df_emg$Fecundity)
-  
-  assign(paste0(stage, "_df"), bind_rows(df_train, df_test))
+## Posterior Predictive - training
+ggplot(training_fitness, aes(x = log(Predicted_Fitness_PostPred + 1), y = log(Obs_Fitness)))  +
+  geom_pointdensity(adjust = 0.5) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  scale_color_viridis_c(option = "C", name = "Point Density") +
+  theme_minimal() +
+  labs(title = "Training - Posterior Predictive")
+
+ggplot(training_fitness, aes(x = log(Predicted_Fitness_PostPred_fixed + 1), y = Obs_Fitness_log)) +
+  geom_pointdensity(adjust = 0.5) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  scale_color_viridis_c(option = "C", name = "Point Density") +
+  theme_minimal() +
+  labs(title = "Training Fixed only - Posterior Predictive")
+
+## Posterior Predictive - testing
+ggplot(testing_fitness, aes(x = log(Predicted_Fitness_PostPred + 1), y = log(Obs_Fitness + 1))) +
+  geom_pointdensity(adjust = 0.5) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  scale_color_viridis_c(option = "C", name = "Point Density") +
+  theme_minimal() +
+  labs(title = "Testing - Posterior Predictive")
+
+
+### seasonality
+
+ggplot(training_fitness, aes(x = Predicted_Fitness_log, y = Obs_Fitness_log, color = seasonality)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() 
+
+ggplot(testing_fitness, aes(x = Predicted_Fitness_log, y = Obs_Fitness_log, color = seasonality)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() 
+
+ggplot(training_fitness, aes(x = log(Predicted_Fitness_PostPred + 1), y = Obs_Fitness_log, color = seasonality)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() 
+
+ggplot(testing_fitness, aes(x = log(Predicted_Fitness_PostPred + 1), y = Obs_Fitness_log, color = seasonality)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() 
+
+
+ggplot(training_fitness, aes(x = Predicted_Fitness_log, y = Obs_Fitness_log, color = as.factor(genotype))) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() + facet_wrap(~site_year) +   theme(legend.position = "none")
+
+ggplot(testing_fitness, aes(x = Predicted_Fitness_log, y = Obs_Fitness_log, color = as.factor(genotype))) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() + facet_wrap(~site_year) + theme(legend.position = "none")
+
+ggplot(training_fitness, aes(x = log(Predicted_Fitness_PostPred + 1), y = Obs_Fitness_log, color = as.factor(genotype))) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() + facet_wrap(~site_year) +   theme(legend.position = "none")
+
+ggplot(testing_fitness, aes(x = log(Predicted_Fitness_PostPred + 1), y = Obs_Fitness_log, color = as.factor(genotype))) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() + facet_wrap(~site_year) + theme(legend.position = "none")
+
+##############  CRPS Code -- old version ##############################
+
+library(posterior)
+library(scoringRules)
+
+# ==== Extract Draws (Main Models) ====
+
+# Fecundity
+y_train_pred <- fit$draws("y_train_pred_full", format = "draws_matrix")
+y_test_pred  <- fit$draws("y_test_pred_full", format = "draws_matrix")
+y_train_pred_fixed <- fit$draws("y_train_pred_full_fixed", format = "draws_matrix")
+
+# Reproduction
+r_train_pred <- fit_rep$draws("r_train_full", format = "draws_matrix")
+r_test_pred  <- fit_rep$draws("r_test_full", format = "draws_matrix")
+r_train_pred_fixed <- fit_rep$draws("r_train_full_fixed", format = "draws_matrix")
+
+r_train_pred_clim <- fit_rep_clim$draws("r_train_full", format = "draws_matrix")
+r_test_pred_clim  <- fit_rep_clim$draws("r_test_full", format = "draws_matrix")
+#r_train_pred_fixed_clim <- fit_rep_clim$draws("r_train_full_fixed", format = "draws_matrix")
+## still ned to add 
+
+r_train_pred_nogene <- fit_rep_nogene$draws("r_train_full", format = "draws_matrix")
+r_test_pred_nogene  <- fit_rep_nogene$draws("r_test_full", format = "draws_matrix")
+#r_train_pred_nogene <- fit_rep_nogene$draws("r_train_full_fixed", format = "draws_matrix")
+
+r_train_pred_nocomp <- fit_rep_nocomp$draws("r_train_full", format = "draws_matrix")
+r_test_pred_nocomp <- fit_rep_nocomp$draws("r_test_full", format = "draws_matrix")
+#r_train_pred_fixed_nocomp <- fit_rep_nocomp$draws("r_train_full_fixed", format = "draws_matrix")
+
+r_train_pred_nointer <- fit_rep_nointer$draws("r_train_full", format = "draws_matrix")
+r_test_pred_nointer  <- fit_rep_nointer$draws("r_test_full", format = "draws_matrix")
+#r_train_pred_fixed_nointer <- fit_rep_nointer$draws("r_train_full_fixed", format = "draws_matrix")
+
+# Emergence
+e_train_pred <- fit_emg_full$draws("e_train_pred", format = "draws_matrix")
+e_test_pred  <- fit_emg_full$draws("e_test_pred", format = "draws_matrix")
+e_train_pred_fixed <- fit_emg_full$draws("e_train_pred_fixed", format = "draws_matrix")
+
+e_train_pred_clim <- fit_emg_clim$draws("e_train_pred", format = "draws_matrix")
+e_test_pred_clim  <- fit_emg_clim$draws("e_test_pred", format = "draws_matrix")
+#r_train_pred_fixed_clim <- fit_rep_clim$draws("r_train_full_fixed", format = "draws_matrix")
+## still ned to add 
+
+e_train_pred_nogene <- fit_emg_nogene$draws("e_train_pred", format = "draws_matrix")
+e_test_pred_nogene  <- fit_emg_nogene$draws("e_test_pred", format = "draws_matrix")
+#r_train_pred_nogene <- fit_rep_nogene$draws("r_train_full_fixed", format = "draws_matrix")
+
+e_train_pred_nocomp <- fit_emg_nocomp$draws("e_train_pred", format = "draws_matrix")
+e_test_pred_nocomp <- fit_emg_nocomp$draws("e_test_pred", format = "draws_matrix")
+#r_train_pred_fixed_nocomp <- fit_rep_nocomp$draws("r_train_full_fixed", format = "draws_matrix")
+
+e_train_pred_nointer <- fit_emg_nointer$draws("e_train_pred", format = "draws_matrix")
+e_test_pred_nointer  <- fit_emg_nointer$draws("e_test_pred", format = "draws_matrix")
+#r_train_pred_fixed_nointer <- fit_rep_nointer$draws("r_train_full_fixed", format = "draws_matrix")
+
+
+# ==== Observed Data ====
+y_train_obs <- training_df_emg$Fecundity
+y_test_obs  <- testing_df_emg$Fecundity
+
+r_train_obs <- training_df_emg$r_train
+r_test_obs  <- testing_df_emg$r_test
+
+e_train_obs <- training_df_emg$e_train
+e_test_obs  <- testing_df_emg$e_test
+
+# ==== Null Model Draws (draws_matrix format assumed) ====
+# You can skip these lines if you already have the precomputed values below
+#y_train_pred_null <- fit_null_fec$draws("y_train_pred", format = "draws_matrix")
+#r_train_pred_null <- fit_null_rep$draws("r_train_pred", format = "draws_matrix")
+#e_train_pred_null <- fit_null_emg$draws("e_train_pred", format = "draws_matrix")
+
+# ==== CRPS Calculation Function ====
+get_crps <- function(obs, pred_draws) {
+  pred_draws <- as.matrix(pred_draws)
+  crps_sample(y = obs, dat = t(pred_draws))  # transpose!
 }
 
-# Combine all stages
-all_stages_df <- bind_rows(Emerged_df, Reproduced_df, Fecundity_df)
+# ==== Compute CRPS Values ====
 
-# Plot
-pdf("figures/Figure3_Predicted_vs_Observed_byStage.pdf", width = 10, height = 8)
-ggplot(all_stages_df, aes(x = Predicted, y = Observed)) +
-  geom_pointdensity(adjust = 0.5) +
-  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
-  scale_color_viridis_c(option = "C") +
-  facet_grid(Stage ~ Type, scales = "free") +
-  labs(title = "Predicted vs Observed by Life Stage & Data Type") +
-  theme_minimal()
-dev.off()
+# Fecundity
+crps_y <- list(
+  train = get_crps(y_train_obs, y_train_pred),
+  test  = get_crps(y_test_obs,  y_test_pred),
+  train_fixed = get_crps(y_train_obs, y_train_pred_fixed)
+)
 
-# --------- Figure S1: Site-Year Pair-Level Variations ----------
-# Aggregate mean predicted fitness per site-year
-training_site_year <- training_df_emg %>%
-  group_by(site_year) %>%
-  summarise(MeanPred = mean(Predicted_Fitness_PostPred), MeanObs = mean(Obs_Fitness), .groups = "drop")
+# Reproduction
+crps_r <- list(
+  train = get_crps(r_train_obs, r_train_pred),
+  test  = get_crps(r_test_obs,  r_test_pred),
+  train_fixed = get_crps(r_train_obs, r_train_pred_fixed)
+)
 
-testing_site_year <- testing_df_emg %>%
-  group_by(site_year) %>%
-  summarise(MeanPred = mean(Predicted_Fitness_PostPred), MeanObs = mean(Obs_Fitness), .groups = "drop")
+crps_r_submodels <- list(
+  #train = get_crps(r_train_obs, r_train_pred),
+  #test  = get_crps(r_test_obs,  r_test_pred),
+  train_clim = get_crps(r_train_obs, r_train_pred_clim),
+  test_clim  = get_crps(r_test_obs,  r_test_pred_clim),
+  train_nogene = get_crps(r_train_obs, r_train_pred_nogene),
+  test_nogene  = get_crps(r_test_obs,  r_test_pred_nogene),
+  train_nocomp = get_crps(r_train_obs, r_train_pred_nocomp),
+  test_nocomp  = get_crps(r_test_obs,  r_test_pred_nocomp),
+  train_nointer = get_crps(r_train_obs, r_train_pred_nointer),
+  test_nointer  = get_crps(r_test_obs,  r_test_pred_nointer)
+)
 
-site_year_df <- bind_rows(training_site_year %>% mutate(Type="Training"),
-                          testing_site_year %>% mutate(Type="Testing"))
+# Emergence
+crps_e <- list(
+  train = get_crps(e_train_obs, e_train_pred),
+  test  = get_crps(e_test_obs,  e_test_pred),
+  train_fixed = get_crps(e_train_obs, e_train_pred_fixed)
+)
 
-pdf("figures/FigureS1_SiteYear_Fitness.pdf", width = 8, height = 6)
-ggplot(site_year_df, aes(x = MeanPred, y = MeanObs)) +
-  geom_pointdensity(adjust = 0.5) +
-  geom_abline(slope=1, intercept=0, linetype="dashed", color="red") +
-  facet_wrap(~Type) +
-  labs(title="Site-Year Mean Predicted vs Observed Fitness",
-       x="Mean Predicted Fitness", y="Mean Observed Fitness") +
-  scale_color_viridis_c(option="C") +
-  theme_minimal()
-dev.off()
 
-# --------- Figures S2 & S4: Climate PCA & Soil PCA Visualization ----------
-# Assuming W_summary / W_plot_df from your earlier PCA workflow
-pdf("figures/FigureS2_ClimatePCA.pdf", width = 10, height = 6)
-ggplot(W_plot_df, aes(x=i, y=mean)) +
-  geom_ribbon(aes(ymin=lower, ymax=upper), fill="lightblue", alpha=0.3) +
-  geom_line(color="blue") +
-  geom_point(aes(y=static_value), color="red") +
-  facet_wrap(~j, scales="free_y", labeller=label_both) +
-  labs(x="Climate Index", y="Latent Climate (W) vs PCA Projection",
-       title="Posterior W vs Original Climate PCA") +
-  theme_minimal()
-dev.off()
+crps_e_submodels <- list(
+  #train = get_crps(e_train_obs, e_train_pred),
+  #test  = get_crps(e_test_obs,  e_test_pred),
+  train_clim = get_crps(e_train_obs, e_train_pred_clim),
+  test_clim  = get_crps(e_test_obs,  e_test_pred_clim),
+  train_nogene = get_crps(e_train_obs, e_train_pred_nogene),
+  test_nogene  = get_crps(e_test_obs,  e_test_pred_nogene),
+  train_nocomp = get_crps(e_train_obs, e_train_pred_nocomp),
+  test_nocomp  = get_crps(e_test_obs,  e_test_pred_nocomp),
+  train_nointer = get_crps(e_train_obs, e_train_pred_nointer),
+  test_nointer  = get_crps(e_test_obs,  e_test_pred_nointer)
+)
 
-# Replace W_plot_df with soil PCA equivalent for S4
-# Assume W_plot_df_soil created earlier in workflow
-pdf("figures/FigureS4_SoilPCA.pdf", width = 10, height = 6)
-ggplot(W_plot_df_soil, aes(x=i, y=mean)) +
-  geom_ribbon(aes(ymin=lower, ymax=upper), fill="lightgreen", alpha=0.3) +
-  geom_line(color="darkgreen") +
-  geom_point(aes(y=static_value), color="red") +
-  facet_wrap(~j, scales="free_y", labeller=label_both) +
-  labs(x="Soil Index", y="Latent Soil (W) vs PCA Projection",
-       title="Posterior W vs Original Soil PCA") +
-  theme_minimal()
-dev.off()
+# ==== Null Model CRPS ====
+
+# Option A: Compute directly from null model draws
+crps_y_null <- get_crps(y_train_obs, y_train_pred_null)
+crps_r_null <- get_crps(r_train_obs, r_train_pred_null)
+crps_e_null <- get_crps(e_train_obs, e_train_pred_null)
+
+# Option B: Use precomputed values (replace if needed)
+crps_y_null <- 202.9695  # mean: 202.9695
+crps_r_null <- 0.2500765 # mean: 0.2500765
+crps_e_null <- 0.1821024  # mean: 0.1821024
+
+# ==== Skill Score Calculation ====
+skill_score <- function(main, null) {
+  1 - (mean(main) / mean(null))
+}
+
+
+skill_scores <- list(
+  y_train       = skill_score(crps_y$train, crps_y_null),
+  y_test        = skill_score(crps_y$test,  crps_y_null),
+  y_train_fixed = skill_score(crps_y$train_fixed, crps_y_null),
+  
+  r_train       = skill_score(crps_r$train, crps_r_null),
+  r_test        = skill_score(crps_r$test,  crps_r_null),
+  r_train_fixed = skill_score(crps_r$train_fixed, crps_r_null),
+  
+  e_train       = skill_score(crps_e$train, crps_e_null),
+  e_test        = skill_score(crps_e$test,  crps_e_null),
+  e_train_fixed = skill_score(crps_e$train_fixed, crps_e_null)
+)
+
+skill_scores_sub <- list(
+  r_train_clim       = skill_score(crps_r_submodels$train_clim, crps_r_null),
+  r_test_clim       = skill_score(crps_r_submodels$test_clim, crps_r_null),
+  r_train_nogene      = skill_score(crps_r_submodels$train_nogene, crps_r_null),
+  r_test_nogene      = skill_score(crps_r_submodels$test_nogene, crps_r_null),
+  r_train_nointer      = skill_score(crps_r_submodels$train_nointer, crps_r_null),
+  r_test_nointer     = skill_score(crps_r_submodels$test_nointer, crps_r_null),
+  r_train_nocomp      = skill_score(crps_r_submodels$train_nocomp, crps_r_null),
+  r_test_nocomp      = skill_score(crps_r_submodels$test_nocomp, crps_r_null)
+)
+
+skill_scores_sub_e <- list(
+  e_train_clim       = skill_score(crps_e_submodels$train_clim, crps_e_null),
+  e_test_clim       = skill_score(crps_e_submodels$test_clim, crps_e_null),
+  e_train_nogene      = skill_score(crps_e_submodels$train_nogene, crps_e_null),
+  e_test_nogene      = skill_score(crps_e_submodels$test_nogene, crps_e_null),
+  e_train_nointer      = skill_score(crps_e_submodels$train_nointer, crps_e_null),
+  e_test_nointer     = skill_score(crps_e_submodels$test_nointer, crps_e_null),
+  e_train_nocomp      = skill_score(crps_e_submodels$train_nocomp, crps_e_null),
+  e_test_nocomp      = skill_score(crps_e_submodels$test_nocomp, crps_e_null)
+)
+
+
+
+
+# ==== CRPS Summary Table ====
+crps_table <- data.frame(
+  Component = c(
+    "Fecundity (train)", "Fecundity (test)", "Fecundity (train, fixed)",
+    "Reproduction (train)", "Reproduction (test)", "Reproduction (train, fixed)",
+    "Emergence (train)", "Emergence (test)", "Emergence (train, fixed)"
+  ),
+  CRPS = round(c(
+    mean(crps_y$train), mean(crps_y$test), mean(crps_y$train_fixed),
+    mean(crps_r$train), mean(crps_r$test), mean(crps_r$train_fixed),
+    mean(crps_e$train), mean(crps_e$test), mean(crps_e$train_fixed)
+  ), 3),
+  Skill_Score = round(c(
+    skill_scores$y_train,
+    skill_scores$y_test,
+    skill_scores$y_train_fixed,
+    skill_scores$r_train,
+    skill_scores$r_test,
+    skill_scores$r_train_fixed,
+    skill_scores$e_train,
+    skill_scores$e_test,
+    skill_scores$e_train_fixed
+  ), 3)
+)
+
+print(crps_table)
+
+# ==== Export Table to Word (optional) ====
+library(flextable)
+flextable::flextable(crps_table) %>%
+  flextable::save_as_docx(path = "CRPS_Table.docx")
+
+#### ============== submodel table ======== #####
+model_labels <- c("Climate only", "No genotype", "No interspecific", "No competition")
+datasets <- c("Train", "Test")
+
+# Construct clean vectors for CRPS and skill scores
+crps_values <- c(
+  mean(crps_r_submodels$train_clim),
+  mean(crps_r_submodels$test_clim),
+  mean(crps_r_submodels$train_nogene),
+  mean(crps_r_submodels$test_nogene),
+  mean(crps_r_submodels$train_nointer),
+  mean(crps_r_submodels$test_nointer),
+  mean(crps_r_submodels$train_nocomp),
+  mean(crps_r_submodels$test_nocomp)
+)
+
+crps_values <- c(
+  mean(crps_e_submodels$train_clim),
+  mean(crps_e_submodels$test_clim),
+  mean(crps_e_submodels$train_nogene),
+  mean(crps_e_submodels$test_nogene),
+  mean(crps_e_submodels$train_nointer),
+  mean(crps_e_submodels$test_nointer),
+  mean(crps_e_submodels$train_nocomp),
+  mean(crps_e_submodels$test_nocomp)
+)
+
+skill_scores_values <- c(
+  skill_scores_sub$r_train_clim,
+  skill_scores_sub$r_test_clim,
+  skill_scores_sub$r_train_nogene,
+  skill_scores_sub$r_test_nogene,
+  skill_scores_sub$r_train_nointer,
+  skill_scores_sub$r_test_nointer,
+  skill_scores_sub$r_train_nocomp,
+  skill_scores_sub$r_test_nocomp
+)
+
+skill_scores_values <- c(
+  skill_scores_sub_e$e_train_clim,
+  skill_scores_sub_e$e_test_clim,
+  skill_scores_sub_e$e_train_nogene,
+  skill_scores_sub_e$e_test_nogene,
+  skill_scores_sub_e$e_train_nointer,
+  skill_scores_sub_e$e_test_nointer,
+  skill_scores_sub_e$e_train_nocomp,
+  skill_scores_sub_e$e_test_nocomp
+)
+
+
+# Make data frame
+submodel_table <- data.frame(
+  Dataset = rep(datasets, times = 4),
+  Model_Type = rep(model_labels, each = 2),
+  CRPS = round(crps_values, 3),
+  Skill_Score = round(skill_scores_values, 3)
+)
+
+library(flextable)
+ft <- flextable(submodel_table) %>%
+  set_header_labels(
+    Data = "Dataset",
+    Model_Type = "Model Type",
+    CRPS = "CRPS",
+    Skill_Score = "Skill Score"
+  ) %>%
+  autofit()
+
+library(officer)
+
+doc <- read_docx() %>%
+  body_add_par("CRPS and Skill Score Summary", style = "heading 1") %>%
+  body_add_flextable(ft)
+
+print(doc, target = "CRPS_Sub_Skill_Summary.docx")
+print(doc, target = "CRPS_Sub_Skill_Summary_emerge.docx")
+
+
+####### Fitness by site year #####
+agg_train <- training_fitness %>%
+  group_by(site_year, Type, seasonality, pH, MAT, prcp.Fall, tmean.Sum, total_precip, tavg_center30d_mean) %>%
+  summarise(
+    mean_obs_fitness = mean(Obs_Fitness_log, na.rm = TRUE), 
+    mean_pred_fitness = mean(Predicted_Fitness_log, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+agg_test <- testing_fitness %>%
+  group_by(site_year, Type, seasonality, pH, MAT, prcp.Fall, tmean.Sum, total_precip, tavg_center30d_mean) %>%
+  summarise(
+    mean_obs_fitness = mean(Obs_Fitness_log, na.rm = TRUE), 
+    mean_pred_fitness = mean(Predicted_Fitness_log, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+ggplot(agg_train, aes(x = mean_pred_fitness, y = mean_obs_fitness, color = seasonality)) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") + theme_minimal()  +
+  xlim(0, 6) +
+  ylim(0, 6)
+
+ggplot(agg_test, aes(x = mean_pred_fitness, y = mean_obs_fitness, color = seasonality)) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") + theme_minimal()
+#prcp
+ggplot(agg_train, aes(x = mean_pred_fitness, y = mean_obs_fitness, color = tmean.Sum)) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") + theme_minimal()
+
+ggplot(agg_test, aes(x = mean_pred_fitness, y = mean_obs_fitness, color = tmean.Sum)) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") + theme_minimal()
+
+###### CRPS ################################
+
+###### CRPS with scoring rules package #######
+library(posterior)
+library(scoringRules)
+
+### null models 
+draws_y <- fit_null_fec$draws(format = "df")
+y_train_pred_null <- draws_y[, grep("^y_train_pred\\[", names(draws_y))]
+
+draws_r <- fit_null_rep$draws(format = "df")
+r_train_pred_null <- draws_r[, grep("^r_train_pred\\[", names(draws_r))]
+
+draws_e_null <- fit_null_emg$draws(format = "df")
+e_train_pred_null <- draws_e_null[, grep("^e_train_pred\\[", names(draws_e_null))]
+
+### Fecundity 
+draws_y <- fit$draws(format = "df")
+y_train_pred <- draws_y[, grep("^y_train_pred\\[", names(draws_y))]
+y_train_fixed_pred <- draws_y[, grep("^y_train_fixed_pred\\[", names(draws_y))]
+y_test_pred <- draws_y[, grep("^y_test_pred\\[", names(draws_y))]
+
+# Reproduction
+draws_r <- fit_rep$draws(format = "df")
+r_train_pred <- draws_r[, grep("^r_train_pred\\[", names(draws_r))]
+r_train_fixed_pred <- draws_r[, grep("^r_train_pred_fixed\\[", names(draws_r))]
+r_test_pred <- draws_r[, grep("^r_test_pred\\[", names(draws_r))]
+
+# Full climate emerged
+draws_e_full <- fit_emg_full$draws(format = "df")
+e_train_pred_full <- draws_e_full[, grep("^e_train_pred\\[", names(draws_e_full))]
+e_train_fixed_pred_full <- draws_e_full[, grep("^e_train_pred_fixed\\[", names(draws_e_full))]
+e_test_pred_full <- draws_e_full[, grep("^e_test_pred\\[", names(draws_e_full))]
+
+# Rhat -- cutoff > 1.05 indicates convergence issues
+
+# Fecundity Rhat values
+rhat_y_train <- rhat(as.matrix(y_train_pred))
+rhat_y_train_fixed <- rhat(as.matrix(y_train_fixed_pred))
+rhat_y_test <- rhat(as.matrix(y_test_pred))
+## rhat above 1.05 with SOS model for train only
+
+# Reproduction Rhat values
+rhat_r_train <- rhat(as.matrix(r_train_pred))
+rhat_r_train_fixed <- rhat(as.matrix(r_train_fixed_pred))
+rhat_r_test <- rhat(as.matrix(r_test_pred))
+
+# Emerged Full Rhat values
+rhat_e_full_train <- rhat(as.matrix(e_train_pred_full))
+rhat_e_full_train_fixed <- rhat(as.matrix(e_train_fixed_pred_full))
+rhat_e_full_test <- rhat(as.matrix(e_test_pred_full))
+
+
+# Observed data 
+y_train_obs <- training_df$Fecundity
+y_test_obs <- testing_df$Fecundity
+r_train_obs <- training_df_rep$r_train
+r_test_obs <- testing_df_rep$r_test
+e_train_obs <- training_df_emg$e_train
+e_test_obs <- testing_df_emg$e_test
+
+# ====== Null model CRPS ======
+y_train_pred_null_mat <- as.matrix(y_train_pred_null)
+r_train_pred_null_mat <- as.matrix(r_train_pred_null)
+e_train_pred_null_mat <- as.matrix(e_train_pred_null)
+
+
+crps_sample(y = y_train_obs, dat = y_train_pred_null)
+
+# Fecundity null CRPS
+crps_y_null <- crps_sample(y = y_train_obs, dat = t(y_train_pred_null_mat))
+
+# Reproduction null CRPS
+crps_r_null <- crps_sample(y = r_train_obs, dat = t(r_train_pred_null_mat))
+
+# Emergence null CRPS
+crps_e_null <- crps_sample(y = e_train_obs, dat = t(e_train_pred_null_mat))
+
+hist(crps_y_null)
+mean(crps_y_null) #202.9695
+
+hist(crps_r_null)
+mean(crps_r_null) # 0.2500765
+
+hist(crps_e_null)
+mean(crps_e_null) #0.1821024
+
+skill_score_y <- 1 - (mean(crps_y) / mean(crps_y_null))
+
+# ==== CRPS Computation Helper ====
+get_crps <- function(obs, pred_df) {
+  pred_t <- t(as.matrix(pred_df))
+  crps_sample(y = obs, dat = pred_t)
+}
+
+# ==== CRPS Calculation ====
+
+# Fecundity
+crps_y <- list(
+  train = get_crps(y_train_obs, y_train_pred),
+  test = get_crps(y_test_obs, y_test_pred)
+)
+
+# Reproduction
+crps_r <- list(
+  train = get_crps(r_train_obs, r_train_pred),
+  train_fixed = get_crps(r_train_obs, r_train_fixed_pred),
+  test = get_crps(r_test_obs, r_test_pred)
+)
+
+# E (Full)
+crps_e_full <- list(
+  train = get_crps(training_df_emg$site_year, e_train_pred_full),
+  train_fixed = get_crps(training_df_emg$site_year, e_train_fixed_pred_full),
+  test = get_crps(testing_df_emg$site_year, e_test_pred_full)
+)
+
+# ==== Mean CRPS Summary ====
+mean_crps_summary <- list(
+  y = sapply(crps_y, mean),
+  r = sapply(crps_r, mean),
+  e_full = sapply(crps_e_full, mean)
+)
+
+y_crps = sapply(crps_y, mean)
+r_crps = sapply(crps_r, mean)
+e_full_crps = sapply(crps_e_full, mean)
+
+
+# ==== Optional Histogram ====
+hist(crps_y$train, breaks = 30, main = "CRPS - y_train", col = "skyblue")
+hist(crps_y$train_fixed, breaks = 30, main = "CRPS - y_train_fixed", col = "orange")
+hist(crps_y$test, breaks = 30, main = "CRPS - y_test", col = "purple")
+
+# Single Posterior Predictive Check 
+hist(t(as.matrix(y_train_pred))[1, ],
+     breaks = 30,
+     main = "Posterior Predictive for 1st Training Point (Fecundity)",
+     xlab = "Predicted Value",
+     col = "skyblue", border = "white")
+
 
