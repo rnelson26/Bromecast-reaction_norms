@@ -296,7 +296,7 @@ library(posterior)
 # Fecundity model
 rhat_fec <- fit_fec$summary() |> dplyr::select(variable, rhat)
 print(head(rhat_fec, 10))  #first 10
-mean(rhat_fec$rhat, na.rm = TRUE)  # mean Rhat = 1.00271
+mean(rhat_fec$rhat, na.rm = TRUE)  # mean Rhat = 1.00271, 1.002233
 hist(rhat_fec$rhat)
 
 # Reproduction model
