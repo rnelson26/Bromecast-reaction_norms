@@ -2,10 +2,50 @@
 ######## Explore W ##########
 ######## code by Becca Nelson ###############################
 ############# created 3-25-25 ######################
-############# Last modified: 10-29-25 ##########################
+############# Last modified: 11-3-25 ##########################
+
+###### biplot of W ############
+library(cmdstanr)
+library(posterior)   
+library(ggplot2)
+library(dplyr)
+
+## first run models in checking convergence code 
+
+draws_array <- fit_emg$draws(variables = "W", format = "array")
+
+
+dim(draws_array) # check dims
+# posterior mean across draws:
+W_mean <- apply(draws_array, c(2,3), mean)  # now n_X x q_X
+
+# PCA and ggplot
+pca <- prcomp(W_mean, center = TRUE, scale. = TRUE)
+scores <- as.data.frame(pca$x[,1:2])
+scores$label <- paste0("obs", seq_len(nrow(W_mean)))
+
+loadings <- as.data.frame(pca$rotation[,1:2])
+loadings$varname <- rownames(loadings)
+
+
+mult <- min(
+  (max(scores$PC1)-min(scores$PC1)) / (max(loadings$PC1)-min(loadings$PC1)),
+  (max(scores$PC2)-min(scores$PC2)) / (max(loadings$PC2)-min(loadings$PC2))
+) * 0.8
+loadings_for_plot <- loadings
+loadings_for_plot[,1:2] <- loadings_for_plot[,1:2] * mult
+
+ggplot() + 
+  geom_point(data = scores, aes(PC1, PC2)) +
+  geom_segment(data = loadings_for_plot, aes(x = 0, y = 0, xend = PC1, yend = PC2),
+               arrow = arrow(length = unit(0.25, "cm"))) +
+  geom_text(data = loadings_for_plot, aes(PC1, PC2, label = varname), vjust = -0.5) +
+  theme_minimal()
+
 
 
 ####### climate W vs original PCA ######
+W_draws <- posterior::as_draws_matrix(fit_emg$draws("W"))
 W_draws <- posterior::as_draws_matrix(fit$draws("W"))
 W_draws_rep <- posterior::as_draws_matrix(fit_rep$draws("W"))
 
