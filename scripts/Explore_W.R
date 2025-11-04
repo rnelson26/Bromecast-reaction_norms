@@ -12,6 +12,10 @@ library(dplyr)
 
 ## first run models in checking convergence code 
 
+
+## average over chains and split into two columns 
+## combine chains first and then take the mean
+
 draws_array <- fit_emg$draws(variables = "W", format = "array")
 
 
