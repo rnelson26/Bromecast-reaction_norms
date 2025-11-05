@@ -16,35 +16,110 @@ library(dplyr)
 ## average over chains and split into two columns 
 ## combine chains first and then take the mean
 
-draws_array <- fit_emg$draws(variables = "W", format = "array")
+# mean posterior  across iterations and chains
+W_means <- apply(draws_array, 3, mean)
+
+## reformat into different columns
+W_df <- tibble(
+  param = names(W_means),
+  value = W_means
+) %>%
+  mutate(
+    i = as.integer(str_extract(param, "(?<=\\[)\\d+")),
+    j = as.integer(str_extract(param, "(?<=,)\\d+(?=\\])"))
+  ) %>%
+  pivot_wider(
+    id_cols = i,
+    names_from = j,
+    names_prefix = "W_col",
+    values_from = value
+  ) %>%
+  arrange(i)
+
+## visualize results
+ggplot(W_df, aes(x = W_col1, y = W_col2)) +
+  geom_point(size = 3, color = "steelblue") +
+  geom_text(aes(label = i), vjust = -0.8, size = 3) +
+  theme_minimal(base_size = 14) +
+  labs(
+    x = "Posterior mean PC1",
+    y = "Posterior mean PC2",
+  )
+
+ggplot(W_df, aes(x = 0, y = 0, xend = W_col1, yend = W_col2)) +
+  geom_segment(arrow = arrow(length = unit(0.15, "cm")), color = "darkred") +
+  geom_text(aes(x = W_col1, y = W_col2, label = i), vjust = -0.5, size = 3) +
+  theme_minimal(base_size = 14) +
+  labs(
+    x = "Posterior mean PC1",
+    y = "Posterior mean PC2",
+  )
 
 
-dim(draws_array) # check dims
-# posterior mean across draws:
-W_mean <- apply(draws_array, c(2,3), mean)  # now n_X x q_X
+##### with climate 
 
-# PCA and ggplot
-pca <- prcomp(W_mean, center = TRUE, scale. = TRUE)
-scores <- as.data.frame(pca$x[,1:2])
-scores$label <- paste0("obs", seq_len(nrow(W_mean)))
+W_df <- W_df %>%
+  mutate(site_year = rownames(X_emg_SOS))  
 
-loadings <- as.data.frame(pca$rotation[,1:2])
-loadings$varname <- rownames(loadings)
+X_df <- as.data.frame(X_emg_SOS)
+X_df$i <- 1:nrow(X_df)  
+X_df$site <- rownames(X_df)  
+
+W_df_full <- W_df %>%
+  left_join(X_df, by = c("i"))
 
 
-mult <- min(
-  (max(scores$PC1)-min(scores$PC1)) / (max(loadings$PC1)-min(loadings$PC1)),
-  (max(scores$PC2)-min(scores$PC2)) / (max(loadings$PC2)-min(loadings$PC2))
-) * 0.8
-loadings_for_plot <- loadings
-loadings_for_plot[,1:2] <- loadings_for_plot[,1:2] * mult
+ggplot(W_df_full, aes(x = W_col1, y = W_col2, color = prcp.Spr)) +
+  geom_point(size = 3) +
+  geom_text(aes(label = site_year), vjust = -0.7, size = 2.5) +
+  scale_color_viridis_c() +
+  theme_minimal(base_size = 14) +
+  labs(
+    x = "Posterior mean PC1",
+    y = "Posterior mean PC2",
+    color = "Spring precipitation (scaled)",
+  )
 
-ggplot() + 
-  geom_point(data = scores, aes(PC1, PC2)) +
-  geom_segment(data = loadings_for_plot, aes(x = 0, y = 0, xend = PC1, yend = PC2),
-               arrow = arrow(length = unit(0.25, "cm"))) +
-  geom_text(data = loadings_for_plot, aes(PC1, PC2, label = varname), vjust = -0.5) +
-  theme_minimal()
+###########  climate and W biplot #######
+# Make W and X into matrices
+W_mat <- as.matrix(W_df[, c("W_col1", "W_col2")])  # 83 x 2
+X_mat <- as.matrix(X_emg_SOS)                      # 83 x 19
+
+# Compute loadings: regression coefficients of X on W
+loadings <- t(solve(t(W_mat) %*% W_mat) %*% t(W_mat) %*% X_mat)  # 19 x 2
+loadings_df <- as.data.frame(loadings)
+loadings_df$variable <- colnames(X_emg_SOS)
+colnames(loadings_df)[1:2] <- c("PC1", "PC2")
+
+
+library(ggrepel)
+arrowscale <- 10
+loadings_df <- loadings_df %>%
+  mutate(PC1 = PC1 * arrowscale,
+         PC2 = PC2 * arrowscale)
+
+ggplot(W_df_full, aes(x = W_col1, y = W_col2)) +
+  # Posterior mean site points
+  geom_point(size = 3, color = "steelblue") +
+  geom_text_repel(aes(label = site_year), size = 3,
+                  max.overlaps = Inf) +
+  
+  # Climate variable arrows
+  geom_segment(data = loadings_df,
+               aes(x = 0, y = 0, xend = PC1, yend = PC2),
+               arrow = arrow(length = unit(0.2, "cm")),
+               color = "darkred") +
+  geom_text_repel(data = loadings_df,
+                  aes(x = PC1, y = PC2, label = variable),
+                  color = "darkred",
+                  size = 3) +
+  
+  theme_minimal(base_size = 14) +
+  labs(
+    x = "Posterior PC1",
+    y = "Posterior PC2",
+  )
+
 
 
 
