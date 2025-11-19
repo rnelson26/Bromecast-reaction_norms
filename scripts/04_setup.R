@@ -37,7 +37,7 @@ kinshipIDs <- read.csv("data/common_gardens/93cg_genotypes.csv")
 
 kinship <- read.table("data/BRTE307_IBSmatrix.txt", sep = ",")
 
-assigned_genotypes <- read.csv("assigned_genotypes.csv")
+#assigned_genotypes <- read.csv("assigned_genotypes.csv")
 
 tips <- read.csv("data/307tips.csv")
 

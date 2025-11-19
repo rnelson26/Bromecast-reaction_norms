@@ -674,13 +674,13 @@ genotype_plant_test_emg <- as.integer(genotype_lookup[as.character(testing_df_em
 
 
 # Check again
-range(genotype_plant_train)  # should be 1 to 93
+range(genotype_plant_train)  
 length(genotype_plant_train)  
 
-range(genotype_plant_train_rep)  # should be 1 to 93
+range(genotype_plant_train_rep)  
 length(genotype_plant_train_rep) 
 
-range(genotype_plant_train_emg)  # should be 1 to 93
+range(genotype_plant_train_emg) 
 length(genotype_plant_train_emg) 
 
 range(genotype_plant_test) 
@@ -711,3 +711,4 @@ idx_plant_test_site_rep  <- as.numeric(testing_df_rep$site)
 
 idx_plant_train_site_emg <- as.numeric(training_df_emg$site)
 idx_plant_test_site_emg  <- as.numeric(testing_df_emg$site)
+
