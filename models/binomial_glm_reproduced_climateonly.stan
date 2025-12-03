@@ -99,7 +99,7 @@ transformed parameters {
   for (i in 1:n_X) W_scaled[i] = X[i] * Lambda;
   for (i in 1:n_X_soil) W_soil_scaled[i] = X_soil[i] * Lambda_soil;
 }
-}
+
 
 model {
   // Priors
@@ -144,6 +144,12 @@ generated quantities {
 
   vector[n_test_full] p_test_full;
   array[n_test_full] int r_test_full;
+  
+    vector[n_train] p_train_fixed_only;
+  array[n_train] int r_train_pred_fixed_only;
+
+  vector[n_train_full] p_train_full_fixed_only;
+  array[n_train_full] int r_train_full_fixed_only;
 
   // Project latent climate/soil projections for full data
   matrix[n_X_full, q_X] W_full;
@@ -168,7 +174,16 @@ generated quantities {
 
     p_train[i] = inv_logit(logit_p);
     r_train_pred[i] = bernoulli_logit_rng(logit_p);
+    
+        // Fixed-effects-only (exclude site-year and plot effects)
+    real logit_fixed = alpha
+                       + dot_product(W_scaled[idx], beta)
+                       + dot_product(W_soil_scaled[site], beta_soil);
+
+    p_train_fixed_only[i] = inv_logit(logit_fixed);
+    r_train_pred_fixed_only[i] = bernoulli_logit_rng(logit_fixed);
   }
+  
 
   // Testing predictions
   for (i in 1:n_test) {
@@ -208,6 +223,14 @@ generated quantities {
 
     p_train_full[i] = inv_logit(logit_p);
     r_train_full[i] = bernoulli_logit_rng(logit_p);
+    
+        // Fixed-effects-only for full training
+    real logit_fixed_full = alpha
+                            + dot_product(W_full[idx], beta)
+                            + dot_product(W_soil_full[site], beta_soil);
+
+    p_train_full_fixed_only[i] = inv_logit(logit_fixed_full);
+    r_train_full_fixed_only[i] = bernoulli_logit_rng(logit_fixed_full);
   }
 
   // Full testing predictions

@@ -269,7 +269,7 @@ generated quantities {
   // Training
   for (i in 1:n_train) {
     int idx = idx_plant_train[i];
-    int site = idx_plant_train_site[i];
+    int idx_site = idx_plant_train_site[i];
     int g = genotype_plant_train[i];
 
     real mu_base = alpha + dot_product(W[idx, ], beta[g]) +
@@ -289,7 +289,7 @@ generated quantities {
   // Test
   for (i in 1:n_test) {
     int idx = idx_plant_test[i];
-    int site = idx_plant_test_site[i];
+    int idx_site = idx_plant_test_site[i];
     int g = genotype_plant_test[i];
 
     real site_year_noise = normal_rng(0, sigma_site_year);
@@ -310,7 +310,7 @@ generated quantities {
   // Fixed (no plot or site_year noise)
   for (i in 1:n_train) {
     int idx = idx_plant_train[i];
-    int site = idx_plant_train_site[i];
+    int idx_site = idx_plant_train_site[i];
     int g = genotype_plant_train[i];
 
     real mu_base = alpha + dot_product(W[idx, ], beta[g]) +
@@ -324,26 +324,12 @@ generated quantities {
     y_train_pred_fixed[i] = ztnb_rng(mu_train_fixed[i], theta);
   }
 
-  for (i in 1:n_test) {
-    int idx = idx_plant_test[i];
-    int site = idx_plant_test_site[i];
-    int g = genotype_plant_test[i];
 
-    real mu_base = alpha + dot_product(W[idx, ], beta[g]) +
-                  dot_product(W_soil[idx_site, ], mu_beta_soil)  +
-                   beta_neighbors * neighbors_test[i] +
-                   beta_annual * annual_test[i] +
-                   beta_perennial * perennial_test[i] +
-                   beta_shrub * shrub_test[i];
-
-    mu_test_fixed[i] = exp(fmin(mu_base, mu_cap));
-    y_test_pred_fixed[i] = ztnb_rng(mu_test_fixed[i], theta);
-  }
 
   // Full training
   for (i in 1:n_train_full) {
     int idx = idx_plant_train_full[i];
-    int site = idx_plant_train_site_full[i];
+    int idx_site = idx_plant_train_site_full[i];
     int g = genotype_plant_train_full[i];
 
     real mu_base = alpha + dot_product(W[idx, ], beta[g]) +
@@ -362,7 +348,7 @@ generated quantities {
   // Fixed-effects-only predictions for full training data
   for (i in 1:n_train_full) {
     int idx = idx_plant_train_full[i];
-    int site = idx_plant_train_site_full[i];
+    int idx_site = idx_plant_train_site_full[i];
     int g = genotype_plant_train_full[i];
 
     real mu_base = alpha
@@ -380,7 +366,7 @@ generated quantities {
   // Full test
   for (i in 1:n_test_full) {
     int idx = idx_plant_test_full[i];
-    int site = idx_plant_test_site_full[i];
+    int idx_site = idx_plant_test_site_full[i];
     int g = genotype_plant_test_full[i];
 
     real site_year_noise = normal_rng(0, sigma_site_year);

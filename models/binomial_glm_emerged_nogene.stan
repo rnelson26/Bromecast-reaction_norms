@@ -99,7 +99,6 @@ transformed parameters {
   for (i in 1:n_X_soil)
     W_soil_scaled[i] = X_soil[i] * Lambda_soil;
 }
-}
 
 model {
   // Priors
@@ -151,6 +150,10 @@ generated quantities {
   vector[n_test] p_test;
   array[n_test] int e_test_pred;
 
+  // Fixed-effects-only predictions for training
+  vector[n_train] p_train_fixed;
+  array[n_train] int e_train_pred_fixed;
+  
   // Training predictions
   for (i in 1:n_train) {
     int idx = idx_plant_train[i];
@@ -168,9 +171,22 @@ generated quantities {
 
     if (plot_index_train[i] != 0)
       logit_p += eta_plot_centered[plot_index_train[i]];
-
-    p_train[i] = inv_logit(logit_p);
+      
+     p_train[i] = inv_logit(logit_p);
     e_train_pred[i] = bernoulli_logit_rng(logit_p);
+   
+    // Fixed-effects-only prediction 
+    real logit_fixed = alpha
+                     + dot_product(W_scaled[idx], beta)
+                     + dot_product(W_soil_scaled[site], beta_soil)
+                     + beta_neighbors * neighbors_train[i]
+                     + beta_annual * annual_train[i]
+                     + beta_perennial * perennial_train[i]
+                     + beta_shrub * shrub_train[i];
+
+    p_train_fixed[i] = inv_logit(logit_fixed);
+    e_train_pred_fixed[i] = bernoulli_logit_rng(logit_fixed);
+  
   }
 
   // Test predictions

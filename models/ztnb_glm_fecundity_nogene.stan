@@ -52,7 +52,6 @@ data {
   int<lower=1> p_X;
   int<lower=1> q_X;
   int<lower=1> q_X_soil;
-  int<lower=1> n_g;
   int<lower=1> n_plot;
   int<lower=1> n_X_soil;
   int<lower=1> s_X;
@@ -61,7 +60,6 @@ data {
   matrix[p_X, q_X] Lambda;
   matrix[s_X, q_X_soil] Lambda_soil;
   matrix[n_X_soil, s_X] X_soil;
-  matrix[n_g, n_g] K;
 
   int<lower=1> n_train_full;
   int<lower=1> n_test_full;
@@ -128,7 +126,7 @@ transformed parameters {
   for (l in 1:q_X) zeta[l] = tan(u_zeta[l]);
   for (l in 1:q_X_soil) zeta_soil[l] = tan(u_zeta_soil[l]);
 }
-}
+
 
 model {
   theta ~ gamma(1, 0.1);
@@ -177,22 +175,116 @@ model {
 generated quantities {
   real mu_cap = 1e10;
 
+  // Posterior mean predictions training and testing
   vector[n_train] mu_train;
   vector[n_test] mu_test;
   vector[n_train_full] mu_train_full;
   vector[n_test_full] mu_test_full;
 
+  // Posterior predictive draws training and testing
   array[n_train] int y_train_pred;
   array[n_test] int y_test_pred;
   array[n_train_full] int y_train_pred_full;
   array[n_test_full] int y_test_pred_full;
 
-  // Training
+  // Fixed-effects-only posterior means training
+  vector[n_train] mu_train_fixed;
+  vector[n_train_full] mu_train_full_fixed;
+
+  // Fixed-effects-only posterior predictive draws training
+  array[n_train] int y_train_pred_fixed;
+  array[n_train_full] int y_train_pred_full_fixed;
+
+  // Training: full
   for (i in 1:n_train) {
     int idx = idx_plant_train[i];
     int site = idx_plant_train_site[i];
-    real mu_base = alpha + dot_product(W[idx], beta) + dot_product(W_soil[site], beta_soil) +
-                   site_year_effect_train_scaled_centered[site_year_id_train[i]] +
-                   beta_neighbors * neighbors_train[i] +
-                   beta_annual * annual_train[i] +
-                   beta_perennial * perennial
+
+    real mu_base = alpha
+                   + dot_product(W[idx], beta)
+                   + dot_product(W_soil[site], beta_soil)
+                   + site_year_effect_train_scaled_centered[site_year_id_train[i]]
+                   + beta_neighbors * neighbors_train[i]
+                   + beta_annual * annual_train[i]
+                   + beta_perennial * perennial_train[i]
+                   + beta_shrub * shrub_train[i];
+
+    mu_train[i] = (plot_index_train[i] == 0 ? exp(mu_base)
+                                             : exp(mu_base + eta_plot_centered[plot_index_train[i]]));
+    y_train_pred[i] = ztnb_rng(mu_train[i], theta);
+
+    // Fixed-effects-only
+    mu_train_fixed[i] = exp(alpha
+                            + dot_product(W[idx], beta)
+                            + dot_product(W_soil[site], beta_soil)
+                            + beta_neighbors * neighbors_train[i]
+                            + beta_annual * annual_train[i]
+                            + beta_perennial * perennial_train[i]
+                            + beta_shrub * shrub_train[i]);
+    y_train_pred_fixed[i] = ztnb_rng(mu_train_fixed[i], theta);
+  }
+
+  // Test: full (no plot effect)
+  for (i in 1:n_test) {
+    int idx = idx_plant_test[i];
+    int site = idx_plant_test_site[i];
+
+    real mu_base = alpha
+                   + dot_product(W[idx], beta)
+                   + dot_product(W_soil[site], beta_soil)
+                   + beta_neighbors * neighbors_test[i]
+                   + beta_annual * annual_test[i]
+                   + beta_perennial * perennial_test[i]
+                   + beta_shrub * shrub_test[i];
+
+    mu_test[i] = exp(mu_base);
+    y_test_pred[i] = ztnb_rng(mu_test[i], theta);
+  }
+
+  // Training full
+  for (i in 1:n_train_full) {
+    int idx = idx_plant_train_full[i];
+    int site = idx_plant_train_site_full[i];
+
+    real mu_base = alpha
+                   + dot_product(W[idx], beta)
+                   + dot_product(W_soil[site], beta_soil)
+                   + site_year_effect_train_scaled_centered[site_year_id_train_full[i]]
+                   + beta_neighbors * neighbors_train_full[i]
+                   + beta_annual * annual_train_full[i]
+                   + beta_perennial * perennial_train_full[i]
+                   + beta_shrub * shrub_train_full[i];
+
+    mu_train_full[i] = (plot_index_train_full[i] == 0 ? exp(mu_base)
+                                                       : exp(mu_base + eta_plot_centered[plot_index_train_full[i]]));
+    y_train_pred_full[i] = ztnb_rng(mu_train_full[i], theta);
+
+    // Fixed-effects-only
+    mu_train_full_fixed[i] = exp(alpha
+                                 + dot_product(W[idx], beta)
+                                 + dot_product(W_soil[site], beta_soil)
+                                 + beta_neighbors * neighbors_train_full[i]
+                                 + beta_annual * annual_train_full[i]
+                                 + beta_perennial * perennial_train_full[i]
+                                 + beta_shrub * shrub_train_full[i]);
+    y_train_pred_full_fixed[i] = ztnb_rng(mu_train_full_fixed[i], theta);
+  }
+
+  // Test full
+  for (i in 1:n_test_full) {
+    int idx = idx_plant_test_full[i];
+    int site = idx_plant_test_site_full[i];
+
+    real mu_base = alpha
+                   + dot_product(W[idx], beta)
+                   + dot_product(W_soil[site], beta_soil)
+                   + beta_neighbors * neighbors_test_full[i]
+                   + beta_annual * annual_test_full[i]
+                   + beta_perennial * perennial_test_full[i]
+                   + beta_shrub * shrub_test_full[i];
+
+    mu_test_full[i] = exp(mu_base);
+    y_test_pred_full[i] = ztnb_rng(mu_test_full[i], theta);
+  }
+}
+

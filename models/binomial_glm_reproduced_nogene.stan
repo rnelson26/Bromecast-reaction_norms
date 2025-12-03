@@ -69,7 +69,7 @@ data {
   array[n_test_full] int<lower=1> idx_plant_test_site_full;
   array[n_test_full] int<lower=1> site_year_id_test_full;
   vector[n_test_full] neighbors_test_full;
-  vector[n_test_full] vector[n_test_full] annual_test_full;
+  vector[n_test_full] annual_test_full;
   vector[n_test_full] perennial_test_full;
   vector[n_test_full] shrub_test_full;
   array[n_test_full] int<lower=0> plot_index_test_full;
@@ -129,7 +129,7 @@ transformed parameters {
   for (i in 1:n_X) W_scaled[i] = X[i] * Lambda;
   for (i in 1:n_X_soil) W_soil_scaled[i] = X_soil[i] * Lambda_soil;
 }
-}
+
 
 model {
   // Priors
@@ -182,14 +182,23 @@ generated quantities {
   vector[n_test_full] p_test_full;
   array[n_test_full] int r_test_full;
 
-  // Projected W for full data
-  matrix[n_X_full, q_X] W_full;
-  matrix[n_X_soil_full, q_X_soil] W_soil_full;
+  // Fixed-effects-only training
+  vector[n_train] p_train_fixed_only;
+  array[n_train] int r_train_pred_fixed_only;
+
+  // Fixed-effects-only for full training
+  vector[n_train_full] p_train_full_fixed_only;
+  array[n_train_full] int r_train_full_fixed_only;
+
+  // Projected W for full data 
+  matrix[n_X_full, q_X_full] W_full;
+  matrix[n_X_soil_full, q_X_soil_full] W_soil_full;
 
   for (i in 1:n_X_full) W_full[i] = X_full[i] * Lambda_full;
   for (i in 1:n_X_soil_full) W_soil_full[i] = X_soil_full[i] * Lambda_soil_full;
 
-  // Training predictions
+
+  // Training predictions 
   for (i in 1:n_train) {
     int idx = idx_plant_train[i];
     int site = idx_plant_train_site[i];
@@ -208,13 +217,25 @@ generated quantities {
 
     p_train[i] = inv_logit(logit_p);
     r_train_pred[i] = bernoulli_logit_rng(logit_p);
+
+    // Fixed-effects-only
+    real logit_fixed = alpha
+                     + dot_product(W_scaled[idx], beta)
+                     + dot_product(W_soil_scaled[site], beta_soil)
+                     + beta_neighbors * neighbors_train[i]
+                     + beta_annual * annual_train[i]
+                     + beta_perennial * perennial_train[i]
+                     + beta_shrub * shrub_train[i];
+
+    p_train_fixed_only[i] = inv_logit(logit_fixed);
+    r_train_pred_fixed_only[i] = bernoulli_logit_rng(logit_fixed);
   }
+
 
   // Testing predictions
   for (i in 1:n_test) {
     int idx = idx_plant_test[i];
     int site = idx_plant_test_site[i];
-    int s = site_year_id_test[i];
     real site_year_noise = normal_rng(0, sigma_site_year);
 
     real logit_p = alpha
@@ -232,7 +253,9 @@ generated quantities {
     r_test_pred[i] = bernoulli_logit_rng(logit_p);
   }
 
-  // Full training predictions
+
+  // Full training predictions 
+
   for (i in 1:n_train_full) {
     int idx = idx_plant_train_full[i];
     int site = idx_plant_train_site_full[i];
@@ -243,26 +266,38 @@ generated quantities {
                            : normal_rng(0, sigma_site_year);
 
     real logit_p = alpha
-                 + dot_product(W_full[idx], beta)
-                 + dot_product(W_soil_full[site], beta_soil)
-                 + site_year_effect
-                 + beta_neighbors * neighbors_train_full[i]
-                 + beta_annual * annual_train_full[i]
-                 + beta_perennial * perennial_train_full[i]
-                 + beta_shrub * shrub_train_full[i];
+                  + dot_product(W_full[idx], beta)
+                  + dot_product(W_soil_full[site], beta_soil)
+                  + site_year_effect
+                  + beta_neighbors * neighbors_train_full[i]
+                  + beta_annual * annual_train_full[i]
+                  + beta_perennial * perennial_train_full[i]
+                  + beta_shrub * shrub_train_full[i];
 
     if (plot_index_train_full[i] != 0)
       logit_p += eta_plot_centered[plot_index_train_full[i]];
 
     p_train_full[i] = inv_logit(logit_p);
     r_train_full[i] = bernoulli_logit_rng(logit_p);
+
+    // Fixed-effects-only for full training 
+    real logit_fixed_full = alpha
+                          + dot_product(W_full[idx], beta)
+                          + dot_product(W_soil_full[site], beta_soil)
+                          + beta_neighbors * neighbors_train_full[i]
+                          + beta_annual * annual_train_full[i]
+                          + beta_perennial * perennial_train_full[i]
+                          + beta_shrub * shrub_train_full[i];
+
+    p_train_full_fixed_only[i] = inv_logit(logit_fixed_full);
+    r_train_full_fixed_only[i] = bernoulli_logit_rng(logit_fixed_full);
   }
 
-  // Full testing predictions
+ 
+  // Full testing predictions 
   for (i in 1:n_test_full) {
     int idx = idx_plant_test_full[i];
     int site = idx_plant_test_site_full[i];
-    int s = site_year_id_test_full[i];
     real site_year_noise = normal_rng(0, sigma_site_year);
 
     real logit_p = alpha

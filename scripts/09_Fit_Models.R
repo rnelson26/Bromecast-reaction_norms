@@ -2,7 +2,7 @@
 
 ############### Bromecast: 09.Fit Models ##########################
 ############# created 3-25-25 ######################
-############# Last modified: 10-30-25 ##########################
+############# Last modified: 12-3-25 ##########################
 ######## Fits and Runs all models ################################
 
 ############ normal cool start for all models #################
@@ -44,7 +44,7 @@ run_model <- function(config) {
   # Save model fit object
   saveRDS(fit, file.path("output", paste0("fit_", config$name, ".rds")))
   
-  # Extract generated quantities 
+  # Extract generated quantities of the posterior predictive 
   gq_names <- fit$metadata()$names_gq
   pred_vars <- grep("_pred$", gq_names, value = TRUE)
   gqs <- lapply(pred_vars, function(v) fit$draws(variables = v, format = "matrix"))
@@ -53,6 +53,20 @@ run_model <- function(config) {
   
   cat("Saved fit and predictions for:", config$name, "\n\n")
 }
+
+# if we want posterior mean objects for other reasons like graphing we could further add (mu_*)
+## fecundity posterior:
+#mu_vars <- grep("^mu_", gq_names, value = TRUE)
+#mu_list <- lapply(mu_vars, function(v) fit$draws(variables = v, format = "matrix"))
+#names(mu_list) <- mu_vars
+#saveRDS(mu_list, file.path("output", paste0("mu_", config$name, ".rds")))
+## emerged and reproduced prosterior
+#p_vars <- grep("^p_", gq_names, value = TRUE)
+#p_list <- lapply(p_vars, function(v) fit$draws(variables = v, format = "matrix"))
+#names(p_list) <- p_vars
+#saveRDS(p_list, file.path("output", paste0("mu_", config$name, ".rds")))
+
+
 
 ######## 1. Run models in parallel on rstudio server ############
 # Define all models

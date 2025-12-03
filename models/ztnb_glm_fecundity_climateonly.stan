@@ -42,7 +42,6 @@ data {
   int<lower=1> p_X;
   int<lower=1> q_X;
   int<lower=1> q_X_soil;
-  int<lower=1> n_g;
   int<lower=1> n_plot;
   int<lower=1> n_X_soil;
   int<lower=1> s_X;
@@ -51,7 +50,6 @@ data {
   matrix[p_X, q_X] Lambda;
   matrix[s_X, q_X_soil] Lambda_soil;
   matrix[n_X_soil, s_X] X_soil;
-  matrix[n_g, n_g] K;
 
   int<lower=1> n_train_full;
   int<lower=1> n_test_full;
@@ -155,6 +153,12 @@ generated quantities {
   array[n_test] int y_test_pred;
   array[n_train_full] int y_train_pred_full;
   array[n_test_full] int y_test_pred_full;
+  
+   // ----- Fixed-effects-only 
+  vector[n_train] mu_train_fixed;
+  vector[n_train_full] mu_train_full_fixed;
+  array[n_train] int y_train_pred_fixed;
+  array[n_train_full] int y_train_pred_full_fixed;
 
   // Training predictions
   for (i in 1:n_train) {
@@ -166,6 +170,10 @@ generated quantities {
 
     mu_train[i] = exp(fmin(mu_base, mu_cap));
     y_train_pred[i] = ztnb_rng(mu_train[i], theta);
+    
+      // Fixed-effects-only 
+    mu_train_fixed[i] = exp(fmin(alpha + dot_product(W[idx], beta) + dot_product(W_soil[site], beta_soil), mu_cap));
+    y_train_pred_fixed[i] = ztnb_rng(mu_train_fixed[i], theta);
   }
 
   // Test predictions
@@ -195,6 +203,10 @@ generated quantities {
 
     mu_train_full[i] = exp(fmin(mu_base, mu_cap));
     y_train_pred_full[i] = ztnb_rng(mu_train_full[i], theta);
+    
+    // Fixed-effects-only 
+    mu_train_full_fixed[i] = exp(fmin(alpha + dot_product(W[idx], beta) + dot_product(W_soil[site], beta_soil), mu_cap));
+    y_train_pred_full_fixed[i] = ztnb_rng(mu_train_full_fixed[i], theta);
   }
 
   // Full test predictions

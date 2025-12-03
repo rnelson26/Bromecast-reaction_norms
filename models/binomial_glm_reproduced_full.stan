@@ -231,6 +231,7 @@ array[n_train_full] int r_train_full;
 vector[n_test_full] p_test_full;
 array[n_test_full] int r_test_full;
 
+
   // Projected covariates for full data
   matrix[n_train_full, q_X_full] W_train_full;
   matrix[n_train_full, q_X_soil_full] W_soil_train_full;

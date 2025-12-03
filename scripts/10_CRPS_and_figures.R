@@ -1,120 +1,251 @@
 ################# Bromecast: 10.CRPS_and_figures.R ##########################
 ############# created 3-25-25 ######################
-############# Last modified: 11-19-25 ##########################
+############# Last modified: 11-20-25 ##########################
 ######## CRPS & Skill Scores for all model variants ################################
 
 # ####### load packages and data
+source("scripts/05_prepare_data.R")
+
 library(cmdstanr)
 library(posterior)
 library(scoringRules)
 library(tibble)
 library(dplyr)
 library(readr)
+library(tidyverse)
 
-source("scripts/05_prepare_data.R")
-
-# Observed test data
-obs_test <- list(
-  emerged    = testing_df_emg$e_test,
-  reproduced = testing_df_emg$r_test,
-  fecund     = testing_df_emg$Fecundity
-)
+##### CRPS updated version #######
 
 
-
-# load in outputs
-all_files <- list.files(
-  "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/output/from megan/emerged_models", ##use file path for your device
-  pattern = "^fit_emerged_.*\\.rds$",
-  full.names = TRUE
-)
-
-
-####### Extract model draws #############
-library(posterior)
-library(scoringRules)
-
-get_draws <- function(fit, var_name) {
-  draws_df <- fit$draws(format = "df")
-  var_cols <- grep(paste0("^", var_name, "\\["), names(draws_df))
-  as.matrix(draws_df[, var_cols])
+# --- Function to extract draws as numeric matrix ---
+extract_draws <- function(draws, var_base) {
+  cols <- grep(paste0("^", var_base, "\\["), names(draws))
+  if (length(cols) == 0) stop(paste("Variable", var_base, "not found in draws df"))
+  mat <- as.matrix(draws[, cols])
+  mat <- apply(mat, 2, as.numeric)
+  return(mat)
 }
 
-library(tibble)
+# --- Function to calculate CRPS ---
+get_crps <- function(obs, pred_df) {
+  pred_mat <- as.matrix(pred_df)
+  if (nrow(pred_mat) != length(obs)) pred_mat <- t(pred_mat)
+  crps_sample(y = as.numeric(obs), dat = pred_mat)
+}
 
-base_dir <- "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/output/from megan/emerged_models"
-
-all_files <- list.files(
-  base_dir,
-  pattern = "^fit_emerged_.*\\.rds$",
-  full.names = TRUE
+# --- Observed data ---
+obs_list <- list(
+  e_train  = training_df_emg$e_train,
+  e_train_fixed = training_df_emg$e_train,
+  e_test   = testing_df_emg$e_test,
+  
+  r_train = training_df_rep$r_train,
+  r_train_fixed = training_df_rep$r_train,
+  r_test  = testing_df_rep$r_test,
+  
+  y_train = training_df$Fecundity,
+  y_train_fixed = training_df$Fecundity,
+  y_test  = testing_df$Fecundity
 )
 
-file_info <- tibble(
-  file_path = all_files
-) %>%
+# --- Set up draw files ---
+#base_dir <- "/Users/Becca/Desktop/Adler Lab/from megan/fit_emerged_draws_sub"
+base_dir <- "/Users/Becca/Desktop/Adler Lab/from megan/reproduced_models"
+all_files <- list.files(base_dir, pattern = "^fit_.*\\.rds$", full.names = TRUE)
+
+file_info <- tibble(file_path = all_files) %>%
   mutate(
-    file_name = basename(file_path),
-    stage = sub("^fit_(.*?)_.*\\.rds$", "\\1", file_name),
-    variant = sub("^fit_.*?_(.*?)\\.rds$", "\\1", file_name),
-    crps_full = NA_real_,
-    crps_null = NA_real_,
-    skill_score = NA_real_
+    file_name   = basename(file_path),
+    stage       = sub("^fit_(.*?)_.*\\.rds$", "\\1", file_name),
+    variant     = sub("^fit_.*?_(.*?)\\.rds$", "\\1", file_name),
+    crps_train  = NA_real_,
+    crps_train_fixed = NA_real_,
+    crps_test   = NA_real_,
+    crps_null   = NA_real_,
+    skill_train = NA_real_,
+    skill_train_fixed = NA_real_,
+    skill_test  = NA_real_
   )
 
-
-#### function to calculate CRPS ##############
+# --- Main loop ---
 for (i in seq_len(nrow(file_info))) {
   
-  # Load Stan fit object
-  fit <- readRDS(file_info$file_path[i])
-  
+  draws <- readRDS(file_info$file_path[i])
   stage <- file_info$stage[i]
   variant <- file_info$variant[i]
   
-  # --- Extract test posterior predictive draws from generated quantities ---
-  # Change these names depending on your stage
-  if (stage == "emerged") {
-    pred_draws <- get_draws(fit, "e_test_pred")
-  } else if (stage == "reproduced") {
-    pred_draws <- get_draws(fit, "r_test_pred")
-  } else if (stage == "fecundity") {
-    pred_draws <- get_draws(fit, "y_test_pred")
+  # Map stage to actual variable names in draws
+  var_map <- switch(stage,
+                    emerged    = c("e_train_pred", "e_train_pred_fixed", "e_test_pred"),
+                    reproduced = c("r_train_pred", "r_train_pred_fixed", "r_test_pred"),
+                    fecundity  = c("y_train_pred", "y_train_pred_fixed", "y_test_pred"))
+  
+  # Names in obs_list
+  obs_names <- switch(stage,
+                      emerged    = c("e_train", "e_train_fixed", "e_test"),
+                      reproduced = c("r_train", "r_train_fixed", "r_test"),
+                      fecundity  = c("y_train", "y_train_fixed", "y_test"))
+  
+  crps_values <- numeric(3)
+  names(crps_values) <- c("train", "train_fixed", "test")
+  
+  # --- Compute CRPS for train, train_fixed, test ---
+  for (j in seq_along(var_map)) {
+    pred_draws <- tryCatch(
+      extract_draws(draws, var_map[j]),
+      error = function(e) {
+        warning(paste("Skipping", var_map[j], "for file:", file_info$file_name[i]))
+        return(NULL)
+      }
+    )
+    if (is.null(pred_draws)) next
+    
+    obs <- obs_list[[obs_names[j]]]
+    if (nrow(pred_draws) != length(obs)) pred_draws <- t(pred_draws)
+    
+    crps_values[j] <- mean(get_crps(obs, pred_draws))
+    file_info[[paste0("crps_", names(crps_values)[j])]][i] <- crps_values[j]
   }
   
-  # Observed test data for this stage
-  obs <- switch(stage,
-                emerged = testing_df$e_test,
-                reproduced = testing_df$r_test,
-                fecundity = testing_df$Fecundity)
+  # --- Null CRPS for skill score (use test null) ---
+  null_file <- file.path(base_dir, paste0("fit_", stage, "_null.rds"))
+  null_crps <- NA_real_
+  if (file.exists(null_file)) {
+    null_draws <- readRDS(null_file)
+    null_var <- var_map[3]  # test
+    pred_null <- tryCatch(extract_draws(null_draws, null_var),
+                          error = function(e) return(NULL))
+    if (!is.null(pred_null)) {
+      obs_null <- obs_list[[obs_names[3]]]  # test obs
+      if (nrow(pred_null) != length(obs_null)) pred_null <- t(pred_null)
+      null_crps <- mean(get_crps(obs_null, pred_null))
+    }
+  }
+  file_info$crps_null[i] <- null_crps
+  
+  # --- Skill scores ---
+  if (!is.na(null_crps) && null_crps != 0) {
+    file_info$skill_train[i]       <- 1 - (file_info$crps_train[i] / null_crps)
+    file_info$skill_train_fixed[i] <- 1 - (file_info$crps_train_fixed[i] / null_crps)
+    file_info$skill_test[i]        <- 1 - (file_info$crps_test[i] / null_crps)
+  }
+  
+  message("Processed: ", file_info$file_name[i],
+          " | CRPS test = ", round(file_info$crps_test[i], 4))
+}
+
+# --- Final output ---
+file_info
+output <- as.data.frame(file_info)
+
+##### null model #######
+draws <- readRDS("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/output/from megan/fit_emerged_draws_sub/fit_emerged_null_draws_sub.rds")
+
+# 2. Check the structure
+str(draws)        # gives an overview of the object type and contents
+class(draws)      # tells you if it's a list, CmdStanMCMC, data.frame, etc.
+names(draws)      # if it's a list, shows what elements you can access
+
+focal_vars <- c("e_test_pred", "e_train_pred", "e_train_pred_fixed")
+
+# Use grepl to see if the variable names exist
+sapply(focal_vars, function(fv) any(grepl(fv, names(draws))))
+
+####### CRPS older version ######
+library(cmdstanr)
+library(posterior)
+library(scoringRules)
+library(tibble)
+library(dplyr)
+library(readr)
+library(tidyverse)
+
+
+# --- Function to extract draws as numeric matrix ---
+extract_draws <- function(draws, var_base) {
+  # select columns that start with var_base + "["
+  cols <- grep(paste0("^", var_base, "\\["), names(draws))
+  if (length(cols) == 0) stop(paste("Variable", var_base, "not found in draws df"))
+  
+  mat <- as.matrix(draws[, cols])
+  mat <- apply(mat, 2, as.numeric)  # ensure numeric
+  return(mat)  # rows = obs, columns = draws
+}
+
+# --- Function to calculate CRPS using posterior draws ---
+get_crps <- function(obs, pred_df) {
+  # crps_sample expects rows = observations, columns = draws
+  pred_mat <- as.matrix(pred_df)
+  if (nrow(pred_mat) != length(obs)) {
+    pred_mat <- t(pred_mat)
+  }
+  crps_sample(y = as.numeric(obs), dat = pred_mat)
+}
+
+# --- Observed test data ---
+obs_test <- list(
+  emerged    = testing_df_emg$e_test,
+  reproduced = testing_df_emg$r_test,
+  fecundity  = testing_df_emg$Fecundity
+)
+
+# --- Set up draw files ---
+base_dir <- "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/output/from megan/fit_emerged_draws_sub"
+all_files <- list.files(base_dir, pattern = "^fit_emerged_.*\\.rds$", full.names = TRUE)
+
+# --- Main loop to compute CRPS and skill scores ---
+for (i in seq_len(nrow(file_info))) {
+  
+  draws   <- readRDS(file_info$file_path[i])
+  stage   <- file_info$stage[i]
+  variant <- file_info$variant[i]
+  
+  # Determine posterior predictive variable
+  pred_var <- switch(stage,
+                     emerged    = "e_test_pred",
+                     reproduced = "r_test_pred",
+                     fecundity  = "y_test_pred")
+  
+  # Safe extraction: skip file if variable not present
+  pred_draws <- tryCatch(
+    extract_draws(draws, pred_var),
+    error = function(e) {
+      warning(paste("Skipping file:", file_info$file_name[i], " —", e$message))
+      return(NULL)
+    }
+  )
+  if (is.null(pred_draws)) next
+  
+  # Observed values
+  if (!stage %in% names(obs_test)) {
+    warning(paste("No observed data for stage:", stage))
+    next
+  }
+  obs <- as.numeric(obs_test[[stage]])
+  
+  # Ensure matrix rows = observations, columns = draws
+  if (nrow(pred_draws) != length(obs)) pred_draws <- t(pred_draws)
   
   # --- CRPS for full model ---
-  if (stage %in% c("emerged", "reproduced")) {
-    file_info$crps_full[i] <- mean(crps_binom(y = obs, size = 1, prob = rowMeans(pred_draws)))
-  } else {
-    file_info$crps_full[i] <- mean(crps_nb(y = obs, size = 10, mean = rowMeans(pred_draws)))
-  }
+  file_info$crps_full[i] <- mean(get_crps(obs, pred_draws))
   
   # --- CRPS for null model ---
   if (variant == "null") {
     file_info$crps_null[i] <- file_info$crps_full[i]
   } else {
-    # Look for null model in same folder
     null_file <- file.path(base_dir, paste0("fit_", stage, "_null.rds"))
     if (file.exists(null_file)) {
-      null_fit <- readRDS(null_file)
-      if (stage == "emerged") {
-        pred_null <- get_draws(null_fit, "e_test_pred")
-      } else if (stage == "reproduced") {
-        pred_null <- get_draws(null_fit, "r_test_pred")
+      null_draws <- readRDS(null_file)
+      pred_null  <- tryCatch(extract_draws(null_draws, pred_var),
+                             error = function(e) {
+                               warning(paste("Skipping null for file:", file_info$file_name[i]))
+                               return(NULL)
+                             })
+      if (!is.null(pred_null)) {
+        if (nrow(pred_null) != length(obs)) pred_null <- t(pred_null)
+        file_info$crps_null[i] <- mean(get_crps(obs, pred_null))
       } else {
-        pred_null <- get_draws(null_fit, "y_test_pred")
-      }
-      
-      if (stage %in% c("emerged", "reproduced")) {
-        file_info$crps_null[i] <- mean(crps_binom(y = obs, size = 1, prob = rowMeans(pred_null)))
-      } else {
-        file_info$crps_null[i] <- mean(crps_nb(y = obs, size = 10, mean = rowMeans(pred_null)))
+        file_info$crps_null[i] <- NA_real_
       }
     } else {
       file_info$crps_null[i] <- NA_real_
@@ -122,17 +253,179 @@ for (i in seq_len(nrow(file_info))) {
   }
   
   # --- Skill score ---
-  file_info$skill_score[i] <- 1 - (file_info$crps_full[i] / file_info$crps_null[i])
+  if (!is.na(file_info$crps_null[i]) && file_info$crps_null[i] != 0) {
+    file_info$skill_score[i] <- 1 - (file_info$crps_full[i] / file_info$crps_null[i])
+  } else {
+    file_info$skill_score[i] <- NA_real_
+  }
+  
+  message("Processed file: ", file_info$file_name[i], 
+          " | CRPS full = ", round(file_info$crps_full[i], 4))
 }
 
+# --- Inspect results ---
+file_info
 
-library(cmdstanr)
 
-# Load the saved fit
-fit <- readRDS("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/output/from megan/emerged_models/fit_emerged_full.rds")
-fit
-# Try to get draws for all generated quantities
-draws_df <- fit$draws(format = "df")
+
+
+####### CRPS ################
+library(tidyverse)
+library(scoringRules)  # for crps_sample
+
+# --- Function to extract draws as numeric matrix ---
+extract_draws <- function(draws, var_name) {
+  if (is.data.frame(draws)) {
+    cols <- grep(paste0("^", var_name, "(\\[|$)"), names(draws))
+    if (length(cols) == 0) stop(paste("Variable", var_name, "not found in draws df"))
+    mat <- as.matrix(draws[, cols])
+    mat <- apply(mat, 2, as.numeric)
+    return(mat)
+  } else if (is.list(draws)) {
+    # list with named elements
+    cols <- grep(paste0("^", var_name, "(\\[|$)"), names(draws))
+    if (length(cols) == 0) stop(paste("Variable", var_name, "not found in draws list"))
+    mat <- as.matrix(draws[cols])
+    mat <- apply(mat, 2, as.numeric)
+    return(mat)
+  } else if (is.matrix(draws)) {
+    return(apply(draws, 2, as.numeric))
+  } else {
+    stop("Unknown draws object type")
+  }
+}
+
+# --- Function to calculate CRPS using posterior draws ---
+get_crps <- function(obs, pred_df) {
+  pred_mat <- t(as.matrix(pred_df))   # transpose: rows = obs, columns = draws
+  obs <- as.numeric(obs)              # ensure numeric
+  crps_sample(y = obs, dat = pred_mat)
+}
+
+# --- Observed test data ---
+obs_test <- list(
+  emerged    = testing_df_emg$e_test,
+  reproduced = testing_df_emg$r_test,
+  fecundity  = testing_df_emg$Fecundity
+)
+
+# --- Set up draw files ---
+base_dir <- "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/output/from megan/fit_emerged_draws_sub"
+all_files <- list.files(base_dir, pattern = "^fit_emerged_.*\\.rds$", full.names = TRUE)
+
+file_info <- tibble(file_path = all_files) %>%
+  mutate(
+    file_name   = basename(file_path),
+    stage       = sub("^fit_(.*?)_.*\\.rds$", "\\1", file_name),
+    variant     = sub("^fit_.*?_(.*?)\\.rds$", "\\1", file_name),
+    crps_full   = NA_real_,
+    crps_null   = NA_real_,
+    skill_score = NA_real_
+  )
+
+# --- Main loop to compute CRPS and skill scores ---
+for (i in seq_len(nrow(file_info))) {
+  
+  draws   <- readRDS(file_info$file_path[i])
+  stage   <- file_info$stage[i]
+  variant <- file_info$variant[i]
+  
+  # Determine posterior predictive variable
+  pred_var <- switch(stage,
+                     emerged    = "e_test_pred",
+                     reproduced = "r_test_pred",
+                     fecundity  = "y_test_pred")
+  
+  # Extract posterior predictive draws
+  pred_draws <- extract_draws(draws, pred_var)
+  
+  # Observed values
+  if (!stage %in% names(obs_test)) {
+    warning(paste("No observed data for stage:", stage))
+    next
+  }
+  obs <- as.numeric(obs_test[[stage]])
+  
+  # Check lengths match
+  if (length(obs) != nrow(pred_draws)) {
+    warning(paste("Length mismatch for stage:", stage, 
+                  "obs =", length(obs), "rows in draws =", nrow(pred_draws)))
+    next
+  }
+  
+  # --- CRPS for full model ---
+  file_info$crps_full[i] <- mean(get_crps(obs, pred_draws))
+  
+  # --- CRPS for null model ---
+  if (variant == "null") {
+    file_info$crps_null[i] <- file_info$crps_full[i]
+  } else {
+    null_file <- file.path(base_dir, paste0("fit_", stage, "_null.rds"))
+    if (file.exists(null_file)) {
+      null_draws <- readRDS(null_file)
+      pred_null  <- extract_draws(null_draws, pred_var)
+      if (nrow(pred_null) == length(obs)) {
+        file_info$crps_null[i] <- mean(get_crps(obs, pred_null))
+      } else {
+        file_info$crps_null[i] <- NA_real_
+        warning("Null draws and obs length mismatch, skipping CRPS for null")
+      }
+    } else {
+      file_info$crps_null[i] <- NA_real_
+    }
+  }
+  
+  # --- Skill score ---
+  if (!is.na(file_info$crps_null[i]) && file_info$crps_null[i] != 0) {
+    file_info$skill_score[i] <- 1 - (file_info$crps_full[i] / file_info$crps_null[i])
+  } else {
+    file_info$skill_score[i] <- NA_real_
+  }
+  
+  message("Processed file: ", file_info$file_name[i], 
+          " | CRPS full = ", round(file_info$crps_full[i], 4))
+}
+
+# --- Inspect results ---
+file_info
+
+
+## old 
+# 1. Load the RDS file
+draws <- readRDS( "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/output/from megan/fit_emerged_draws_sub/fit_emerged_full_draws_sub.rds")
+
+# 2. Inspect what is inside
+str(draws)
+names(draws)  # if it's a list
+
+# 3. Extract the draws you want
+# If draws is a list with matrices/vectors
+draws_e_full <- draws  # sometimes just the whole object
+# Train posterior draws
+e_train_pred_full <- draws %>% dplyr::select(starts_with("e_train_pred[")) %>% as.matrix()
+
+# Train fixed effect draws (if present)
+e_train_fixed_full <- draws %>% dplyr::select(starts_with("e_train_pred_fixed[")) %>% as.matrix()
+
+# Test posterior draws
+e_test_pred_full <- draws %>% dplyr::select(starts_with("e_test_pred[")) %>% as.matrix()
+
+
+# 4. Check dimensions
+dim(e_train_pred_full)
+dim(e_train_fixed_pred_full)
+dim(e_test_pred_full)
+
+# 5. Calculate rowMeans if needed for CRPS
+pred_mean <- rowMeans(e_test_pred_full)
+
+# 6. Observed test data
+obs <- testing_df$e_test  # or testing_df_emg$e_test
+
+# 7. Compute CRPS for this single file
+crps_value <- mean(crps_binom(y = obs, size = 1, prob = pred_mean))
+crps_value
+
 
 
 #draws_e_full <- fit_emg_full$draws(format = "df")
