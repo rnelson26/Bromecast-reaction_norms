@@ -1,6 +1,6 @@
 ################# Bromecast: 10.CRPS_and_figures.R ##########################
 ############# created 3-25-25 ######################
-############# Last modified: 11-20-25 ##########################
+############# Last modified: 12-3-25 ##########################
 ######## CRPS & Skill Scores for all model variants ################################
 
 # ####### load packages and data
@@ -137,6 +137,172 @@ for (i in seq_len(nrow(file_info))) {
 # --- Final output ---
 file_info
 output <- as.data.frame(file_info)
+
+
+######## confusion matrix for Reproduced & Emerged models #################
+
+### version 1
+library(dplyr)
+library(purrr)
+library(caret)
+
+# --- Function to extract confusion matrix for each posterior draw ---
+extract_confusion <- function(draws, var_name, obs) {
+  # Extract numeric matrix (posterior predictive draws)
+  pred_draws <- extract_draws(draws, var_name)
+  n_draws <- nrow(pred_draws)
+  
+  # Compute confusion matrix per draw
+  cm_list <- map(1:n_draws, function(d) {
+    pred_class <- pred_draws[d, ]  # already 0/1
+    confusionMatrix(factor(pred_class), factor(obs))
+  })
+  
+  return(cm_list)
+}
+
+# --- Example usage ---
+#base_dir <- "/Users/Becca/Desktop/Adler Lab/from megan/fit_emerged_draws_sub"
+base_dir <- "/Users/Becca/Desktop/Adler Lab/from megan/reproduced_models"
+all_files <- list.files(base_dir, pattern = "^fit_.*\\.rds$", full.names = TRUE)
+
+draws <- readRDS("/Users/Becca/Desktop/Adler Lab/from megan/reproduced_models/fit_reproduced_full_draws_sub.rds")
+obs <- r_test
+cm_list <- extract_confusion(draws, "r_test_pred", obs)
+
+# --- Summarize confusion matrices ---
+# Extract TP, FP, FN, TN counts
+cm_summary <- map_dfr(cm_list, ~ {
+  tab <- as.data.frame(.x$table)
+  # pivot table into single-row summary
+  tibble(
+    TP = tab$Freq[tab$Prediction==1 & tab$Reference==1],
+    FP = tab$Freq[tab$Prediction==1 & tab$Reference==0],
+    FN = tab$Freq[tab$Prediction==0 & tab$Reference==1],
+    TN = tab$Freq[tab$Prediction==0 & tab$Reference==0]
+  )
+})
+
+# Posterior mean confusion matrix
+posterior_mean_cm <- cm_summary %>%
+  summarise(across(TP:TN, mean))
+posterior_mean_cm
+
+
+
+
+
+##### version 2
+
+# Load posterior predictive draws
+gqs <- readRDS("output/gqs_emerged_full.rds")  # example for one model
+
+# Extract predictions
+r_train_pred <- gqs$e_train_pred      # array: n_draws x n_train
+r_test_pred  <- gqs$r_test_pred
+r_train_pred_fixed <- gqs$r_train_pred_fixed
+r_test_pred_fixed  <- gqs$r_test_pred_fixed
+
+# Load observed outcomes
+r_train <- stan_data_emg_full$r_train  # vector of 0/1
+r_test  <- stan_data_emg_full$r_test   # vector of 0/1 (if defined)
+
+
+# Majority vote across posterior draws
+r_train_pred_summary <- apply(r_train_pred, 2, function(x) as.integer(mean(x) > 0.5))
+r_test_pred_summary <- apply(r_test_pred, 2, function(x) as.integer(mean(x) > 0.5))
+r_train_fixed_summary <- apply(r_train_pred_fixed, 2, function(x) as.integer(mean(x) > 0.5))
+confusionMatrix(factor(r_train_fixed_summary), factor(r_train))
+
+# Base R confusion matrix
+conf_train <- table(Predicted = r_train_pred_summary, Observed = r_train)
+conf_test  <- table(Predicted = r_test_pred_summary, Observed = r_test)
+
+print(conf_train)
+print(conf_test)
+
+library(caret)
+
+confusionMatrix(
+  factor(r_train_pred_summary),
+  factor(r_train),
+  positive = "1"
+)
+
+confusionMatrix(
+  factor(r_test_pred_summary),
+  factor(r_test),
+  positive = "1"
+)
+
+## graph matrix
+library(tidyverse)
+
+# Example for test set
+# r_test_pred is n_draws x n_test (matrix)
+n_draws <- nrow(r_test_pred)
+n_test <- ncol(r_test_pred)
+
+# Compute predicted probability per observation
+pred_prob <- colMeans(r_test_pred) # mean over draws
+
+df_plot <- tibble(
+  observed = r_test,      # 0 or 1
+  predicted_prob = pred_prob
+)
+
+ggplot(df_plot, aes(x = predicted_prob, y = as.factor(observed))) +
+  geom_jitter(width = 0.02, height = 0.1, alpha = 0.5, color = "blue") +
+  geom_point(aes(y = 0.5), color = "red") +  # optional: threshold line
+  labs(x = "Predicted probability", y = "Observed outcome") +
+  theme_minimal()
+
+library(caret)
+library(purrr)
+
+# Threshold predicted probability for each draw
+threshold <- 0.5
+conf_mats <- map(1:n_draws, function(d) {
+  pred_class <- ifelse(r_test_pred[d, ] > threshold, 1, 0)
+  confusionMatrix(factor(pred_class), factor(r_test))
+})
+
+# Extract metrics (accuracy, sensitivity, specificity)
+metrics <- map_dfr(conf_mats, ~ as.data.frame(t(.x$byClass)))
+metrics$draw <- 1:n_draws
+
+# Plot distribution of accuracy
+ggplot(metrics, aes(x = draw, y = Accuracy)) +
+  geom_line(alpha = 0.3) +
+  geom_point(stat = "summary", fun = "mean", color = "red", size = 2) +
+  labs(y = "Accuracy", x = "Posterior draw") +
+  theme_minimal()
+
+
+df_density <- tibble(
+  observed = rep(r_test, each = n_draws),
+  predicted = as.vector(t(r_test_pred))
+)
+
+ggplot(df_density, aes(x = predicted, fill = as.factor(observed))) +
+  geom_density(alpha = 0.4) +
+  labs(x = "Posterior predictive", fill = "Observed") +
+  theme_minimal()
+
+cm <- table(Predicted = pred_label, Observed = r_test)
+library(ggplot2)
+library(reshape2)
+
+cm_melt <- melt(cm)
+ggplot(cm_melt, aes(x = Observed, y = Predicted, fill = value)) +
+  geom_tile() +
+  geom_text(aes(label = value), color = "white") +
+  scale_fill_gradient(low = "blue", high = "red") +
+  theme_minimal()
+
+
+
+########## older code #######################
 
 ##### null model #######
 draws <- readRDS("/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/output/from megan/fit_emerged_draws_sub/fit_emerged_null_draws_sub.rds")
