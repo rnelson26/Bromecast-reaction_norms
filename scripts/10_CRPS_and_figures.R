@@ -1,7 +1,10 @@
 ################# Bromecast: 10.CRPS_and_figures.R ##########################
 ############# created 3-25-25 ######################
-############# Last modified: 12-3-25 ##########################
+############# Last modified: 12-8-25 ##########################
 ######## CRPS & Skill Scores for all model variants ################################
+
+
+
 
 # ####### load packages and data
 source("scripts/05_prepare_data.R")
@@ -49,8 +52,8 @@ obs_list <- list(
 )
 
 # --- Set up draw files ---
-#base_dir <- "/Users/Becca/Desktop/Adler Lab/from megan/fit_emerged_draws_sub"
-base_dir <- "/Users/Becca/Desktop/Adler Lab/from megan/reproduced_models"
+base_dir <- "/Users/Becca/Desktop/Adler Lab/from megan/fit_emerged_draws_sub"
+#base_dir <- "/Users/Becca/Desktop/Adler Lab/from megan/reproduced_models"
 all_files <- list.files(base_dir, pattern = "^fit_.*\\.rds$", full.names = TRUE)
 
 file_info <- tibble(file_path = all_files) %>%
@@ -137,6 +140,41 @@ for (i in seq_len(nrow(file_info))) {
 # --- Final output ---
 file_info
 output <- as.data.frame(file_info)
+
+
+# --- Get null model CRPS for emerged ----
+
+
+
+null_file <- "/Users/Becca/Desktop/Adler Lab/from megan/fit_emerged_draws_sub/fit_emerged_null_draws_sub.rds"
+null_draws <- readRDS(null_file)
+df_null <- posterior::as_draws_df(null_draws)
+grep("e_.*pred", names(df_null), value = TRUE)
+
+
+vars <- names(df_null)
+
+
+base_vars <- gsub("\\[.*\\]", "", vars)
+
+unique_base_vars <- unique(base_vars)
+#[1] "lp__"         "alpha"        "p_train"      "r_train_pred" "p_test"       "r_test_pred"  ".chain"       ".iteration"  
+#[9] ".draw"  
+
+unique_base_vars
+
+
+extract_null <- function(df, base) {
+  cols <- grep(paste0("^", base, "\\["), names(df))
+  if (length(cols) == 0) {
+    stop(paste("Variable", base, "not found. Use grep() to inspect names(df_null)."))
+  }
+  mat <- as.matrix(df[, cols])
+  apply(mat, 2, as.numeric)
+}
+e_train_pred_null <- extract_null(df_null, "e_train_pred")
+e_test_pred_null  <- extract_null(df_null, "e_test_pred")
+
 
 
 ######## confusion matrix for Reproduced & Emerged models #################
