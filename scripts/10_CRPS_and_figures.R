@@ -1,8 +1,7 @@
 ################# Bromecast: 10.CRPS_and_figures.R ##########################
 ############# created 3-25-25 ######################
-############# Last modified: 12-8-25 ##########################
+############# Last modified: 12-18-25 ##########################
 ######## CRPS & Skill Scores for all model variants ################################
-
 
 
 
@@ -52,8 +51,8 @@ obs_list <- list(
 )
 
 # --- Set up draw files ---
-base_dir <- "/Users/Becca/Desktop/Adler Lab/from megan/fit_emerged_draws_sub"
-#base_dir <- "/Users/Becca/Desktop/Adler Lab/from megan/reproduced_models"
+base_dir <- "/Users/Becca/Desktop/Adler Lab/from megan/Outputs_Dec_2025"
+
 all_files <- list.files(base_dir, pattern = "^fit_.*\\.rds$", full.names = TRUE)
 
 file_info <- tibble(file_path = all_files) %>%
@@ -64,11 +63,196 @@ file_info <- tibble(file_path = all_files) %>%
     crps_train  = NA_real_,
     crps_train_fixed = NA_real_,
     crps_test   = NA_real_,
-    crps_null   = NA_real_,
+    null_crps_train = NA_real_,   # <-- ADD
+    null_crps_test  = NA_real_,   # <-- ADD
     skill_train = NA_real_,
     skill_train_fixed = NA_real_,
     skill_test  = NA_real_
   )
+
+
+
+null_crps <- list()
+
+for (stg in unique(file_info$stage)) {
+  
+  null_file <- file.path(base_dir, paste0("fit_", stg, "_null_draws.rds"))
+  if (!file.exists(null_file)) next
+  
+  null_draws <- readRDS(null_file)
+  
+  var_map <- switch(stg,
+                    emerged    = c(train = "e_train_pred", test = "e_test_pred"),
+                    reproduced = c(train = "r_train_pred", test = "r_test_pred"),
+                    fecundity  = c(train = "y_train_pred", test = "y_test_pred")
+  )
+  
+  obs_map <- switch(stg,
+                    emerged    = c(train = "e_train", test = "e_test"),
+                    reproduced = c(train = "r_train", test = "r_test"),
+                    fecundity  = c(train = "y_train", test = "y_test")
+  )
+  
+  null_crps[[stg]] <- list()
+  
+  for (nm in names(var_map)) {
+    pred <- extract_draws(null_draws, var_map[nm])
+    obs  <- obs_list[[obs_map[nm]]]
+    if (nrow(pred) != length(obs)) pred <- t(pred)
+    null_crps[[stg]][[nm]] <- mean(get_crps(obs, pred))
+  }
+}
+
+# ================================================================
+# STEP 2: MAIN LOOP
+# ================================================================
+for (i in seq_len(nrow(file_info))) {
+  
+  draws   <- readRDS(file_info$file_path[i])
+  stage   <- file_info$stage[i]
+  variant <- file_info$variant[i]
+  
+  var_map <- switch(stage,
+                    emerged    = c(train = "e_train_pred",
+                                   train_fixed = "e_train_pred_fixed",
+                                   test = "e_test_pred"),
+                    reproduced = c(train = "r_train_pred",
+                                   train_fixed = "r_train_pred_fixed",
+                                   test = "r_test_pred"),
+                    fecundity  = c(train = "y_train_pred",
+                                   train_fixed = "y_train_pred_fixed",
+                                   test = "y_test_pred")
+  )
+  
+  obs_map <- switch(stage,
+                    emerged    = c(train = "e_train",
+                                   train_fixed = "e_train_fixed",
+                                   test = "e_test"),
+                    reproduced = c(train = "r_train",
+                                   train_fixed = "r_train_fixed",
+                                   test = "r_test"),
+                    fecundity  = c(train = "y_train",
+                                   train_fixed = "y_train_fixed",
+                                   test = "y_test")
+  )
+  
+  # --- CRPS ---
+  for (nm in names(var_map)) {
+    
+    pred <- tryCatch(
+      extract_draws(draws, var_map[nm]),
+      error = function(e) NULL
+    )
+    if (is.null(pred)) next
+    
+    obs <- obs_list[[obs_map[nm]]]
+    if (nrow(pred) != length(obs)) pred <- t(pred)
+    
+    file_info[[paste0("crps_", nm)]][i] <-
+      mean(get_crps(obs, pred))
+  }
+  
+  # --- Attach null CRPS ---
+  file_info$null_crps_train[i] <- null_crps[[stage]]$train
+  file_info$null_crps_test[i]  <- null_crps[[stage]]$test
+  
+  # --- Skill scores ---
+  if (variant == "null") {
+    file_info$skill_train[i]        <- 0
+    file_info$skill_train_fixed[i]  <- 0
+    file_info$skill_test[i]         <- 0
+  } else {
+    if (!is.na(file_info$null_crps_train[i])) {
+      file_info$skill_train[i] <-
+        1 - file_info$crps_train[i] / file_info$null_crps_train[i]
+      
+      file_info$skill_train_fixed[i] <-
+        1 - file_info$crps_train_fixed[i] / file_info$null_crps_train[i]
+    }
+    
+    if (!is.na(file_info$null_crps_test[i])) {
+      file_info$skill_test[i] <-
+        1 - file_info$crps_test[i] / file_info$null_crps_test[i]
+    }
+  }
+  
+  message(
+    "Processed: ", file_info$file_name[i],
+    " | Skill train = ", round(file_info$skill_train[i], 3),
+    " | Skill test = ", round(file_info$skill_test[i], 3)
+  )
+}
+
+
+
+# --- Final output ---
+file_info
+output <- as.data.frame(file_info)
+
+########### results table #######
+library(flextable)
+library(officer)
+library(dplyr)
+
+
+table_df <- output %>%
+  select(
+    stage,
+    file_name,
+    crps_train,
+    crps_train_fixed,
+    crps_test,
+    null_crps_train,
+    null_crps_test,
+    skill_train,
+    skill_train_fixed,
+    skill_test
+  ) %>%
+  arrange(stage, desc(skill_test)) %>%
+  mutate(
+    across(
+      where(is.numeric),
+      ~ round(.x, 3)
+    )
+  )
+
+ft <- flextable(table_df) %>%
+  set_header_labels(
+    stage              = "Stage",
+    file_name            = "Model variant",
+    crps_train         = "CRPS (train)",
+    crps_train_fixed   = "CRPS (train, fixed)",
+    crps_test          = "CRPS (test)",
+    null_crps_train    = "Null CRPS (train)",
+    null_crps_test     = "Null CRPS (test)",
+    skill_train        = "Skill (train)",
+    skill_train_fixed  = "Skill (train, fixed)",
+    skill_test         = "Skill (test)"
+  ) %>%
+  theme_booktabs() %>%
+  autofit()
+
+
+#ft <- ft %>%
+ # bold(j = "skill_test", bold = TRUE) %>%
+  #color(
+   # i = ~ grepl("null", variant),
+    #color = "gray40"
+ # )
+
+ft <- ft %>%
+  merge_v(j = "stage") %>%
+  valign(j = "stage", valign = "top")
+
+doc <- read_docx() %>%
+  body_add_par("Model performance summary", style = "heading 1") %>%
+  body_add_flextable(ft)
+
+print(doc, target = "CRPS_skill_summary.docx")
+
+
+################# Old CODE/ IN PROGRESSS ####################
+
 
 # --- Main loop ---
 for (i in seq_len(nrow(file_info))) {
@@ -111,7 +295,7 @@ for (i in seq_len(nrow(file_info))) {
   }
   
   # --- Null CRPS for skill score (use test null) ---
-  null_file <- file.path(base_dir, paste0("fit_", stage, "_null.rds"))
+  null_file <- file.path(base_dir, paste0("fit_", stg, "_null_draws.rds"))
   null_crps <- NA_real_
   if (file.exists(null_file)) {
     null_draws <- readRDS(null_file)
@@ -136,10 +320,6 @@ for (i in seq_len(nrow(file_info))) {
   message("Processed: ", file_info$file_name[i],
           " | CRPS test = ", round(file_info$crps_test[i], 4))
 }
-
-# --- Final output ---
-file_info
-output <- as.data.frame(file_info)
 
 
 # --- Get null model CRPS for emerged ----
