@@ -1,6 +1,6 @@
 ################# Bromecast: 10.CRPS_and_figures.R ##########################
 ############# created 3-25-25 ######################
-############# Last modified: 12-18-25 ##########################
+############# Last modified: 12-19-25 ##########################
 ######## CRPS & Skill Scores for all model variants ################################
 
 
@@ -251,163 +251,203 @@ doc <- read_docx() %>%
 print(doc, target = "CRPS_skill_summary.docx")
 
 
-################# Old CODE/ IN PROGRESSS ####################
-
-
-# --- Main loop ---
-for (i in seq_len(nrow(file_info))) {
-  
-  draws <- readRDS(file_info$file_path[i])
-  stage <- file_info$stage[i]
-  variant <- file_info$variant[i]
-  
-  # Map stage to actual variable names in draws
-  var_map <- switch(stage,
-                    emerged    = c("e_train_pred", "e_train_pred_fixed", "e_test_pred"),
-                    reproduced = c("r_train_pred", "r_train_pred_fixed", "r_test_pred"),
-                    fecundity  = c("y_train_pred", "y_train_pred_fixed", "y_test_pred"))
-  
-  # Names in obs_list
-  obs_names <- switch(stage,
-                      emerged    = c("e_train", "e_train_fixed", "e_test"),
-                      reproduced = c("r_train", "r_train_fixed", "r_test"),
-                      fecundity  = c("y_train", "y_train_fixed", "y_test"))
-  
-  crps_values <- numeric(3)
-  names(crps_values) <- c("train", "train_fixed", "test")
-  
-  # --- Compute CRPS for train, train_fixed, test ---
-  for (j in seq_along(var_map)) {
-    pred_draws <- tryCatch(
-      extract_draws(draws, var_map[j]),
-      error = function(e) {
-        warning(paste("Skipping", var_map[j], "for file:", file_info$file_name[i]))
-        return(NULL)
-      }
-    )
-    if (is.null(pred_draws)) next
-    
-    obs <- obs_list[[obs_names[j]]]
-    if (nrow(pred_draws) != length(obs)) pred_draws <- t(pred_draws)
-    
-    crps_values[j] <- mean(get_crps(obs, pred_draws))
-    file_info[[paste0("crps_", names(crps_values)[j])]][i] <- crps_values[j]
-  }
-  
-  # --- Null CRPS for skill score (use test null) ---
-  null_file <- file.path(base_dir, paste0("fit_", stg, "_null_draws.rds"))
-  null_crps <- NA_real_
-  if (file.exists(null_file)) {
-    null_draws <- readRDS(null_file)
-    null_var <- var_map[3]  # test
-    pred_null <- tryCatch(extract_draws(null_draws, null_var),
-                          error = function(e) return(NULL))
-    if (!is.null(pred_null)) {
-      obs_null <- obs_list[[obs_names[3]]]  # test obs
-      if (nrow(pred_null) != length(obs_null)) pred_null <- t(pred_null)
-      null_crps <- mean(get_crps(obs_null, pred_null))
-    }
-  }
-  file_info$crps_null[i] <- null_crps
-  
-  # --- Skill scores ---
-  if (!is.na(null_crps) && null_crps != 0) {
-    file_info$skill_train[i]       <- 1 - (file_info$crps_train[i] / null_crps)
-    file_info$skill_train_fixed[i] <- 1 - (file_info$crps_train_fixed[i] / null_crps)
-    file_info$skill_test[i]        <- 1 - (file_info$crps_test[i] / null_crps)
-  }
-  
-  message("Processed: ", file_info$file_name[i],
-          " | CRPS test = ", round(file_info$crps_test[i], 4))
-}
-
-
-# --- Get null model CRPS for emerged ----
-
-
-
-null_file <- "/Users/Becca/Desktop/Adler Lab/from megan/fit_emerged_draws_sub/fit_emerged_null_draws_sub.rds"
-null_draws <- readRDS(null_file)
-df_null <- posterior::as_draws_df(null_draws)
-grep("e_.*pred", names(df_null), value = TRUE)
-
-
-vars <- names(df_null)
-
-
-base_vars <- gsub("\\[.*\\]", "", vars)
-
-unique_base_vars <- unique(base_vars)
-#[1] "lp__"         "alpha"        "p_train"      "r_train_pred" "p_test"       "r_test_pred"  ".chain"       ".iteration"  
-#[9] ".draw"  
-
-unique_base_vars
-
-
-extract_null <- function(df, base) {
-  cols <- grep(paste0("^", base, "\\["), names(df))
-  if (length(cols) == 0) {
-    stop(paste("Variable", base, "not found. Use grep() to inspect names(df_null)."))
-  }
-  mat <- as.matrix(df[, cols])
-  apply(mat, 2, as.numeric)
-}
-e_train_pred_null <- extract_null(df_null, "e_train_pred")
-e_test_pred_null  <- extract_null(df_null, "e_test_pred")
-
-
 
 ######## confusion matrix for Reproduced & Emerged models #################
 
-### version 1
-library(dplyr)
-library(purrr)
 library(caret)
+library(purrr)
 
-# --- Function to extract confusion matrix for each posterior draw ---
-extract_confusion <- function(draws, var_name, obs) {
-  # Extract numeric matrix (posterior predictive draws)
-  pred_draws <- extract_draws(draws, var_name)
-  n_draws <- nrow(pred_draws)
+
+# --- Function to compute posterior mean confusion matrix ---
+get_posterior_cm <- function(draws, var_name, obs) {
   
-  # Compute confusion matrix per draw
-  cm_list <- map(1:n_draws, function(d) {
-    pred_class <- pred_draws[d, ]  # already 0/1
-    confusionMatrix(factor(pred_class), factor(obs))
+  pred_mat <- extract_draws(draws, var_name)
+  
+  # Ensure orientation: rows = draws, cols = observations
+  if (ncol(pred_mat) != length(obs)) pred_mat <- t(pred_mat)
+  
+  # Confusion matrix per draw
+  cm_df <- map_dfr(seq_len(nrow(pred_mat)), function(d) {
+    pred_class <- as.integer(pred_mat[d, ])
+    
+    tab <- table(
+      Prediction = factor(pred_class, levels = c(0, 1)),
+      Reference  = factor(obs,        levels = c(0, 1))
+    )
+    
+    tibble(
+      TP = tab["1", "1"],
+      FP = tab["1", "0"],
+      FN = tab["0", "1"],
+      TN = tab["0", "0"]
+    )
   })
   
-  return(cm_list)
+  # Posterior mean confusion matrix
+  cm_df %>%
+    summarise(across(TP:TN, mean))
 }
 
-# --- Example usage ---
-#base_dir <- "/Users/Becca/Desktop/Adler Lab/from megan/fit_emerged_draws_sub"
-base_dir <- "/Users/Becca/Desktop/Adler Lab/from megan/reproduced_models"
-all_files <- list.files(base_dir, pattern = "^fit_.*\\.rds$", full.names = TRUE)
+# loop over models 
 
-draws <- readRDS("/Users/Becca/Desktop/Adler Lab/from megan/reproduced_models/fit_reproduced_full_draws_sub.rds")
-obs <- r_test
-cm_list <- extract_confusion(draws, "r_test_pred", obs)
+confusion_results <- list()
 
-# --- Summarize confusion matrices ---
-# Extract TP, FP, FN, TN counts
-cm_summary <- map_dfr(cm_list, ~ {
-  tab <- as.data.frame(.x$table)
-  # pivot table into single-row summary
-  tibble(
-    TP = tab$Freq[tab$Prediction==1 & tab$Reference==1],
-    FP = tab$Freq[tab$Prediction==1 & tab$Reference==0],
-    FN = tab$Freq[tab$Prediction==0 & tab$Reference==1],
-    TN = tab$Freq[tab$Prediction==0 & tab$Reference==0]
+for (i in seq_len(nrow(file_info))) {
+  
+  stage   <- file_info$stage[i]
+  variant <- file_info$variant[i]
+  
+  # Only binary stages
+  if (!stage %in% c("emerged", "reproduced")) next
+  
+  draws <- readRDS(file_info$file_path[i])
+  
+  var_map <- switch(stage,
+                    emerged = c(
+                      train        = "e_train_pred",
+                      train_fixed  = "e_train_pred_fixed",
+                      test         = "e_test_pred"
+                    ),
+                    reproduced = c(
+                      train        = "r_train_pred",
+                      train_fixed  = "r_train_pred_fixed",
+                      test         = "r_test_pred"
+                    )
   )
-})
+  
+  obs_map <- switch(stage,
+                    emerged = c(
+                      train        = "e_train",
+                      train_fixed  = "e_train_fixed",
+                      test         = "e_test"
+                    ),
+                    reproduced = c(
+                      train        = "r_train",
+                      train_fixed  = "r_train_fixed",
+                      test         = "r_test"
+                    )
+  )
+  
+  for (nm in names(var_map)) {
+    
+    # Skip missing prediction variables
+    pred <- tryCatch(
+      extract_draws(draws, var_map[nm]),
+      error = function(e) NULL
+    )
+    if (is.null(pred)) next
+    
+    obs <- obs_list[[obs_map[nm]]]
+    
+    cm <- get_posterior_cm(draws, var_map[nm], obs)
+    
+    confusion_results[[length(confusion_results) + 1]] <-
+      cm %>%
+      mutate(
+        stage    = stage,
+        variant  = variant,
+        dataset  = nm,
+        file     = file_info$file_name[i]
+      )
+  }
+}
 
-# Posterior mean confusion matrix
-posterior_mean_cm <- cm_summary %>%
-  summarise(across(TP:TN, mean))
-posterior_mean_cm
+
+# FINAL CONFUSION MATRIX TABLE
+
+
+confusion_df <- bind_rows(confusion_results) %>%
+  relocate(stage, variant, dataset, file)
+
+confusion_df
+#Posterior mean counts of observations classified as TP (true positive), FP (false postive), FN (false negative), and TN (and true negative).
+
+## plot them
+cm_long <- confusion_df %>%
+  pivot_longer(
+    cols = TP:TN,
+    names_to = "cell",
+    values_to = "count"
+  ) %>%
+  mutate(
+    Reference = if_else(cell %in% c("TP", "FN"), "1", "0"),
+    Prediction = if_else(cell %in% c("TP", "FP"), "1", "0"),
+    Reference = factor(Reference, levels = c("1", "0")),
+    Prediction = factor(Prediction, levels = c("1", "0"))
+  )
+
+cm_long <- cm_long %>%
+  mutate(
+    data_split = case_when(
+      dataset %in% c("train") ~ "train",
+      dataset %in% c("train_fixed") ~ "train_fixed",
+      dataset == "test"                      ~ "test"
+    )
+  )
+
+
+plot_confusion_heatmap_split <- function(df, variant_name, split_name) {
+  
+  ggplot(df, aes(x = Prediction, y = Reference, fill = count)) +
+    geom_tile(color = "white", linewidth = 0.6) +
+    geom_text(aes(label = sprintf("%.1f", count)), size = 4) +
+    scale_fill_viridis_c(option = "C", direction = -1) +
+    facet_wrap(~ stage, nrow = 1) +
+    coord_equal() +
+    labs(
+      title = paste(
+        "Posterior Mean Confusion Matrix:",
+        variant_name, "-", split_name
+      ),
+      x = "Predicted",
+      y = "Observed",
+      fill = "Mean count"
+    ) +
+    theme_classic(base_size = 12) +
+    theme(
+      strip.background = element_rect(fill = "grey95", color = NA),
+      strip.text = element_text(face = "bold"),
+      plot.title = element_text(face = "bold", hjust = 0.5)
+    )
+}
+
+output_dir <- "confusion_matrix_heatmaps"
+dir.create(output_dir, showWarnings = FALSE)
+
+for (f in unique(cm_long$file)) {
+  for (s in c("train", "test", "train_fixed")) {
+    
+    df_plot <- cm_long %>%
+      filter(file == f, data_split == s)
+    
+    # Skip if no data
+    if (nrow(df_plot) == 0) next
+    
+    p <- plot_confusion_heatmap_split(
+      df = df_plot,
+      variant_name = f,
+      split_name = s
+    )
+    
+    safe_f <- gsub("[^A-Za-z0-9_]", "_", f)
+    
+    ggsave(
+      filename = file.path(
+        output_dir,
+        paste0("confusion_heatmap_", safe_f, "_", s, ".pdf")
+      ),
+      plot = p,
+      width = 7,
+      height = 4
+    )
+  }
+}
 
 
 
+
+
+################# Old CODE/ IN PROGRESSS ####################
 
 
 ##### version 2
