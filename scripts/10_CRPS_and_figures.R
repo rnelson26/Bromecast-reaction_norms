@@ -15,27 +15,54 @@ library(tibble)
 library(dplyr)
 library(readr)
 library(tidyverse)
+library(purrr)
+
+######## look for missing info
+## two files are not having the fixed only values pulled from in our CRPS function
+#rep_clim <- "/Users/Becca/Desktop/Adler Lab/from megan/Outputs_Dec_2025/fit_reproduced_climate_draws.rds"
+
+#rep_gene <- "/Users/Becca/Desktop/Adler Lab/from megan/Outputs_Dec_2025/fit_reproduced_nogene_draws.rds"
+
+#obj_clim <- readRDS(rep_clim)
+#obj_gene <- readRDS(rep_gene)
+## both have columns called #r_train_pred_fixed_only
+
+#rep_full <- "/Users/Becca/Desktop/Adler Lab/from megan/Outputs_Dec_2025/fit_reproduced_full_draws.rds"
+#obj_full <- readRDS(rep_full)
+## r_trained_fixed
 
 ##### CRPS updated version #######
 
-
-# --- Function to extract draws as numeric matrix ---
-extract_draws <- function(draws, var_base) {
-  cols <- grep(paste0("^", var_base, "\\["), names(draws))
-  if (length(cols) == 0) stop(paste("Variable", var_base, "not found in draws df"))
-  mat <- as.matrix(draws[, cols])
-  mat <- apply(mat, 2, as.numeric)
-  return(mat)
+# extract draws function
+extract_draws <- function(draws, var_bases) {
+  
+  for (vb in var_bases) {                  # vb is length-1 character
+    pattern <- paste0("^", vb, "\\[")
+    cols <- grep(pattern, names(draws))
+    
+    if (length(cols) > 0) {
+      mat <- as.matrix(draws[, cols])
+      mat <- apply(mat, 2, as.numeric)
+      return(mat)
+    }
+  }
+  
+  stop(
+    paste(
+      "None of these variables found:",
+      paste(var_bases, collapse = ", ")
+    )
+  )
 }
 
-# --- Function to calculate CRPS ---
+# get crps function
 get_crps <- function(obs, pred_df) {
   pred_mat <- as.matrix(pred_df)
   if (nrow(pred_mat) != length(obs)) pred_mat <- t(pred_mat)
   crps_sample(y = as.numeric(obs), dat = pred_mat)
 }
 
-# --- Observed data ---
+# list data
 obs_list <- list(
   e_train  = training_df_emg$e_train,
   e_train_fixed = training_df_emg$e_train,
@@ -50,7 +77,7 @@ obs_list <- list(
   y_test  = testing_df$Fecundity
 )
 
-# --- Set up draw files ---
+# set up draws files
 base_dir <- "/Users/Becca/Desktop/Adler Lab/from megan/Outputs_Dec_2025"
 
 all_files <- list.files(base_dir, pattern = "^fit_.*\\.rds$", full.names = TRUE)
@@ -63,14 +90,14 @@ file_info <- tibble(file_path = all_files) %>%
     crps_train  = NA_real_,
     crps_train_fixed = NA_real_,
     crps_test   = NA_real_,
-    null_crps_train = NA_real_,   # <-- ADD
-    null_crps_test  = NA_real_,   # <-- ADD
+    null_crps_train = NA_real_,
+    null_crps_test  = NA_real_,
     skill_train = NA_real_,
     skill_train_fixed = NA_real_,
     skill_test  = NA_real_
   )
 
-
+# get null model values
 
 null_crps <- list()
 
@@ -82,9 +109,12 @@ for (stg in unique(file_info$stage)) {
   null_draws <- readRDS(null_file)
   
   var_map <- switch(stg,
-                    emerged    = c(train = "e_train_pred", test = "e_test_pred"),
-                    reproduced = c(train = "r_train_pred", test = "r_test_pred"),
-                    fecundity  = c(train = "y_train_pred", test = "y_test_pred")
+                    emerged    = list(train = c("e_train_pred"),
+                                      test  = c("e_test_pred")),
+                    reproduced = list(train = c("r_train_pred"),
+                                      test  = c("r_test_pred")),
+                    fecundity  = list(train = c("y_train_pred"),
+                                      test  = c("y_test_pred"))
   )
   
   obs_map <- switch(stg,
@@ -96,16 +126,14 @@ for (stg in unique(file_info$stage)) {
   null_crps[[stg]] <- list()
   
   for (nm in names(var_map)) {
-    pred <- extract_draws(null_draws, var_map[nm])
+    pred <- extract_draws(null_draws, var_map[[nm]])   # ### CHANGE ###
     obs  <- obs_list[[obs_map[nm]]]
     if (nrow(pred) != length(obs)) pred <- t(pred)
     null_crps[[stg]][[nm]] <- mean(get_crps(obs, pred))
   }
 }
 
-# ================================================================
-# STEP 2: MAIN LOOP
-# ================================================================
+# main loop
 for (i in seq_len(nrow(file_info))) {
   
   draws   <- readRDS(file_info$file_path[i])
@@ -113,15 +141,25 @@ for (i in seq_len(nrow(file_info))) {
   variant <- file_info$variant[i]
   
   var_map <- switch(stage,
-                    emerged    = c(train = "e_train_pred",
-                                   train_fixed = "e_train_pred_fixed",
-                                   test = "e_test_pred"),
-                    reproduced = c(train = "r_train_pred",
-                                   train_fixed = "r_train_pred_fixed",
-                                   test = "r_test_pred"),
-                    fecundity  = c(train = "y_train_pred",
-                                   train_fixed = "y_train_pred_fixed",
-                                   test = "y_test_pred")
+                    
+                    emerged = list(
+                      train       = c("e_train_pred"),
+                      train_fixed = c("e_train_pred_fixed"),
+                      test        = c("e_test_pred")
+                    ),
+                    
+                    reproduced = list(
+                      train       = c("r_train_pred"),
+                      train_fixed = c("r_train_pred_fixed",
+                                      "r_train_pred_fixed_only"),  #for multiple naming schemes in files
+                      test        = c("r_test_pred")
+                    ),
+                    
+                    fecundity = list(
+                      train       = c("y_train_pred"),
+                      train_fixed = c("y_train_pred_fixed"),
+                      test        = c("y_test_pred")
+                    )
   )
   
   obs_map <- switch(stage,
@@ -136,11 +174,13 @@ for (i in seq_len(nrow(file_info))) {
                                    test = "y_test")
   )
   
-  # --- CRPS ---
+  # -------------------------
+  # CRPS
+
   for (nm in names(var_map)) {
     
     pred <- tryCatch(
-      extract_draws(draws, var_map[nm]),
+      extract_draws(draws, var_map[[nm]]),   
       error = function(e) NULL
     )
     if (is.null(pred)) next
@@ -152,11 +192,15 @@ for (i in seq_len(nrow(file_info))) {
       mean(get_crps(obs, pred))
   }
   
-  # --- Attach null CRPS ---
+  # -------------------------
+  # Attach null CRPS
+  # -------------------------
   file_info$null_crps_train[i] <- null_crps[[stage]]$train
   file_info$null_crps_test[i]  <- null_crps[[stage]]$test
   
-  # --- Skill scores ---
+  # -------------------------
+  # Skill scores 
+  # -------------------------
   if (variant == "null") {
     file_info$skill_train[i]        <- 0
     file_info$skill_train_fixed[i]  <- 0
@@ -183,11 +227,12 @@ for (i in seq_len(nrow(file_info))) {
   )
 }
 
-
-
-# --- Final output ---
-file_info
+# ================================================================
+# Final output
+# ================================================================
 output <- as.data.frame(file_info)
+output
+
 
 ########### results table #######
 library(flextable)
@@ -297,21 +342,22 @@ for (i in seq_len(nrow(file_info))) {
   stage   <- file_info$stage[i]
   variant <- file_info$variant[i]
   
-  # Only binary stages
   if (!stage %in% c("emerged", "reproduced")) next
   
   draws <- readRDS(file_info$file_path[i])
   
   var_map <- switch(stage,
-                    emerged = c(
-                      train        = "e_train_pred",
-                      train_fixed  = "e_train_pred_fixed",
-                      test         = "e_test_pred"
+                    emerged = list(
+                      train        = c("e_train_pred"),
+                      train_fixed  = c("e_train_pred_fixed",
+                                       "e_train_pred_fixed_only"),
+                      test         = c("e_test_pred")
                     ),
-                    reproduced = c(
-                      train        = "r_train_pred",
-                      train_fixed  = "r_train_pred_fixed",
-                      test         = "r_test_pred"
+                    reproduced = list(
+                      train        = c("r_train_pred"),
+                      train_fixed  = c("r_train_pred_fixed",
+                                       "r_train_pred_fixed_only"),
+                      test         = c("r_test_pred")
                     )
   )
   
@@ -330,16 +376,15 @@ for (i in seq_len(nrow(file_info))) {
   
   for (nm in names(var_map)) {
     
-    # Skip missing prediction variables
     pred <- tryCatch(
-      extract_draws(draws, var_map[nm]),
+      extract_draws(draws, var_map[[nm]]),
       error = function(e) NULL
     )
     if (is.null(pred)) next
     
     obs <- obs_list[[obs_map[nm]]]
     
-    cm <- get_posterior_cm(draws, var_map[nm], obs)
+    cm <- get_posterior_cm(draws, var_map[[nm]], obs)
     
     confusion_results[[length(confusion_results) + 1]] <-
       cm %>%
@@ -351,6 +396,7 @@ for (i in seq_len(nrow(file_info))) {
       )
   }
 }
+
 
 
 # FINAL CONFUSION MATRIX TABLE
