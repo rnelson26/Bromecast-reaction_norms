@@ -1,6 +1,6 @@
 ################# Bromecast: 10.CRPS_and_figures.R ##########################
 ############# created 3-25-25 ######################
-############# Last modified: 12-19-25 ##########################
+############# Last modified: 1-5-26 ##########################
 ######## CRPS & Skill Scores for all model variants ################################
 
 
@@ -261,7 +261,36 @@ table_df <- output %>%
     )
   )
 
-ft <- flextable(table_df) %>%
+
+library(stringr)
+
+stage_order <- c("emerged", "reproduced", "fecundity")
+
+submodel_order <- c(
+  "full",
+  "nointer",
+  "nocomp",
+  "nogene",
+  "climate",
+  "null"
+)
+
+table_df_ordered <- table_df %>%
+  mutate(
+    stage = str_extract(file_name, "(?<=fit_)[^_]+"),
+    submodel = str_extract(file_name, "(?<=_)[^_]+(?=_draws)")
+  )
+
+## put models in a logic order for interpretation 
+table_df_ordered <- table_df_ordered %>%
+  mutate(
+    stage = factor(stage, levels = stage_order),
+    submodel = factor(submodel, levels = submodel_order)
+  ) %>%
+  arrange(stage, submodel)
+
+
+ft <- flextable(table_df_ordered) %>%
   set_header_labels(
     stage              = "Stage",
     file_name            = "Model variant",
@@ -296,7 +325,111 @@ doc <- read_docx() %>%
 print(doc, target = "CRPS_skill_summary.docx")
 
 
+########### Visualize CRPS #############
 
+
+crps_long <- table_df_ordered %>%
+  select(stage, submodel,
+         crps_train,
+         crps_train_fixed,
+         crps_test) %>%
+  pivot_longer(
+    cols = starts_with("crps_"),
+    names_to = "dataset",
+    values_to = "crps"
+  ) %>%
+  mutate(
+    dataset = recode(
+      dataset,
+      crps_train = "Training",
+      crps_train_fixed = "Training (fixed only)",
+      crps_test = "Testing"
+    )
+  )
+
+crps_fig <- ggplot(crps_long,
+       aes(x = submodel,
+           y = crps,
+           color = dataset,
+           group = dataset)) +
+  geom_point(size = 2.5) +
+  geom_line(linewidth = 0.8) +
+  facet_wrap(~ stage, nrow = 1, scales = "free_y") +
+  theme_classic() +
+  labs(
+    x = "Submodel",
+    y = "CRPS",
+    color = "Dataset"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold")
+  )
+
+
+## save graph
+ggsave("crps_fig.pdf", plot = crps_fig, width = 6, height = 5, units = "in")
+
+ggplot(crps_long,
+       aes(x = submodel,
+           y = crps,
+           fill = dataset)) +
+  geom_col(position = position_dodge(width = 0.8)) +
+  facet_wrap(~ stage, nrow = 1, scales = "free_y") +
+  theme_classic() +
+  labs(
+    x = "Submodel",
+    y = "CRPS",
+    fill = "Dataset"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+
+crps_skill_long <- table_df_ordered %>%
+  select(stage, submodel,
+         starts_with("crps_"),
+         starts_with("skill_")) %>%
+  pivot_longer(
+    cols = -c(stage, submodel),
+    names_to = c(".value", "dataset"),
+    names_pattern = "(crps|skill)_(.*)"
+  ) %>%
+  mutate(
+    dataset = recode(
+      dataset,
+      train = "Training",
+      train_fixed = "Training (fixed only)",
+      test = "Testing"
+    )
+  )
+
+
+skills_fig <- ggplot(crps_skill_long,
+                   aes(x = submodel,
+                       y = skill,
+                       color = dataset,
+                       group = dataset)) +
+  geom_point(size = 2.5) +
+  geom_line(linewidth = 0.8) +
+  facet_wrap(~ stage, nrow = 1, scales = "free_y") +
+  theme_classic() +
+  labs(
+    x = "Submodel",
+    y = "Skill Score",
+    color = "Dataset"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold")
+  )
+
+
+## save graph
+ggsave("skill_fig.pdf", plot = skills_fig, width = 6, height = 5, units = "in")
 ######## confusion matrix for Reproduced & Emerged models #################
 
 library(caret)
@@ -489,6 +622,152 @@ for (f in unique(cm_long$file)) {
   }
 }
 
+######## Extract Predicted vs Observed Cheatgrass Fitness #############
+
+
+# helper functions
+get_draw_matrix <- function(draws, var_names, obs_length) {
+  mat <- tryCatch(
+    extract_draws(draws, var_names),
+    error = function(e) NULL
+  )
+  if (is.null(mat)) return(NULL)
+  
+  # Ensure orientation: rows = draws, cols = observations
+  if (nrow(mat) != obs_length && ncol(mat) == obs_length) {
+    mat <- t(mat)
+  } else if (nrow(mat) != obs_length && ncol(mat) != obs_length) {
+    stop("Draws matrix cannot be oriented correctly: check dimensions")
+  }
+  mat
+}
+
+compute_log_fitness <- function(e_mat, r_mat, y_mat) {
+  log(e_mat) + log(r_mat) + log(y_mat)
+}
+
+# Observed fitness
+training_df_emg <- training_df_emg %>%
+  mutate(
+    Obs_Fitness     = e_train * r_train * Fecundity,
+    Obs_Fitness_log = log(Obs_Fitness)
+  )
+
+testing_df_emg <- testing_df_emg %>%
+  mutate(
+    Obs_Fitness     = e_test * r_test * Fecundity,
+    Obs_Fitness_log = log(Obs_Fitness)
+  )
+
+# Variable mapping for fitness
+fitness_var_map <- list(
+  e = list(
+    train       = c("e_train_pred"),
+    train_fixed = c("e_train_pred_fixed"),
+    test        = c("e_test_pred")
+  ),
+  r = list(
+    train       = c("r_train_pred"),
+    train_fixed = c("r_train_pred_fixed", "r_train_pred_fixed_only", "r_train_pred_full", "r_train_pred_full_fixed"),
+    test        = c("r_test_pred")
+  ),
+  y = list(
+    train       = c("y_train_pred"),
+    train_fixed = c("y_train_pred_fixed", "y_train_pred_full", "y_train_pred_full_fixed"),
+    test        = c("y_test_pred")
+  )
+)
+
+# Loop over stages and submodels
+fitness_results <- list()
+
+for (f in unique(file_info$file_name)) {
+  
+  files <- file_info %>% filter(file_name == f)
+  stage <- unique(files$stage)
+  
+  # Skip null files
+  if (stage == "null") next
+  
+  # Get draws for each stage
+  draws_emg <- file_info %>%
+    filter(stage == "emerged", file_name == f) %>%
+    pull(file_path) %>%
+    { if (length(.) > 0) readRDS(.) else NULL }
+  
+  draws_rep <- file_info %>%
+    filter(stage == "reproduced", grepl("full", file_name)) %>%
+    pull(file_path) %>%
+    { if (length(.) > 0) readRDS(.) else NULL }
+  
+  draws_fec <- file_info %>%
+    filter(stage == "fecundity", grepl("full", file_name)) %>%
+    pull(file_path) %>%
+    { if (length(.) > 0) readRDS(.) else NULL }
+  
+  for (dataset in c("train", "train_fixed", "test")) {
+    
+    obs_df <- if (dataset == "test") testing_df_emg else training_df_emg
+    
+    # Only extract predictions if the stage draws exist
+    e_mat <- if (!is.null(draws_emg)) get_draw_matrix(draws_emg, fitness_var_map$e[[dataset]], obs_df$Obs_Fitness_log) else NULL
+    r_mat <- if (!is.null(draws_rep)) get_draw_matrix(draws_rep, fitness_var_map$r[[dataset]], obs_df$Obs_Fitness_log) else NULL
+    y_mat <- if (!is.null(draws_fec)) get_draw_matrix(draws_fec, fitness_var_map$y[[dataset]], obs_df$Obs_Fitness_log) else NULL
+    
+    # Skip if any stage missing
+    if (any(sapply(list(e_mat, r_mat, y_mat), is.null))) next
+    
+    # Compute log fitness
+    log_fitness_draws <- compute_log_fitness(e_mat, r_mat, y_mat)
+    mean_log_fitness <- colMeans(log_fitness_draws)
+    
+    fitness_results[[length(fitness_results) + 1]] <- tibble(
+      file_name = f,
+      dataset   = dataset,
+      id        = seq_len(nrow(obs_df)),
+      pred_log  = mean_log_fitness,
+      obs_log   = obs_df$Obs_Fitness_log
+    )
+  }
+}
+
+fitness_plot_df <- bind_rows(fitness_results)
+
+
+# Final dataframe for plotting or analysis
+fitness_plot_df <- bind_rows(fitness_results)
+
+
+
+######## Fitness Heatmap for Paper ########################
+
+
+library(ggplot2)
+library(ggpointdensity)
+
+
+## Posterior Predictive - training
+ggplot(training_fitness, aes(x = log(Predicted_Fitness_PostPred + 1), y = log(Obs_Fitness)))  +
+  geom_pointdensity(adjust = 0.5) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  scale_color_viridis_c(option = "C", name = "Point Density") +
+  theme_minimal() +
+  labs(title = "Training - Posterior Predictive")
+
+ggplot(training_fitness, aes(x = log(Predicted_Fitness_PostPred_fixed + 1), y = Obs_Fitness_log)) +
+  geom_pointdensity(adjust = 0.5) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  scale_color_viridis_c(option = "C", name = "Point Density") +
+  theme_minimal() +
+  labs(title = "Training Fixed only - Posterior Predictive")
+
+## Posterior Predictive - testing
+ggplot(testing_fitness, aes(x = log(Predicted_Fitness_PostPred + 1), y = log(Obs_Fitness + 1))) +
+  geom_pointdensity(adjust = 0.5) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  scale_color_viridis_c(option = "C", name = "Point Density") +
+  theme_minimal() +
+  labs(title = "Testing - Posterior Predictive")
 
 
 
