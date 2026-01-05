@@ -625,28 +625,38 @@ for (f in unique(cm_long$file)) {
 ######## Extract Predicted vs Observed Cheatgrass Fitness #############
 
 
-# helper functions
-get_draw_matrix <- function(draws, var_names, obs_length) {
-  mat <- tryCatch(
-    extract_draws(draws, var_names),
-    error = function(e) NULL
-  )
+# Extract draws matching variable names
+extract_draws <- function(draws, var_bases) {
+  for (vb in var_bases) {
+    pattern <- paste0("^", vb, "\\[")
+    cols <- grep(pattern, names(draws))
+    if (length(cols) > 0) {
+      mat <- as.matrix(draws[, cols])
+      return(apply(mat, 2, as.numeric))
+    }
+  }
+  stop(paste("None of these variables found:", paste(var_bases, collapse = ", ")))
+}
+
+# Ensure draws matrix has orientation: rows = draws, cols = observations
+get_draw_matrix <- function(draws, var_names, obs_len) {
+  mat <- tryCatch(extract_draws(draws, var_names), error = function(e) NULL)
   if (is.null(mat)) return(NULL)
   
-  # Ensure orientation: rows = draws, cols = observations
-  if (nrow(mat) != obs_length && ncol(mat) == obs_length) {
+  if (nrow(mat) != obs_len && ncol(mat) == obs_len) {
     mat <- t(mat)
-  } else if (nrow(mat) != obs_length && ncol(mat) != obs_length) {
+  } else if (nrow(mat) != obs_len && ncol(mat) != obs_len) {
     stop("Draws matrix cannot be oriented correctly: check dimensions")
   }
   mat
 }
 
-compute_log_fitness <- function(e_mat, r_mat, y_mat) {
-  log(e_mat) + log(r_mat) + log(y_mat)
+# Compute posterior log fitness
+compute_log_fitness <- function(e_mat, r_mat, y_mat, eps = 1e-10) {
+  log(e_mat + eps) + log(r_mat + eps) + log(y_mat + eps)
 }
 
-# Observed fitness
+########### Observed fitness ###########
 training_df_emg <- training_df_emg %>%
   mutate(
     Obs_Fitness     = e_train * r_train * Fecundity,
@@ -659,7 +669,7 @@ testing_df_emg <- testing_df_emg %>%
     Obs_Fitness_log = log(Obs_Fitness)
   )
 
-# Variable mapping for fitness
+########### Variable mapping ###########
 fitness_var_map <- list(
   e = list(
     train       = c("e_train_pred"),
@@ -678,7 +688,8 @@ fitness_var_map <- list(
   )
 )
 
-# Loop over stages and submodels
+########### Fitness calculation loop ###########
+
 fitness_results <- list()
 
 for (f in unique(file_info$file_name)) {
@@ -686,15 +697,17 @@ for (f in unique(file_info$file_name)) {
   files <- file_info %>% filter(file_name == f)
   stage <- unique(files$stage)
   
-  # Skip null files
   if (stage == "null") next
   
-  # Get draws for each stage
+  # -------------------------------
+  # Read draws for each stage
+  # -------------------------------
   draws_emg <- file_info %>%
     filter(stage == "emerged", file_name == f) %>%
     pull(file_path) %>%
     { if (length(.) > 0) readRDS(.) else NULL }
   
+  # For reproduced/fecundity, we want the full dataset draws
   draws_rep <- file_info %>%
     filter(stage == "reproduced", grepl("full", file_name)) %>%
     pull(file_path) %>%
@@ -705,28 +718,42 @@ for (f in unique(file_info$file_name)) {
     pull(file_path) %>%
     { if (length(.) > 0) readRDS(.) else NULL }
   
+  # -------------------------------
+  # Loop over datasets
+  # -------------------------------
   for (dataset in c("train", "train_fixed", "test")) {
     
     obs_df <- if (dataset == "test") testing_df_emg else training_df_emg
+    obs_len <- nrow(obs_df)
     
-    # Only extract predictions if the stage draws exist
-    e_mat <- if (!is.null(draws_emg)) get_draw_matrix(draws_emg, fitness_var_map$e[[dataset]], obs_df$Obs_Fitness_log) else NULL
-    r_mat <- if (!is.null(draws_rep)) get_draw_matrix(draws_rep, fitness_var_map$r[[dataset]], obs_df$Obs_Fitness_log) else NULL
-    y_mat <- if (!is.null(draws_fec)) get_draw_matrix(draws_fec, fitness_var_map$y[[dataset]], obs_df$Obs_Fitness_log) else NULL
+    # Emerged
+    e_mat <- if (!is.null(draws_emg)) {
+      get_draw_matrix(draws_emg, fitness_var_map$e[[dataset]], obs_len)
+    } else NULL
+    
+    # Reproduced and Fecundity: always pull from *_full draws
+    r_mat <- if (!is.null(draws_rep)) {
+      # map rows in obs_df to full draws indices (assumes obs_df has column full_index)
+      get_draw_matrix(draws_rep, fitness_var_map$r[[dataset]], obs_len)
+    } else NULL
+    
+    y_mat <- if (!is.null(draws_fec)) {
+      get_draw_matrix(draws_fec, fitness_var_map$y[[dataset]], obs_len)
+    } else NULL
     
     # Skip if any stage missing
     if (any(sapply(list(e_mat, r_mat, y_mat), is.null))) next
     
     # Compute log fitness
-    log_fitness_draws <- compute_log_fitness(e_mat, r_mat, y_mat)
+    log_fitness_draws <- log(e_mat) + log(r_mat) + log(y_mat)
     mean_log_fitness <- colMeans(log_fitness_draws)
     
     fitness_results[[length(fitness_results) + 1]] <- tibble(
       file_name = f,
       dataset   = dataset,
-      id        = seq_len(nrow(obs_df)),
+      id        = seq_len(obs_len),
       pred_log  = mean_log_fitness,
-      obs_log   = obs_df$Obs_Fitness_log
+      obs_log   = log(obs_df$Obs_Fitness)
     )
   }
 }
@@ -734,8 +761,56 @@ for (f in unique(file_info$file_name)) {
 fitness_plot_df <- bind_rows(fitness_results)
 
 
-# Final dataframe for plotting or analysis
-fitness_plot_df <- bind_rows(fitness_results)
+
+
+library(dplyr)
+
+# Function to compute posterior mean
+posterior_mean <- function(draws, var_names) {
+  mat <- extract_draws(draws, var_names)
+  # robust orientation: rows = draws, cols = observations
+  if (ncol(mat) < nrow(mat)) mat <- t(mat)
+  colMeans(mat)
+}
+
+# Loop over stages and datasets
+check_draws <- list()
+
+for (f in unique(file_info$file_name)) {
+  
+  # Get the stage names for this file
+  files <- file_info %>% filter(file_name == f)
+  stage <- unique(files$stage)
+  
+  # skip null
+  if (stage == "null") next
+  
+  draws_emg <- file_info %>% filter(stage == "emerged", file_name == f) %>% pull(file_path) %>% { if(length(.)>0) readRDS(.) else NULL }
+  draws_rep <- file_info %>% filter(stage == "reproduced", file_name == f) %>% pull(file_path) %>% { if(length(.)>0) readRDS(.) else NULL }
+  draws_fec <- file_info %>% filter(stage == "fecundity", file_name == f) %>% pull(file_path) %>% { if(length(.)>0) readRDS(.) else NULL }
+  
+  for (dataset in c("train", "train_fixed", "test")) {
+    obs_df <- if (dataset == "test") testing_df_emg else training_df_emg
+    obs_len <- nrow(obs_df)
+    
+    e_len <- if (!is.null(draws_emg)) length(posterior_mean(draws_emg, fitness_var_map$e[[dataset]])) else NA
+    r_len <- if (!is.null(draws_rep)) length(posterior_mean(draws_rep, fitness_var_map$r[[dataset]])) else NA
+    y_len <- if (!is.null(draws_fec)) length(posterior_mean(draws_fec, fitness_var_map$y[[dataset]])) else NA
+    
+    check_draws[[length(check_draws)+1]] <- tibble(
+      file_name = f,
+      dataset   = dataset,
+      obs_len   = obs_len,
+      e_draws   = e_len,
+      r_draws   = r_len,
+      y_draws   = y_len
+    )
+  }
+}
+
+bind_rows(check_draws)
+
+
 
 
 
