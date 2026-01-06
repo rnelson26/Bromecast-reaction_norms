@@ -313,11 +313,14 @@ generated quantities {
     int idx_site = idx_plant_train_site[i];
     int g = genotype_plant_train[i];
 
+     //   real site_year_noise = normal_rng(0, sigma_site_year); add plot noise term for common gardens only
+    real site_year_noise = normal_rng(0, sigma_site_year);
     real mu_base = alpha + dot_product(W[idx, ], beta[g]) +
                    dot_product(W_soil[idx_site, ], mu_beta_soil)  +
                    beta_neighbors * neighbors_train[i] +
                    beta_annual * annual_train[i] +
                    beta_perennial * perennial_train[i] +
+                   beta_0_centered[g] +
                    beta_shrub * shrub_train[i];
 
     mu_train_fixed[i] = exp(fmin(mu_base, mu_cap));
