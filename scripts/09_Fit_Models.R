@@ -2,7 +2,7 @@
 
 ############### Bromecast: 09.Fit Models ##########################
 ############# created 3-25-25 ######################
-############# Last modified: 12-3-25 ##########################
+############# Last modified: 1-7-26 ##########################
 ######## Fits and Runs all models ################################
 
 ############ normal cool start for all models #################
@@ -30,7 +30,11 @@ run_model <- function(config) {
   # Standard initialization for all models (no warm startup)
   init_list <- 0
   
-  # Fit model
+  # Define a permanent folder for model CSVs
+  out_dir <- file.path("output", config$name)
+  if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+  
+  # Fit model with permanent output folder
   fit <- mod$sample(
     data = config$data,
     init = init_list,
@@ -38,11 +42,26 @@ run_model <- function(config) {
     parallel_chains = 4,
     iter_warmup = 500,
     iter_sampling = 1000,
-    seed = 123
+    seed = 123,
+    output_dir = out_dir,
+    output_basename = paste0("fit_", config$name)
   )
+  
+  
+  # Fit model
+  #fit <- mod$sample(
+   # data = config$data,
+    #init = init_list,
+    #chains = 4,
+    #parallel_chains = 4,
+    #iter_warmup = 500,
+    #iter_sampling = 1000,
+    #seed = 123
+  #)
   
   # Save model fit object
   saveRDS(fit, file.path("output", paste0("fit_", config$name, ".rds")))
+  
   
   # Extract generated quantities of the posterior predictive 
   gq_names <- fit$metadata()$names_gq
