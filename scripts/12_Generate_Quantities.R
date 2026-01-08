@@ -62,10 +62,11 @@ predict_ztnb <- function(
   plot_mode <- match.arg(plot_mode)
   
   n_draws <- length(theta)
-  n_obs   <- nrow(data)
+  n_obs   <- data$n_obs  
   
   mu_mat <- matrix(NA_real_, n_draws, n_obs)
   y_mat  <- matrix(NA_integer_, n_draws, n_obs)
+  
   
   for (d in seq_len(n_draws)) {
     for (i in seq_len(n_obs)) {
@@ -151,118 +152,218 @@ fec_draws <- list(
   sigma_site_year = as.numeric(fit_fec_full$draws("sigma_site_year")),
   sigma_plot      = as.numeric(fit_fec_full$draws("sigma_plot")),
   
-  ## random effects centered 
-  eta_site_year   = fit_fec_full$draws("eta_site_year", format = "matrix"),
-  eta_plot        = fit_fec_full$draws("eta_plot", format = "matrix")
+  ## random effects 
+  site_year_effect = fit_fec_full$draws(
+    "site_year_effect_train_scaled_centered",
+    format = "matrix"
+  ),
+  
+  eta_plot = fit_fec_full$draws(
+    "eta_plot_centered",
+    format = "matrix"
+  )
 )
+
+# --- Flatten posterior draws to remove the chains dimension ---
+# --- Flatten chains to match predict_ztnb expected dimensions ---
+flatten_array <- function(x) {
+  dims <- dim(x)
+  
+  if (length(dims) == 4) {
+    # iter x chain x dim2 x dim3 -> (iter*chain) x dim2 x dim3
+    dim(x) <- c(dims[1]*dims[2], dims[3], dims[4])
+    return(x)
+    
+  } else if (length(dims) == 3) {
+    # iter x chain x dim2 -> (iter*chain) x dim2
+    dim(x) <- c(dims[1]*dims[2], dims[3])
+    return(x)
+    
+  } else if (length(dims) == 2) {
+    # iter x chain? just flatten first dimension if needed
+    return(x)
+    
+  } else {
+    stop("Unexpected array shape in flatten_array")
+  }
+}
+
+# Apply flattening
+fec_draws$beta             <- flatten_array(fec_draws$beta)        # draws x genotype x covariate
+fec_draws$beta_0           <- flatten_array(fec_draws$beta_0)      # draws x genotype
+fec_draws$mu_beta_soil     <- flatten_array(fec_draws$mu_beta_soil)# draws x covariate
+fec_draws$site_year_effect <- flatten_array(fec_draws$site_year_effect) # draws x site_year
+fec_draws$eta_plot         <- flatten_array(fec_draws$eta_plot)    # draws x plot
+
+n_draws <- dim(fec_draws$beta)[1]
+n_genotypes <- 121
+n_covariates <- 2
+
+fec_draws$beta <- array(fec_draws$beta, dim = c(n_draws, n_genotypes, n_covariates))
+dim(fec_draws$beta)
+# [1] 4000 121 2
+
+
+# Scalars
+fec_draws$alpha           <- as.numeric(fec_draws$alpha)
+fec_draws$beta_neighbors  <- as.numeric(fec_draws$beta_neighbors)
+fec_draws$beta_annual     <- as.numeric(fec_draws$beta_annual)
+fec_draws$beta_perennial  <- as.numeric(fec_draws$beta_perennial)
+fec_draws$beta_shrub      <- as.numeric(fec_draws$beta_shrub)
+fec_draws$theta           <- as.numeric(fec_draws$theta)
+fec_draws$sigma_site_year <- as.numeric(fec_draws$sigma_site_year)
+fec_draws$sigma_plot      <- as.numeric(fec_draws$sigma_plot)
+
 
 saveRDS(fec_draws, "output/fecundity_draws_extracted.rds")
 
 fec_draws <- readRDS("output/fecundity_draws_extracted.rds")
 
+###### Load covariate matrices #################
+
+W      <- stan_data_fec_full$W_plant   # plant-level covariates
+W_soil <- stan_data_fec_full$W_soil    # soil-level covariates
+
+########## Assign Data for Predict Functions  ################
+
+make_predict_data <- function(stan_data, train_or_test = "train", full = FALSE) {
+  
+  suffix <- if (full) "_full" else ""
+  
+  # required columns
+  data_list <- list(
+    n_obs        = stan_data[[paste0("n_", train_or_test, suffix)]],
+    genotype     = stan_data[[paste0("genotype_plant_", train_or_test, suffix)]],
+    idx_plant    = stan_data[[paste0("idx_plant_", train_or_test, suffix)]],
+    idx_plant_site = stan_data[[paste0("idx_plant_", train_or_test, "_site", suffix)]],
+    site_year_id = stan_data[[paste0("site_year_id_", train_or_test, suffix)]],
+    plot_index   = stan_data[[paste0("plot_index_", train_or_test, suffix)]]
+  )
+  
+  # optional competition covariates (only include if they exist)
+  optional_vars <- c("neighbors", "annual", "perennial", "shrub")
+  for (var in optional_vars) {
+    var_name <- paste0(var, "_", train_or_test, suffix)
+    if (!is.null(stan_data[[var_name]])) {
+      data_list[[var]] <- stan_data[[var_name]]
+    }
+  }
+  
+  data_list
+}
+
+# Fecundity full
+train_data       <- make_predict_data(stan_data_fec_full, "train", full = FALSE)
+train_full_data  <- make_predict_data(stan_data_fec_full, "train", full = TRUE)
+test_data        <- make_predict_data(stan_data_fec_full, "test", full = FALSE)
+test_full_data   <- make_predict_data(stan_data_fec_full, "test", full = TRUE)
+
 ####### Generate Quantities for Posterior Predictive ###########
-
-
 ## 1) Training (conditional site-year, conditional plot)
 mu_train <- predict_ztnb(
-  draws = draws,
+  draws = fec_draws,
   data = train_data,
   W = W, W_soil = W_soil,
-  beta = beta, beta_0 = beta_0,
-  mu_beta_soil = mu_beta_soil,
-  theta = theta,
-  sigma_site_year = sigma_site_year,
-  sigma_plot = sigma_plot,
-  site_year_effect = site_year_effect_train_scaled_centered,
-  eta_plot = eta_plot_centered,
+  beta = fec_draws$beta, 
+  beta_0 = fec_draws$beta_0,
+  mu_beta_soil = fec_draws$mu_beta_soil,
+  theta = fec_draws$theta,
+  sigma_site_year = fec_draws$sigma_site_year,
+  sigma_plot = fec_draws$sigma_plot,
+  site_year_effect = fec_draws$site_year_effect,
+  eta_plot = fec_draws$eta_plot,
   site_year_mode = "conditional",
   plot_mode = "conditional"
 )
 
 ## 2) Test (noise site-year, conditional plot)
 mu_test <- predict_ztnb(
-  draws = draws,
+  draws = fec_draws,
   data = test_data,
   W = W, W_soil = W_soil,
-  beta = beta, beta_0 = beta_0,
-  mu_beta_soil = mu_beta_soil,
-  theta = theta,
-  sigma_site_year = sigma_site_year,
-  sigma_plot = sigma_plot,
-  eta_plot = eta_plot_centered,
-  site_year_mode = "noise",       # site_year noise
-  plot_mode = "conditional"       # plot effect conditional
+  beta = fec_draws$beta, 
+  beta_0 = fec_draws$beta_0,
+  mu_beta_soil = fec_draws$mu_beta_soil,
+  theta = fec_draws$theta,
+  sigma_site_year = fec_draws$sigma_site_year,
+  sigma_plot = fec_draws$sigma_plot,
+  eta_plot = fec_draws$eta_plot,
+  site_year_mode = "noise",
+  plot_mode = "conditional"
 )
 
 ## 3) Training fixed (noise site-year, noise plot)
 mu_train_fixed <- predict_ztnb(
-  draws = draws,
+  draws = fec_draws,
   data = train_data,
   W = W, W_soil = W_soil,
-  beta = beta, beta_0 = beta_0,
-  mu_beta_soil = mu_beta_soil,
-  theta = theta,
-  sigma_site_year = sigma_site_year,
-  sigma_plot = sigma_plot,
+  beta = fec_draws$beta, 
+  beta_0 = fec_draws$beta_0,
+  mu_beta_soil = fec_draws$mu_beta_soil,
+  theta = fec_draws$theta,
+  sigma_site_year = fec_draws$sigma_site_year,
+  sigma_plot = fec_draws$sigma_plot,
   site_year_mode = "noise",
   plot_mode = "noise"
 )
 
 ## 4) Full training (conditional site-year, conditional plot)
 mu_train_full <- predict_ztnb(
-  draws = draws,
+  draws = fec_draws,
   data = train_full_data,
   W = W, W_soil = W_soil,
-  beta = beta, beta_0 = beta_0,
-  mu_beta_soil = mu_beta_soil,
-  theta = theta,
-  sigma_site_year = sigma_site_year,
-  sigma_plot = sigma_plot,
-  site_year_effect = site_year_effect_train_scaled_centered,
-  eta_plot = eta_plot_centered,
+  beta = fec_draws$beta, 
+  beta_0 = fec_draws$beta_0,
+  mu_beta_soil = fec_draws$mu_beta_soil,
+  theta = fec_draws$theta,
+  sigma_site_year = fec_draws$sigma_site_year,
+  sigma_plot = fec_draws$sigma_plot,
+  site_year_effect = fec_draws$site_year_effect,
+  eta_plot = fec_draws$eta_plot,
   site_year_mode = "conditional",
   plot_mode = "conditional"
 )
 
 ## 5) Full training fixed (noise site-year, noise plot)
 mu_train_full_fixed <- predict_ztnb(
-  draws = draws,
+  draws = fec_draws,
   data = train_full_data,
   W = W, W_soil = W_soil,
-  beta = beta, beta_0 = beta_0,
-  mu_beta_soil = mu_beta_soil,
-  theta = theta,
-  sigma_site_year = sigma_site_year,
-  sigma_plot = sigma_plot,
+  beta = fec_draws$beta, 
+  beta_0 = fec_draws$beta_0,
+  mu_beta_soil = fec_draws$mu_beta_soil,
+  theta = fec_draws$theta,
+  sigma_site_year = fec_draws$sigma_site_year,
+  sigma_plot = fec_draws$sigma_plot,
   site_year_mode = "noise",
   plot_mode = "noise"
 )
 
 ## 6) Full test (noise site-year, conditional plot)
 mu_test_full <- predict_ztnb(
-  draws = draws,
+  draws = fec_draws,
   data = test_full_data,
   W = W, W_soil = W_soil,
-  beta = beta, beta_0 = beta_0,
-  mu_beta_soil = mu_beta_soil,
-  theta = theta,
-  sigma_site_year = sigma_site_year,
-  sigma_plot = sigma_plot,
-  eta_plot = eta_plot_centered,
+  beta = fec_draws$beta, 
+  beta_0 = fec_draws$beta_0,
+  mu_beta_soil = fec_draws$mu_beta_soil,
+  theta = fec_draws$theta,
+  sigma_site_year = fec_draws$sigma_site_year,
+  sigma_plot = fec_draws$sigma_plot,
+  eta_plot = fec_draws$eta_plot,
   site_year_mode = "noise",
   plot_mode = "conditional"
 )
-
 
 ####### save predictions #################
 saveRDS(
   list(
     mu_train = mu_train,
     mu_test = mu_test,
-    mu_train_fixed = mu_train_fixed,
-    mu_train_full = mu_train_full,
-    mu_train_full_fixed = mu_train_full_fixed,
-    mu_test_full = mu_test_full
+    mu_train_fixed = mu_train_fixed #,
+   # mu_train_full = mu_train_full,
+  #  mu_train_full_fixed = mu_train_full_fixed,
+  #  mu_test_full = mu_test_full
   ),
   "output/predictions_all_fecundity.rds"
 )
