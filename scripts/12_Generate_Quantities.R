@@ -1,6 +1,6 @@
 ############### Bromecast: 12. Generate Quantities ##########################
 ############# created 1-6-26 ######################
-############# Last modified: 1-7-26 ##########################
+############# Last modified: 1-8-26 ##########################
 ######## Extracts generated quantities in R instead of Stan ################################
 ########### code by R. Nelson ###############
 
