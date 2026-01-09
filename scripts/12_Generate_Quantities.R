@@ -121,7 +121,7 @@ predict_ztnb <- function(
 
 fit_fec_full <- readRDS("output/fit_fecundity_full.rds")
 
-
+fit_fec_full <- readRDS("output/fit_fecundity_climate.rds")
 
 
 ######## Extract posterior draws for generating quanitites ########
@@ -384,4 +384,196 @@ cat("✅ All fecundity generated quantities have been generated and saved.\n")
 #y — draws from the ZTNB distribution using rztnegbin().
 #Each element is an integer ≥ 1 (because it’s zero-truncated).
 #Also dimensions: n_draws × n_obs.
-#This is the posterior predictive distribution, the stochastic outcomes you would expect in reality that are used for CRPS. 
+#This is the posterior predictive distribution, the stochastic outcomes you would expect in reality that are used for CRPS.
+
+#############  version adaptable to any type of fecundity  model #############
+
+
+## ---- helpers --------------------------------------------------------------
+
+add_scalar <- function(draws, name, d) {
+  if (!is.null(draws[[name]])) draws[[name]][d] else 0
+}
+
+add_vector <- function(draws, name, d, idx) {
+  if (!is.null(draws[[name]])) draws[[name]][d, idx] else 0
+}
+
+add_dot <- function(draws, name, d, idx, X) {
+  if (!is.null(draws[[name]]) && !is.null(X)) {
+    sum(X[idx, ] * draws[[name]][d, ])
+  } else 0
+}
+
+add_rng <- function(draws, sd_name, d) {
+  if (!is.null(draws[[sd_name]])) rnorm(1, 0, draws[[sd_name]][d]) else 0
+}
+
+get_data <- function(data, name, i) {
+  if (!is.null(data[[name]])) data[[name]][i] else 0
+}
+
+
+## ---- extract draws (STRUCTURE-AGNOSTIC) ------------------------------------
+
+extract_draws_generic <- function(fit) {
+  
+  vars <- fit$metadata()$model_params
+  
+  safe_grab <- function(name) {
+    if (!name %in% vars) return(NULL)
+    
+    x <- fit$draws(name)
+    x <- as.array(x)
+    
+    # flatten chains + iterations → single draw dimension
+    if (length(dim(x)) >= 3) {
+      x <- flatten_array(x)
+    } else {
+      x <- as.numeric(x)
+    }
+    
+    x
+  }
+  
+  draws <- list(
+    # always-present
+    alpha = safe_grab("alpha"),
+    
+    # optional fixed effects
+    beta_neighbors  = safe_grab("beta_neighbors"),
+    beta_annual     = safe_grab("beta_annual"),
+    beta_perennial  = safe_grab("beta_perennial"),
+    beta_shrub      = safe_grab("beta_shrub"),
+    
+    # genotype / climate
+    beta   = safe_grab("beta"),
+    beta_0 = safe_grab("beta_0"),
+    
+    # soil
+    mu_beta_soil = safe_grab("mu_beta_soil"),
+    
+    # random effects
+    site_year_effect = safe_grab("site_year_effect_train_scaled_centered"),
+    eta_plot         = safe_grab("eta_plot_centered"),
+    
+    # SDs
+    sigma_site_year = safe_grab("sigma_site_year"),
+    sigma_plot      = safe_grab("sigma_plot"),
+    
+    # distribution
+    theta = safe_grab("theta")
+  )
+  
+  # sanity check
+  stopifnot(!is.null(draws$alpha))
+  
+  # ---- FINAL SAFETY FLATTEN (exactly fecundity-style) ----
+  for (nm in names(draws)) {
+    if (!is.null(draws[[nm]]) && length(dim(draws[[nm]])) >= 3) {
+      draws[[nm]] <- flatten_array(draws[[nm]])
+    }
+  }
+  
+  draws
+}
+
+
+## ---- universal predictor ---------------------------------------------------
+
+predict_ztnb_universal <- function(
+    draws, data, W = NULL, W_soil = NULL,
+    site_year_mode = c("conditional", "noise", "none"),
+    plot_mode      = c("conditional", "noise", "none"),
+    mu_cap = 10
+) {
+  
+  site_year_mode <- match.arg(site_year_mode)
+  plot_mode      <- match.arg(plot_mode)
+  
+  n_draws <- length(draws$alpha)
+  n_obs   <- data$n_obs
+  
+  mu_mat <- matrix(NA_real_, n_draws, n_obs)
+  y_mat  <- matrix(NA_integer_, n_draws, n_obs)
+  
+  for (d in seq_len(n_draws)) {
+    for (i in seq_len(n_obs)) {
+      
+      ## baseline
+      lp <- draws$alpha[d]
+      
+      ## genotype × climate
+      if (!is.null(draws$beta) && !is.null(W)) {
+        g <- data$genotype[i]
+        lp <- lp + sum(W[data$idx_plant[i], ] * draws$beta[d, g, ])
+      }
+      
+      ## genotype intercept
+      lp <- lp + add_vector(draws, "beta_0", d, data$genotype[i])
+      
+      ## soil
+      if (!is.null(draws$mu_beta_soil) && !is.null(W_soil)) {
+        lp <- lp + sum(
+          W_soil[data$idx_plant_site[i], ] *
+            draws$mu_beta_soil[d, ]
+        )
+      }
+      
+      ## optional fixed effects
+      lp <- lp +
+        add_scalar(draws, "beta_neighbors", d)  * get_data(data, "neighbors", i) +
+        add_scalar(draws, "beta_annual", d)     * get_data(data, "annual", i) +
+        add_scalar(draws, "beta_perennial", d)  * get_data(data, "perennial", i) +
+        add_scalar(draws, "beta_shrub", d)       * get_data(data, "shrub", i)
+      
+      ## site-year
+      if (site_year_mode == "conditional" && !is.null(draws$site_year_effect)) {
+        lp <- lp + draws$site_year_effect[d, data$site_year_id[i]]
+      }
+      if (site_year_mode == "noise") {
+        lp <- lp + add_rng(draws, "sigma_site_year", d)
+      }
+      
+      ## plot
+      if (!is.null(data$plot_index) && data$plot_index[i] != 0) {
+        if (plot_mode == "conditional" && !is.null(draws$eta_plot)) {
+          lp <- lp + draws$eta_plot[d, data$plot_index[i]]
+        }
+        if (plot_mode == "noise") {
+          lp <- lp + add_rng(draws, "sigma_plot", d)
+        }
+      }
+      
+      mu <- exp(pmin(lp, mu_cap))
+      mu_mat[d, i] <- mu
+      
+      y_mat[d, i] <- if (!is.null(draws$theta)) {
+        rztnegbin(1, mu, draws$theta[d])
+      } else {
+        mu
+      }
+    }
+  }
+  
+  list(mu = mu_mat, y = y_mat)
+}
+
+
+## ---- CLIMATE-ONLY FIT ------------------------------------------------------
+
+fit_fec_climate <- readRDS("output/fit_fecundity_climate.rds")
+
+climate_draws <- extract_draws_generic(fit_fec_climate)
+## need to check that the right things are being extracted per model, since spatial random effect isn't fully being pulled from climate only 
+
+mu_train_climate <- predict_ztnb_universal(
+  draws = climate_draws,
+  data  = train_data,
+  W     = W,
+  W_soil = W_soil,
+  site_year_mode = "none",
+  plot_mode = "none"
+)
+
+
