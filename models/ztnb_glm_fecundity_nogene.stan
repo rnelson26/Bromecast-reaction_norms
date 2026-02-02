@@ -195,7 +195,7 @@ generated quantities {
   array[n_train] int y_train_pred_fixed;
   array[n_train_full] int y_train_pred_full_fixed;
 
-  // Training: full
+  // Training: 
   for (i in 1:n_train) {
     int idx = idx_plant_train[i];
     int site = idx_plant_train_site[i];
@@ -213,18 +213,40 @@ generated quantities {
                                              : exp(mu_base + eta_plot_centered[plot_index_train[i]]));
     y_train_pred[i] = ztnb_rng(mu_train[i], theta);
 
-    // Fixed-effects-only
-    mu_train_fixed[i] = exp(alpha
-                            + dot_product(W[idx], beta)
+  }
+  
+  
+  // Fixed effects only
+  for (i in 1:n_train) {
+    int idx = idx_plant_train[i];
+    int idx_site = idx_plant_train_site[i];
+    int g = genotype_plant_train[i];
+
+    real site_year_noise = normal_rng(0, sigma_site_year);
+
+    real plot_noise =
+   (plot_index_train[i] == 0)
+       ? 0
+     : normal_rng(0, sigma_plot);
+     
+
+real mu_base =
+     alpha + dot_product(W[idx], beta)
                             + dot_product(W_soil[site], beta_soil)
                             + beta_neighbors * neighbors_train[i]
                             + beta_annual * annual_train[i]
                             + beta_perennial * perennial_train[i]
-                            + beta_shrub * shrub_train[i]);
-    y_train_pred_fixed[i] = ztnb_rng(mu_train_fixed[i], theta);
-  }
+                            + beta_shrub * shrub_train[i]) +
+    site_year_noise +
+    plot_noise;
 
-  // Test: full (no plot effect)
+    mu_train_fixed[i] = exp(fmin(mu_base, mu_cap));
+    y_train_pred_fixed[i] = ztnb_rng(mu_train_fixed[i], theta);
+   }
+
+  
+
+  // Test:  
   for (i in 1:n_test) {
     int idx = idx_plant_test[i];
     int site = idx_plant_test_site[i];
@@ -259,16 +281,35 @@ generated quantities {
                                                        : exp(mu_base + eta_plot_centered[plot_index_train_full[i]]));
     y_train_pred_full[i] = ztnb_rng(mu_train_full[i], theta);
 
-    // Fixed-effects-only
-    mu_train_full_fixed[i] = exp(alpha
+  }
+  
+  //Training fixed only
+   for (i in 1:n_train_full) {
+    int idx = idx_plant_train_full[i];
+    int idx_site = idx_plant_train_site_full[i];
+    int g = genotype_plant_train_full[i];
+    
+   real site_year_noise = normal_rng(0, sigma_site_year);
+   real plot_noise =
+    (plot_index_train[i] == 0)
+       ? 0
+     : normal_rng(0, sigma_plot);
+
+     real mu_base = alpha
                                  + dot_product(W[idx], beta)
                                  + dot_product(W_soil[site], beta_soil)
                                  + beta_neighbors * neighbors_train_full[i]
                                  + beta_annual * annual_train_full[i]
                                  + beta_perennial * perennial_train_full[i]
-                                 + beta_shrub * shrub_train_full[i]);
-    y_train_pred_full_fixed[i] = ztnb_rng(mu_train_full_fixed[i], theta);
-  }
+                                 + beta_shrub * shrub_train_full[i]) + site_year_noise +
+    plot_noise;
+
+     mu_train_full_fixed[i] = exp(fmin(mu_base, mu_cap));
+     y_train_pred_full_fixed[i] = ztnb_rng(mu_train_full_fixed[i], theta);
+    }
+  
+  
+  
 
   // Test full
   for (i in 1:n_test_full) {

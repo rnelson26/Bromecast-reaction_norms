@@ -183,13 +183,28 @@ array[n_train] int e_train_pred_fixed;
 
     p_train[i] = inv_logit(logit_p);
     e_train_pred[i] = bernoulli_logit_rng(logit_p);
+  }
+  
+  // Fixed effects only 
+    for (i in 1:n_train) {
+    int idx = idx_plant_train[i];
+    int idx_site = idx_plant_train_site[i];
+    int idx_genotype = genotype_plant_train[i];
+    
+    real site_year_noise = normal_rng(0, sigma_site_year);
 
-    // Fixed effects only (no site/plot random effects)
+    real plot_noise =
+   (plot_index_train[i] == 0)
+       ? 0
+     : normal_rng(0, sigma_plot);
+    
     real mu_fixed_base = alpha
                        + dot_product(W[idx], beta[idx_genotype]) +
-                      dot_product(W_soil[idx_site, ], mu_beta_soil);
-                   
-              
+                      dot_product(W_soil[idx_site, ], mu_beta_soil)
+                       + beta_0_centered[g] 
+                       + site_year_noise +
+    plot_noise;
+
     p_train_fixed[i] = inv_logit(mu_fixed_base);
     e_train_pred_fixed[i] = bernoulli_logit_rng(mu_fixed_base);
   }
