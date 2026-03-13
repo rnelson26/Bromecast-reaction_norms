@@ -1,0 +1,43 @@
+"","site_year.site_year","site_year.idx","site_year_effect"
+"site_year_effect_train_scaled_centered[1]","BA_black 2022",1,-1.33313265
+"site_year_effect_train_scaled_centered[2]","BA_white 2022",2,-1.49282005
+"site_year_effect_train_scaled_centered[3]","CaseAoyamaS1 2022",3,0.253065655
+"site_year_effect_train_scaled_centered[4]","CastValley 2021",4,-1.17786915
+"site_year_effect_train_scaled_centered[5]","CH_black 2022",5,-1.41024075
+"site_year_effect_train_scaled_centered[6]","CH_black 2023",6,-2.54724785
+"site_year_effect_train_scaled_centered[7]","CH_white 2022",7,-0.3635214
+"site_year_effect_train_scaled_centered[8]","CH_white 2023",8,-1.3440331
+"site_year_effect_train_scaled_centered[9]","dino 2024",9,2.1369929
+"site_year_effect_train_scaled_centered[10]","EnsingS1 SuRDC 2022",10,2.80835525
+"site_year_effect_train_scaled_centered[11]","EnsingS2 Summerland-Princeton 2022",11,0.57243682
+"site_year_effect_train_scaled_centered[12]","FAR NORTH CPER 2023",12,-3.7819991
+"site_year_effect_train_scaled_centered[13]","FtK_Cottonwood_Coulee 2021",13,-0.28611778
+"site_year_effect_train_scaled_centered[14]","GreenCanyon 2022",14,0.353790075
+"site_year_effect_train_scaled_centered[15]","MPG_IR 2021",15,0.61071891
+"site_year_effect_train_scaled_centered[16]","MPG_IR 2022",16,2.752437
+"site_year_effect_train_scaled_centered[17]","MPG_SR 2021",17,0.22524425
+"site_year_effect_train_scaled_centered[18]","MPG_SR 2022",18,2.03919175
+"site_year_effect_train_scaled_centered[19]","MPG_TH 2021",19,0.91555865
+"site_year_effect_train_scaled_centered[20]","NEAR 4WAY CPER 2023",20,-3.6822259
+"site_year_effect_train_scaled_centered[21]","Peavine 2022",21,0.32869856
+"site_year_effect_train_scaled_centered[22]","Peavine 2024",22,1.41975295
+"site_year_effect_train_scaled_centered[23]","Plymouth 2022",23,-0.394185305
+"site_year_effect_train_scaled_centered[24]","PMR- Pine 2022",24,0.95421897
+"site_year_effect_train_scaled_centered[25]","RedBluff 2023",25,4.15186815
+"site_year_effect_train_scaled_centered[26]","SouthEden 2022",26,0.686342185
+"site_year_effect_train_scaled_centered[27]","SS_black 2022",27,0.577244095
+"site_year_effect_train_scaled_centered[28]","SS_black 2023",28,-1.62488775
+"site_year_effect_train_scaled_centered[29]","SS_white 2022",29,0.49260266
+"site_year_effect_train_scaled_centered[30]","SS_white 2023",30,-0.451645845
+"site_year_effect_train_scaled_centered[31]","SSHigh 2023",31,-2.54570005
+"site_year_effect_train_scaled_centered[32]","SSHigh 2024",32,-1.29126625
+"site_year_effect_train_scaled_centered[33]","SSHQ 2022",33,1.3110768
+"site_year_effect_train_scaled_centered[34]","SSHQ 2023",34,0.588168295
+"site_year_effect_train_scaled_centered[35]","SSHQ 2024",35,1.31356075
+"site_year_effect_train_scaled_centered[36]","Symstad1 2022",36,-1.6542108
+"site_year_effect_train_scaled_centered[37]","TB LC Control 2023",37,-2.2204556
+"site_year_effect_train_scaled_centered[38]","TB PRAIRIE DOG 2022",38,2.02740555
+"site_year_effect_train_scaled_centered[39]","WI_black 2022",39,-0.133184245
+"site_year_effect_train_scaled_centered[40]","WI_black 2023",40,0.0774325665
+"site_year_effect_train_scaled_centered[41]","WI_white 2022",41,0.38314989
+"site_year_effect_train_scaled_centered[42]","WI_white 2023",42,0.43414291
