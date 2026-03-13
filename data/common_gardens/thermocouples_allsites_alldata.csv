@@ -1,0 +1,1293 @@
+Date,Site,Block,Color,Density,Soil_temp_1cm_C,Soil_temp_5cm_C,Cloudcondition,Windcondition,Soil_temp_10cm_C
+2022-03-07,Wildcat,1,Black,High,8.2,4.9,overcast,breezy,NA
+2022-03-07,Wildcat,1,Black,Low,8.3,10.8,overcast,breezy,NA
+2022-03-07,Wildcat,1,White,High,4,7.3,overcast,breezy,NA
+2022-03-07,Wildcat,1,White,Low,6.3,8.4,overcast,breezy,NA
+2022-03-07,Wildcat,10,Black,High,10.6,14.2,overcast,breezy,NA
+2022-03-07,Wildcat,10,Black,Low,12,13.9,overcast,breezy,NA
+2022-03-07,Wildcat,10,White,High,22.1,NA,overcast,breezy,NA
+2022-03-07,Wildcat,10,White,Low,19.6,NA,overcast,breezy,NA
+2022-03-07,Wildcat,2,Black,High,16.9,11.6,overcast,breezy,NA
+2022-03-07,Wildcat,2,Black,Low,17.7,10.9,overcast,breezy,NA
+2022-03-07,Wildcat,2,White,High,15.5,7.9,overcast,breezy,NA
+2022-03-07,Wildcat,2,White,Low,12.1,7.4,overcast,breezy,NA
+2022-03-07,Wildcat,3,Black,High,16.5,NA,overcast,breezy,NA
+2022-03-07,Wildcat,3,Black,Low,22.1,10.4,overcast,breezy,NA
+2022-03-07,Wildcat,3,White,High,12.7,NA,overcast,breezy,NA
+2022-03-07,Wildcat,3,White,Low,12.1,NA,overcast,breezy,NA
+2022-03-07,Wildcat,4,Black,High,17.4,NA,overcast,breezy,NA
+2022-03-07,Wildcat,4,Black,Low,17.3,NA,overcast,breezy,NA
+2022-03-07,Wildcat,4,White,High,9.8,NA,overcast,breezy,NA
+2022-03-07,Wildcat,4,White,Low,10.4,NA,overcast,breezy,NA
+2022-03-07,Wildcat,5,Black,High,18.5,NA,overcast,breezy,NA
+2022-03-07,Wildcat,5,Black,Low,17.2,NA,overcast,breezy,NA
+2022-03-07,Wildcat,5,White,High,12.6,NA,overcast,breezy,NA
+2022-03-07,Wildcat,5,White,Low,NA,NA,overcast,breezy,NA
+2022-03-07,Wildcat,6,Black,High,NA,NA,overcast,breezy,NA
+2022-03-07,Wildcat,6,Black,Low,NA,NA,overcast,breezy,NA
+2022-03-07,Wildcat,6,White,High,NA,NA,overcast,breezy,NA
+2022-03-07,Wildcat,6,White,Low,NA,NA,overcast,breezy,NA
+2022-03-07,Wildcat,7,Black,High,NA,NA,overcast,breezy,NA
+2022-03-07,Wildcat,7,Black,Low,NA,NA,overcast,breezy,NA
+2022-03-07,Wildcat,7,White,High,NA,NA,overcast,breezy,NA
+2022-03-07,Wildcat,7,White,Low,NA,NA,overcast,breezy,NA
+2022-03-07,Wildcat,8,Black,High,NA,NA,overcast,breezy,NA
+2022-03-07,Wildcat,8,Black,Low,NA,NA,overcast,breezy,NA
+2022-03-07,Wildcat,8,White,High,NA,NA,overcast,breezy,NA
+2022-03-07,Wildcat,8,White,Low,NA,NA,overcast,breezy,NA
+2022-03-07,Wildcat,9,Black,High,NA,NA,overcast,breezy,NA
+2022-03-07,Wildcat,9,Black,Low,NA,NA,overcast,breezy,NA
+2022-03-07,Wildcat,9,White,High,17.3,16.8,overcast,breezy,NA
+2022-03-07,Wildcat,9,White,Low,14.6,18.1,overcast,breezy,NA
+2022-04-06,Balzor,1,Black,High,18.2,20.2,None,light/none,NA
+2022-04-06,Balzor,1,Black,Low,17.7,17.9,None,light/none,NA
+2022-04-06,Balzor,1,White,High,12.6,11.1,None,light/none,NA
+2022-04-06,Balzor,1,White,Low,11.2,11.5,None,light/none,NA
+2022-04-06,Balzor,10,Black,High,23.2,21.4,None,light/none,NA
+2022-04-06,Balzor,10,Black,Low,23.1,18.9,None,light/none,NA
+2022-04-06,Balzor,10,White,High,9.6,7,None,light/none,NA
+2022-04-06,Balzor,10,White,Low,13.9,11.8,None,light/none,NA
+2022-04-06,Balzor,2,Black,High,NA,NA,None,light/none,NA
+2022-04-06,Balzor,2,Black,Low,NA,NA,None,light/none,NA
+2022-04-06,Balzor,2,White,High,NA,NA,None,light/none,NA
+2022-04-06,Balzor,2,White,Low,NA,NA,None,light/none,NA
+2022-04-06,Balzor,3,Black,High,NA,NA,None,light/none,NA
+2022-04-06,Balzor,3,Black,Low,NA,NA,None,light/none,NA
+2022-04-06,Balzor,3,White,High,NA,NA,None,light/none,NA
+2022-04-06,Balzor,3,White,Low,NA,NA,None,light/none,NA
+2022-04-06,Balzor,4,Black,High,20.2,20.6,None,light/none,NA
+2022-04-06,Balzor,4,Black,Low,18.8,21.9,None,light/none,NA
+2022-04-06,Balzor,4,White,High,11.6,13.1,None,light/none,NA
+2022-04-06,Balzor,4,White,Low,11.6,10.4,None,light/none,NA
+2022-04-06,Balzor,5,Black,High,NA,NA,None,light/none,NA
+2022-04-06,Balzor,5,Black,Low,NA,NA,None,light/none,NA
+2022-04-06,Balzor,5,White,High,NA,NA,None,light/none,NA
+2022-04-06,Balzor,5,White,Low,NA,NA,None,light/none,NA
+2022-04-06,Balzor,6,Black,High,23.6,NA,None,light/none,NA
+2022-04-06,Balzor,6,Black,Low,19.3,NA,None,light/none,NA
+2022-04-06,Balzor,6,White,High,11.4,NA,None,light/none,NA
+2022-04-06,Balzor,6,White,Low,17.6,NA,None,light/none,NA
+2022-04-06,Balzor,7,Black,High,19.4,22.9,None,light/none,NA
+2022-04-06,Balzor,7,Black,Low,19.4,18.6,None,light/none,NA
+2022-04-06,Balzor,7,White,High,13.7,14.1,None,light/none,NA
+2022-04-06,Balzor,7,White,Low,11.1,10.8,None,light/none,NA
+2022-04-06,Balzor,8,Black,High,NA,NA,None,light/none,NA
+2022-04-06,Balzor,8,Black,Low,NA,NA,None,light/none,NA
+2022-04-06,Balzor,8,White,High,NA,NA,None,light/none,NA
+2022-04-06,Balzor,8,White,Low,NA,NA,None,light/none,NA
+2022-04-06,Balzor,9,Black,High,NA,NA,None,light/none,NA
+2022-04-06,Balzor,9,Black,Low,NA,NA,None,light/none,NA
+2022-04-06,Balzor,9,White,High,NA,NA,None,light/none,NA
+2022-04-06,Balzor,9,White,Low,NA,NA,None,light/none,NA
+2022-04-27,Wildcat,1,Black,High,18.2,NA,None,light/none,NA
+2022-04-27,Wildcat,1,Black,Low,18.1,NA,None,light/none,NA
+2022-04-27,Wildcat,1,White,High,19.3,NA,None,light/none,NA
+2022-04-27,Wildcat,1,White,Low,21.8,NA,None,light/none,NA
+2022-04-27,Wildcat,10,Black,High,NA,NA,None,light/none,NA
+2022-04-27,Wildcat,10,Black,Low,NA,NA,None,light/none,NA
+2022-04-27,Wildcat,10,White,High,NA,NA,None,light/none,NA
+2022-04-27,Wildcat,10,White,Low,NA,NA,None,light/none,NA
+2022-04-27,Wildcat,2,Black,High,18.8,NA,None,light/none,NA
+2022-04-27,Wildcat,2,Black,Low,18.4,NA,None,light/none,NA
+2022-04-27,Wildcat,2,White,High,16.1,17.4,None,light/none,NA
+2022-04-27,Wildcat,2,White,Low,14.3,18.1,None,light/none,NA
+2022-04-27,Wildcat,3,Black,High,12.6,15.3,None,light/none,NA
+2022-04-27,Wildcat,3,Black,Low,19.9,16.6,None,light/none,NA
+2022-04-27,Wildcat,3,White,High,22.5,NA,None,light/none,NA
+2022-04-27,Wildcat,3,White,Low,18.9,NA,None,light/none,NA
+2022-04-27,Wildcat,4,Black,High,18.3,NA,None,light/none,NA
+2022-04-27,Wildcat,4,Black,Low,17.4,NA,None,light/none,NA
+2022-04-27,Wildcat,4,White,High,15.9,20.5,None,light/none,NA
+2022-04-27,Wildcat,4,White,Low,15.4,21.3,None,light/none,NA
+2022-04-27,Wildcat,5,Black,High,12.7,16.3,None,light/none,NA
+2022-04-27,Wildcat,5,Black,Low,13.4,16.5,None,light/none,NA
+2022-04-27,Wildcat,5,White,High,18.1,NA,None,light/none,NA
+2022-04-27,Wildcat,5,White,Low,17.4,NA,None,light/none,NA
+2022-04-27,Wildcat,6,Black,High,14.3,NA,None,light/none,NA
+2022-04-27,Wildcat,6,Black,Low,11.7,NA,None,light/none,NA
+2022-04-27,Wildcat,6,White,High,21.5,NA,None,light/none,NA
+2022-04-27,Wildcat,6,White,Low,22.6,NA,None,light/none,NA
+2022-04-27,Wildcat,7,Black,High,17.1,NA,None,light/none,NA
+2022-04-27,Wildcat,7,Black,Low,19.3,NA,None,light/none,NA
+2022-04-27,Wildcat,7,White,High,22.9,NA,None,light/none,NA
+2022-04-27,Wildcat,7,White,Low,18.1,NA,None,light/none,NA
+2022-04-27,Wildcat,8,Black,High,17.3,NA,None,light/none,NA
+2022-04-27,Wildcat,8,Black,Low,17,NA,None,light/none,NA
+2022-04-27,Wildcat,8,White,High,19.3,22.2,None,light/none,NA
+2022-04-27,Wildcat,8,White,Low,18.6,22.1,None,light/none,NA
+2022-04-27,Wildcat,9,Black,High,15.9,15.9,None,light/none,NA
+2022-04-27,Wildcat,9,Black,Low,13.3,15.7,None,light/none,NA
+2022-04-27,Wildcat,9,White,High,NA,NA,None,light/none,NA
+2022-04-27,Wildcat,9,White,Low,NA,NA,None,light/none,NA
+2022-05-17,SheepStation,1,Black,High,46.15,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,10,White,Low,31.55,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,11,Black,High,38.5,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,12,Black,Low,39.15,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,13,White,Low,29.2,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,14,White,High,32.2,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,15,Black,High,39.45,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,16,Black,Low,36.35,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,17,Black,High,35.8,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,18,Black,Low,38.05,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,19,White,High,31.9,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,2,White,High,37.55,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,20,White,Low,30.05,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,21,White,Low,29.45,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,22,Black,Low,36.1,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,23,White,High,27.85,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,24,Black,High,36.25,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,25,White,High,30.6,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,26,White,Low,28.1,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,27,Black,High,34.65,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,28,Black,Low,36,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,29,White,High,30,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,3,Black,Low,46.55,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,30,Black,High,37.05,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,31,Black,Low,38.5,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,32,White,Low,31.25,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,33,White,High,31.3,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,34,Black,High,37.7,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,35,White,Low,28.95,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,36,Black,Low,36.25,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,37,Black,High,36.85,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,38,White,Low,29.3,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,39,Black,Low,36.05,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,4,White,Low,36.7,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,40,White,High,30.35,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,5,White,Low,35.55,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,6,Black,Low,39.5,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,7,Black,High,39.35,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,8,White,High,32.35,NA,Sunny,None/light,NA
+2022-05-17,SheepStation,9,White,High,31,NA,Sunny,None/light,NA
+2022-05-18,SheepStation,1,Black,High,NA,25.05,Sunny,None/light,NA
+2022-05-18,SheepStation,10,White,Low,NA,18.95,Sunny,None/light,NA
+2022-05-18,SheepStation,11,Black,High,NA,27.75,Sunny,None/light,NA
+2022-05-18,SheepStation,12,Black,Low,NA,31.5,Sunny,None/light,NA
+2022-05-18,SheepStation,13,White,Low,NA,21,Sunny,None/light,NA
+2022-05-18,SheepStation,14,White,High,NA,21.4,Sunny,None/light,NA
+2022-05-18,SheepStation,15,Black,High,NA,34.55,Sunny,None/light,NA
+2022-05-18,SheepStation,16,Black,Low,NA,30.5,Sunny,None/light,NA
+2022-05-18,SheepStation,17,Black,High,NA,28.35,Sunny,None/light,NA
+2022-05-18,SheepStation,18,Black,Low,NA,31,Sunny,None/light,NA
+2022-05-18,SheepStation,19,White,High,NA,26,Sunny,None/light,NA
+2022-05-18,SheepStation,2,White,High,NA,16.4,Sunny,None/light,NA
+2022-05-18,SheepStation,20,White,Low,NA,26.4,Sunny,None/light,NA
+2022-05-18,SheepStation,21,White,Low,NA,21.85,Cloudy,Windy,NA
+2022-05-18,SheepStation,22,Black,Low,NA,26.25,Cloudy,Windy,NA
+2022-05-18,SheepStation,23,White,High,NA,21.4,Cloudy,Windy,NA
+2022-05-18,SheepStation,24,Black,High,NA,27.3,Cloudy,Windy,NA
+2022-05-18,SheepStation,25,White,High,NA,22.65,Cloudy,Windy,NA
+2022-05-18,SheepStation,26,White,Low,NA,24.35,Sunny,Windy,NA
+2022-05-18,SheepStation,27,Black,High,NA,21.35,Sunny,Windy,NA
+2022-05-18,SheepStation,28,Black,Low,NA,26.8,Sunny,Windy,NA
+2022-05-18,SheepStation,29,White,High,NA,21.55,Sunny,Windy,NA
+2022-05-18,SheepStation,3,Black,Low,NA,20.8,Sunny,None/light,NA
+2022-05-18,SheepStation,30,Black,High,NA,26.55,Sunny,Windy,NA
+2022-05-18,SheepStation,31,Black,Low,NA,26,Sunny,Windy,NA
+2022-05-18,SheepStation,32,White,Low,NA,21.25,Sunny,Windy,NA
+2022-05-18,SheepStation,33,White,High,NA,20.6,Sunny,Windy,NA
+2022-05-18,SheepStation,34,Black,High,NA,27.45,Sunny,Windy,NA
+2022-05-18,SheepStation,35,White,Low,NA,20.9,Sunny,Windy,NA
+2022-05-18,SheepStation,36,Black,Low,NA,25.6,Sunny,Windy,NA
+2022-05-18,SheepStation,37,Black,High,NA,28.2,Sunny,Windy,NA
+2022-05-18,SheepStation,38,White,Low,NA,23.15,Sunny,Windy,NA
+2022-05-18,SheepStation,39,Black,Low,NA,26.85,Sunny,Windy,NA
+2022-05-18,SheepStation,4,White,Low,NA,15.1,Sunny,None/light,NA
+2022-05-18,SheepStation,40,White,High,NA,21.2,Sunny,Windy,NA
+2022-05-18,SheepStation,5,White,Low,NA,18.8,Sunny,None/light,NA
+2022-05-18,SheepStation,6,Black,Low,NA,24.3,Sunny,None/light,NA
+2022-05-18,SheepStation,7,Black,High,NA,24.4,Sunny,None/light,NA
+2022-05-18,SheepStation,8,White,High,NA,20.85,Sunny,None/light,NA
+2022-05-18,SheepStation,9,White,High,NA,20.25,Sunny,None/light,NA
+2022-05-24,Balzor,1,Black,High,25.9,NA,partly cloudy,light/none,20.1
+2022-05-24,Balzor,1,Black,Low,28.7,NA,partly cloudy,light/none,20
+2022-05-24,Balzor,1,White,High,22.2,NA,partly cloudy,light/none,16.9
+2022-05-24,Balzor,1,White,Low,23.6,NA,partly cloudy,light/none,16.6
+2022-05-24,Balzor,10,Black,High,34.3,NA,partly cloudy,light/none,17.9
+2022-05-24,Balzor,10,Black,Low,34.1,NA,partly cloudy,light/none,18.7
+2022-05-24,Balzor,10,White,High,25.3,NA,partly cloudy,light/none,15.6
+2022-05-24,Balzor,10,White,Low,29.1,NA,partly cloudy,light/none,15.7
+2022-05-24,Balzor,2,Black,High,28.6,NA,partly cloudy,light/none,NA
+2022-05-24,Balzor,2,Black,Low,25.2,NA,partly cloudy,light/none,NA
+2022-05-24,Balzor,2,White,High,20.9,NA,partly cloudy,light/none,NA
+2022-05-24,Balzor,2,White,Low,23,NA,partly cloudy,light/none,NA
+2022-05-24,Balzor,3,Black,High,29.7,NA,partly cloudy,light/none,NA
+2022-05-24,Balzor,3,Black,Low,27.8,NA,partly cloudy,light/none,NA
+2022-05-24,Balzor,3,White,High,25.1,NA,partly cloudy,light/none,NA
+2022-05-24,Balzor,3,White,Low,23.8,NA,partly cloudy,light/none,NA
+2022-05-24,Balzor,4,Black,High,28.5,NA,partly cloudy,light/none,19.2
+2022-05-24,Balzor,4,Black,Low,29.7,NA,partly cloudy,light/none,20.1
+2022-05-24,Balzor,4,White,High,25.8,NA,partly cloudy,light/none,18.1
+2022-05-24,Balzor,4,White,Low,23.9,NA,partly cloudy,light/none,19.1
+2022-05-24,Balzor,5,Black,High,33,NA,partly cloudy,light/none,NA
+2022-05-24,Balzor,5,Black,Low,31.6,NA,partly cloudy,light/none,NA
+2022-05-24,Balzor,5,White,High,28.4,NA,partly cloudy,light/none,NA
+2022-05-24,Balzor,5,White,Low,26.2,NA,partly cloudy,light/none,NA
+2022-05-24,Balzor,6,Black,High,34.7,NA,partly cloudy,light/none,18.1
+2022-05-24,Balzor,6,Black,Low,34.4,NA,partly cloudy,light/none,19.8
+2022-05-24,Balzor,6,White,High,27.5,NA,partly cloudy,light/none,17.5
+2022-05-24,Balzor,6,White,Low,25.3,NA,partly cloudy,light/none,16.2
+2022-05-24,Balzor,7,Black,High,34.7,NA,partly cloudy,light/none,21.1
+2022-05-24,Balzor,7,Black,Low,36.2,NA,partly cloudy,light/none,19.2
+2022-05-24,Balzor,7,White,High,26.1,NA,partly cloudy,light/none,17.5
+2022-05-24,Balzor,7,White,Low,26.9,NA,partly cloudy,light/none,17.4
+2022-05-24,Balzor,8,Black,High,28.8,NA,partly cloudy,light/none,NA
+2022-05-24,Balzor,8,Black,Low,31.3,NA,partly cloudy,light/none,NA
+2022-05-24,Balzor,8,White,High,26.8,NA,partly cloudy,light/none,NA
+2022-05-24,Balzor,8,White,Low,26.2,NA,partly cloudy,light/none,NA
+2022-05-24,Balzor,9,Black,High,35.6,NA,partly cloudy,light/none,NA
+2022-05-24,Balzor,9,Black,Low,34.2,NA,partly cloudy,light/none,NA
+2022-05-24,Balzor,9,White,High,26.8,NA,partly cloudy,light/none,NA
+2022-05-24,Balzor,9,White,Low,28,NA,partly cloudy,light/none,NA
+2022-06-01,SheepStation,1,Black,High,27.95,NA,Sunny,NA,NA
+2022-06-01,SheepStation,1,Black,High,NA,29.75,cloudy,NA,NA
+2022-06-01,SheepStation,10,White,Low,27.4,NA,cloudy,NA,NA
+2022-06-01,SheepStation,11,Black,High,33.5,NA,sunny,NA,NA
+2022-06-01,SheepStation,12,Black,Low,29.6,NA,sunny,NA,NA
+2022-06-01,SheepStation,13,White,Low,25.85,NA,sunny,NA,NA
+2022-06-01,SheepStation,14,White,High,24.25,NA,sunny,NA,NA
+2022-06-01,SheepStation,15,Black,High,30.8,NA,sunny,NA,NA
+2022-06-01,SheepStation,16,Black,Low,31.45,NA,sunny,NA,NA
+2022-06-01,SheepStation,17,Black,High,31.55,NA,sunny,NA,NA
+2022-06-01,SheepStation,17,Black,High,NA,31,cloudy,NA,NA
+2022-06-01,SheepStation,18,Black,Low,33.55,NA,sunny,NA,NA
+2022-06-01,SheepStation,18,Black,Low,NA,31.95,cloudy,NA,NA
+2022-06-01,SheepStation,19,White,High,28.2,NA,sunny,NA,NA
+2022-06-01,SheepStation,19,White,High,NA,24.8,cloudy,NA,NA
+2022-06-01,SheepStation,2,White,High,23,NA,Sunny,NA,NA
+2022-06-01,SheepStation,2,White,High,NA,23.9,cloudy,NA,NA
+2022-06-01,SheepStation,20,White,Low,27.35,NA,sunny,NA,NA
+2022-06-01,SheepStation,20,White,Low,NA,24.3,cloudy,NA,NA
+2022-06-01,SheepStation,21,White,Low,27.2,NA,sunny,NA,NA
+2022-06-01,SheepStation,22,Black,Low,37.75,NA,sunny,NA,NA
+2022-06-01,SheepStation,23,White,High,26.3,NA,sunny,NA,NA
+2022-06-01,SheepStation,24,Black,High,34.5,NA,sunny,NA,NA
+2022-06-01,SheepStation,25,White,High,28,NA,sunny,NA,NA
+2022-06-01,SheepStation,25,White,High,NA,24.9,cloudy,NA,NA
+2022-06-01,SheepStation,26,White,Low,28.85,NA,sunny,NA,NA
+2022-06-01,SheepStation,26,White,Low,NA,27.1,cloudy,NA,NA
+2022-06-01,SheepStation,27,Black,High,36.15,NA,sunny,NA,NA
+2022-06-01,SheepStation,27,Black,High,NA,33.3,cloudy,NA,NA
+2022-06-01,SheepStation,28,Black,Low,34.15,NA,sunny,NA,NA
+2022-06-01,SheepStation,28,Black,Low,NA,35.55,cloudy,NA,NA
+2022-06-01,SheepStation,29,White,High,28.5,NA,sunny,NA,NA
+2022-06-01,SheepStation,29,White,High,NA,24.95,cloudy,NA,NA
+2022-06-01,SheepStation,3,Black,Low,29.75,NA,Sunny,NA,NA
+2022-06-01,SheepStation,3,Black,Low,NA,31.45,cloudy,NA,NA
+2022-06-01,SheepStation,30,Black,High,36.2,NA,sunny,NA,NA
+2022-06-01,SheepStation,30,Black,High,NA,29.35,cloudy,NA,NA
+2022-06-01,SheepStation,31,Black,Low,35.05,NA,sunny,NA,NA
+2022-06-01,SheepStation,31,Black,Low,NA,28.9,cloudy,NA,NA
+2022-06-01,SheepStation,32,White,Low,30.25,NA,sunny,NA,NA
+2022-06-01,SheepStation,32,White,Low,NA,26.05,cloudy,NA,NA
+2022-06-01,SheepStation,33,White,High,30.5,NA,sunny,NA,NA
+2022-06-01,SheepStation,34,Black,High,38.05,NA,sunny,NA,NA
+2022-06-01,SheepStation,35,White,Low,31.1,NA,sunny,NA,NA
+2022-06-01,SheepStation,36,Black,Low,38.55,NA,cloudy,NA,NA
+2022-06-01,SheepStation,37,Black,High,37.15,NA,sunny,NA,NA
+2022-06-01,SheepStation,38,White,Low,26.4,NA,sunny,NA,NA
+2022-06-01,SheepStation,39,Black,Low,36.6,NA,sunny,NA,NA
+2022-06-01,SheepStation,4,White,Low,21.7,NA,Sunny,NA,NA
+2022-06-01,SheepStation,4,White,Low,NA,23.5,cloudy,NA,NA
+2022-06-01,SheepStation,40,White,High,27.65,NA,sunny,NA,NA
+2022-06-01,SheepStation,5,White,Low,26.75,NA,Sunny,NA,NA
+2022-06-01,SheepStation,6,Black,Low,31.4,NA,Sunny,NA,NA
+2022-06-01,SheepStation,7,Black,High,32.65,NA,Sunny,NA,NA
+2022-06-01,SheepStation,8,White,High,22.75,NA,cloudy,NA,NA
+2022-06-01,SheepStation,9,White,High,25.35,NA,cloudy,NA,NA
+2022-06-15,SheepStation,1,Black,High,33.75,NA,sunny,NA,NA
+2022-06-15,SheepStation,10,White,Low,27.3,NA,sunny,NA,NA
+2022-06-15,SheepStation,11,Black,High,32.85,NA,sunny,NA,NA
+2022-06-15,SheepStation,12,Black,Low,32.8,NA,sunny,NA,NA
+2022-06-15,SheepStation,13,White,Low,30.65,NA,sunny,NA,NA
+2022-06-15,SheepStation,14,White,High,28.2,NA,sunny,NA,NA
+2022-06-15,SheepStation,15,Black,High,34.4,NA,sunny,NA,NA
+2022-06-15,SheepStation,16,Black,Low,37.35,NA,sunny,NA,NA
+2022-06-15,SheepStation,17,Black,High,37.05,NA,sunny,NA,NA
+2022-06-15,SheepStation,18,Black,Low,38.25,NA,sunny,NA,NA
+2022-06-15,SheepStation,19,White,High,27.55,NA,sunny,NA,NA
+2022-06-15,SheepStation,2,White,High,26.2,NA,sunny,NA,NA
+2022-06-15,SheepStation,20,White,Low,28.4,NA,sunny,NA,NA
+2022-06-15,SheepStation,21,White,Low,30.8,NA,sunny,NA,NA
+2022-06-15,SheepStation,22,Black,Low,39.85,NA,sunny,NA,NA
+2022-06-15,SheepStation,23,White,High,29.7,NA,sunny,NA,NA
+2022-06-15,SheepStation,24,Black,High,41.55,NA,sunny,NA,NA
+2022-06-15,SheepStation,25,White,High,31.8,NA,sunny,NA,NA
+2022-06-15,SheepStation,26,White,Low,28.7,NA,sunny,NA,NA
+2022-06-15,SheepStation,27,Black,High,35.75,NA,sunny,NA,NA
+2022-06-15,SheepStation,28,Black,Low,34.35,NA,sunny,NA,NA
+2022-06-15,SheepStation,29,White,High,34.05,26.4,sunny,NA,NA
+2022-06-15,SheepStation,3,Black,Low,37.85,NA,sunny,NA,NA
+2022-06-15,SheepStation,30,Black,High,41.6,37.15,sunny,NA,NA
+2022-06-15,SheepStation,31,Black,Low,36.05,33.8,sunny,NA,NA
+2022-06-15,SheepStation,32,White,Low,31.65,27.5,sunny,NA,NA
+2022-06-15,SheepStation,33,White,High,28.95,23.8,sunny,NA,NA
+2022-06-15,SheepStation,34,Black,High,39.75,30.9,sunny,NA,NA
+2022-06-15,SheepStation,35,White,Low,33.05,25.7,sunny,NA,NA
+2022-06-15,SheepStation,36,Black,Low,36.8,30.95,sunny,NA,NA
+2022-06-15,SheepStation,37,Black,High,38.6,31.3,sunny,NA,NA
+2022-06-15,SheepStation,38,White,Low,30.2,24.65,sunny,NA,NA
+2022-06-15,SheepStation,39,Black,Low,39.95,33.65,sunny,NA,NA
+2022-06-15,SheepStation,4,White,Low,28.95,NA,sunny,NA,NA
+2022-06-15,SheepStation,40,White,High,29.8,26.25,sunny,NA,NA
+2022-06-15,SheepStation,5,White,Low,31.6,29.3,sunny,NA,NA
+2022-06-15,SheepStation,6,Black,Low,30.9,35,sunny,NA,NA
+2022-06-15,SheepStation,7,Black,High,31.45,34.5,sunny,NA,NA
+2022-06-15,SheepStation,8,White,High,28.7,29.05,sunny,NA,NA
+2022-06-15,SheepStation,9,White,High,29.3,NA,sunny,NA,NA
+2022-06-21,Cheyenne,1,Black,High,47.5,NA,NA,NA,NA
+2022-06-21,Cheyenne,1,Black,Low,46.9,NA,NA,NA,NA
+2022-06-21,Cheyenne,1,White,High,39.799999999999997,NA,NA,NA,NA
+2022-06-21,Cheyenne,1,White,Low,42.7,NA,NA,NA,NA
+2022-06-21,Cheyenne,10,Black,High,53,NA,NA,NA,NA
+2022-06-21,Cheyenne,10,Black,Low,54.6,NA,NA,NA,NA
+2022-06-21,Cheyenne,10,White,High,47.3,NA,NA,NA,NA
+2022-06-21,Cheyenne,10,White,Low,46.2,NA,NA,NA,NA
+2022-06-21,Cheyenne,2,Black,High,NA,NA,NA,NA,NA
+2022-06-21,Cheyenne,2,Black,Low,46.3,NA,NA,NA,NA
+2022-06-21,Cheyenne,2,White,High,43.5,NA,NA,NA,NA
+2022-06-21,Cheyenne,2,White,Low,NA,NA,NA,NA,NA
+2022-06-21,Cheyenne,3,Black,High,42.9,NA,NA,NA,NA
+2022-06-21,Cheyenne,3,Black,Low,51.1,NA,NA,NA,NA
+2022-06-21,Cheyenne,3,White,High,39.1,NA,NA,NA,NA
+2022-06-21,Cheyenne,3,White,Low,42.2,NA,NA,NA,NA
+2022-06-21,Cheyenne,4,Black,High,42.3,NA,NA,NA,NA
+2022-06-21,Cheyenne,4,Black,Low,NA,NA,NA,NA,NA
+2022-06-21,Cheyenne,4,White,High,36.6,NA,NA,NA,NA
+2022-06-21,Cheyenne,4,White,Low,36.5,NA,NA,NA,NA
+2022-06-21,Cheyenne,5,Black,High,51.3,NA,NA,NA,NA
+2022-06-21,Cheyenne,5,Black,Low,44.5,NA,NA,NA,NA
+2022-06-21,Cheyenne,5,White,High,35.5,NA,NA,NA,NA
+2022-06-21,Cheyenne,5,White,Low,38.6,NA,NA,NA,NA
+2022-06-21,Cheyenne,6,Black,High,46.4,NA,NA,NA,NA
+2022-06-21,Cheyenne,6,Black,Low,45.9,NA,NA,NA,NA
+2022-06-21,Cheyenne,6,White,High,39,NA,NA,NA,NA
+2022-06-21,Cheyenne,6,White,Low,37.9,NA,NA,NA,NA
+2022-06-21,Cheyenne,7,Black,High,44.1,NA,NA,NA,NA
+2022-06-21,Cheyenne,7,Black,Low,43.6,NA,NA,NA,NA
+2022-06-21,Cheyenne,7,White,High,34.799999999999997,NA,NA,NA,NA
+2022-06-21,Cheyenne,7,White,Low,39.200000000000003,NA,NA,NA,NA
+2022-06-21,Cheyenne,8,Black,High,46.9,NA,NA,NA,NA
+2022-06-21,Cheyenne,8,Black,Low,51.3,NA,NA,NA,NA
+2022-06-21,Cheyenne,8,White,High,43.9,NA,NA,NA,NA
+2022-06-21,Cheyenne,8,White,Low,45.5,NA,NA,NA,NA
+2022-06-21,Cheyenne,9,Black,High,51.7,NA,NA,NA,NA
+2022-06-21,Cheyenne,9,Black,Low,54.6,NA,NA,NA,NA
+2022-06-21,Cheyenne,9,White,High,41.4,NA,NA,NA,NA
+2022-06-21,Cheyenne,9,White,Low,46.3,NA,NA,NA,NA
+2022-06-23,Cheyenne,1,Black,High,45.2,NA,NA,NA,NA
+2022-06-23,Cheyenne,1,Black,Low,46.7,NA,NA,NA,NA
+2022-06-23,Cheyenne,1,White,High,39.4,NA,NA,NA,NA
+2022-06-23,Cheyenne,1,White,Low,42.7,NA,NA,NA,NA
+2022-06-23,Cheyenne,10,Black,High,39.200000000000003,NA,NA,NA,NA
+2022-06-23,Cheyenne,10,Black,Low,37.9,NA,NA,NA,NA
+2022-06-23,Cheyenne,10,White,High,34.5,NA,NA,NA,NA
+2022-06-23,Cheyenne,10,White,Low,34.9,NA,NA,NA,NA
+2022-06-23,Cheyenne,2,Black,High,NA,NA,NA,NA,NA
+2022-06-23,Cheyenne,2,Black,Low,42.1,NA,NA,NA,NA
+2022-06-23,Cheyenne,2,White,High,39.799999999999997,NA,NA,NA,NA
+2022-06-23,Cheyenne,2,White,Low,NA,NA,NA,NA,NA
+2022-06-23,Cheyenne,3,Black,High,40.9,NA,NA,NA,NA
+2022-06-23,Cheyenne,3,Black,Low,43.2,NA,NA,NA,NA
+2022-06-23,Cheyenne,3,White,High,36.799999999999997,NA,NA,NA,NA
+2022-06-23,Cheyenne,3,White,Low,36.299999999999997,NA,NA,NA,NA
+2022-06-23,Cheyenne,4,Black,High,36.1,NA,NA,NA,NA
+2022-06-23,Cheyenne,4,Black,Low,NA,NA,NA,NA,NA
+2022-06-23,Cheyenne,4,White,High,36.299999999999997,NA,NA,NA,NA
+2022-06-23,Cheyenne,4,White,Low,38.4,NA,NA,NA,NA
+2022-06-23,Cheyenne,5,Black,High,45.1,NA,NA,NA,NA
+2022-06-23,Cheyenne,5,Black,Low,45.7,NA,NA,NA,NA
+2022-06-23,Cheyenne,5,White,High,40.200000000000003,NA,NA,NA,NA
+2022-06-23,Cheyenne,5,White,Low,42,NA,NA,NA,NA
+2022-06-23,Cheyenne,6,Black,High,43.9,NA,NA,NA,NA
+2022-06-23,Cheyenne,6,Black,Low,45.3,NA,NA,NA,NA
+2022-06-23,Cheyenne,6,White,High,39.200000000000003,NA,NA,NA,NA
+2022-06-23,Cheyenne,6,White,Low,41.5,NA,NA,NA,NA
+2022-06-23,Cheyenne,7,Black,High,41.4,NA,NA,NA,NA
+2022-06-23,Cheyenne,7,Black,Low,41.4,NA,NA,NA,NA
+2022-06-23,Cheyenne,7,White,High,38.200000000000003,NA,NA,NA,NA
+2022-06-23,Cheyenne,7,White,Low,39.700000000000003,NA,NA,NA,NA
+2022-06-23,Cheyenne,8,Black,High,41.7,NA,NA,NA,NA
+2022-06-23,Cheyenne,8,Black,Low,41.8,NA,NA,NA,NA
+2022-06-23,Cheyenne,8,White,High,37.1,NA,NA,NA,NA
+2022-06-23,Cheyenne,8,White,Low,38.299999999999997,NA,NA,NA,NA
+2022-06-23,Cheyenne,9,Black,High,39.5,NA,NA,NA,NA
+2022-06-23,Cheyenne,9,Black,Low,40.6,NA,NA,NA,NA
+2022-06-23,Cheyenne,9,White,High,35.6,NA,NA,NA,NA
+2022-06-23,Cheyenne,9,White,Low,37.6,NA,NA,NA,NA
+2022-06-23,SheepStation,1,Black,High,44.25,NA,sunny,NA,NA
+2022-06-23,SheepStation,1,Black,High,NA,35.55,sunny,windy,NA
+2022-06-23,SheepStation,10,White,Low,36.75,NA,sunny,NA,NA
+2022-06-23,SheepStation,11,Black,High,44.2,NA,sunny,NA,NA
+2022-06-23,SheepStation,12,Black,Low,46.1,NA,sunny,NA,NA
+2022-06-23,SheepStation,13,White,Low,35.85,NA,sunny,NA,NA
+2022-06-23,SheepStation,13,White,Low,NA,31.05,sunny,windy,NA
+2022-06-23,SheepStation,14,White,High,39.7,NA,sunny,NA,NA
+2022-06-23,SheepStation,14,White,High,NA,32.15,sunny,windy,NA
+2022-06-23,SheepStation,15,Black,High,44.2,NA,cloudy,windy,NA
+2022-06-23,SheepStation,15,Black,High,NA,35.15,sunny,windy,NA
+2022-06-23,SheepStation,16,Black,Low,47,NA,cloudy,windy,NA
+2022-06-23,SheepStation,16,Black,Low,NA,38.4,sunny,windy,NA
+2022-06-23,SheepStation,17,Black,High,42.9,NA,cloudy,windy,NA
+2022-06-23,SheepStation,17,Black,High,NA,36.3,sunny,windy,NA
+2022-06-23,SheepStation,18,Black,Low,44,NA,cloudy,windy,NA
+2022-06-23,SheepStation,18,Black,Low,NA,36.6,sunny,windy,NA
+2022-06-23,SheepStation,19,White,High,36.8,NA,cloudy,windy,NA
+2022-06-23,SheepStation,19,White,High,NA,29.15,sunny,windy,NA
+2022-06-23,SheepStation,2,White,High,36.4,NA,sunny,NA,NA
+2022-06-23,SheepStation,2,White,High,NA,30.75,sunny,windy,NA
+2022-06-23,SheepStation,20,White,Low,38.1,NA,cloudy,windy,NA
+2022-06-23,SheepStation,20,White,Low,NA,31.25,sunny,windy,NA
+2022-06-23,SheepStation,21,White,Low,35.9,NA,cloudy,windy,NA
+2022-06-23,SheepStation,22,Black,Low,42.9,NA,cloudy,windy,NA
+2022-06-23,SheepStation,23,White,High,33.95,NA,cloudy,windy,NA
+2022-06-23,SheepStation,24,Black,High,44.6,NA,cloudy,windy,NA
+2022-06-23,SheepStation,25,White,High,32.3,NA,cloudy,windy,NA
+2022-06-23,SheepStation,26,White,Low,35.25,NA,cloudy,windy,NA
+2022-06-23,SheepStation,27,Black,High,40,NA,cloudy,windy,NA
+2022-06-23,SheepStation,28,Black,Low,41.75,NA,cloudy,windy,NA
+2022-06-23,SheepStation,29,White,High,33.25,NA,cloudy,windy,NA
+2022-06-23,SheepStation,3,Black,Low,50.3,NA,sunny,NA,NA
+2022-06-23,SheepStation,3,Black,Low,NA,37.7,sunny,windy,NA
+2022-06-23,SheepStation,30,Black,High,42.6,NA,cloudy,windy,NA
+2022-06-23,SheepStation,31,Black,Low,39.95,NA,cloudy,windy,NA
+2022-06-23,SheepStation,32,White,Low,37.75,NA,cloudy,windy,NA
+2022-06-23,SheepStation,33,White,High,36.15,NA,cloudy,windy,NA
+2022-06-23,SheepStation,33,White,High,NA,33.7,sunny,windy,NA
+2022-06-23,SheepStation,34,Black,High,45.6,NA,cloudy,windy,NA
+2022-06-23,SheepStation,34,Black,High,NA,38.7,sunny,windy,NA
+2022-06-23,SheepStation,35,White,Low,36.25,NA,cloudy,windy,NA
+2022-06-23,SheepStation,35,White,Low,NA,32,sunny,windy,NA
+2022-06-23,SheepStation,36,Black,Low,39.6,38.8,sunny,windy,NA
+2022-06-23,SheepStation,37,Black,High,40.95,NA,sunny,windy,NA
+2022-06-23,SheepStation,38,White,Low,33.8,NA,sunny,windy,NA
+2022-06-23,SheepStation,39,Black,Low,45.25,NA,sunny,windy,NA
+2022-06-23,SheepStation,4,White,Low,33.95,NA,sunny,NA,NA
+2022-06-23,SheepStation,4,White,Low,NA,30.95,sunny,windy,NA
+2022-06-23,SheepStation,40,White,High,35.25,NA,sunny,windy,NA
+2022-06-23,SheepStation,5,White,Low,41.1,NA,sunny,NA,NA
+2022-06-23,SheepStation,6,Black,Low,51.4,NA,sunny,NA,NA
+2022-06-23,SheepStation,7,Black,High,40.9,NA,sunny,NA,NA
+2022-06-23,SheepStation,8,White,High,39.45,NA,sunny,NA,NA
+2022-06-23,SheepStation,9,White,High,39.45,NA,sunny,NA,NA
+2022-06-29,Cheyenne,1,Black,High,39.9,NA,NA,NA,NA
+2022-06-29,Cheyenne,1,Black,Low,42.7,NA,NA,NA,NA
+2022-06-29,Cheyenne,1,White,High,34.6,NA,NA,NA,NA
+2022-06-29,Cheyenne,1,White,Low,36.1,NA,NA,NA,NA
+2022-06-29,Cheyenne,10,Black,High,41.6,NA,NA,NA,NA
+2022-06-29,Cheyenne,10,Black,Low,41.9,NA,NA,NA,NA
+2022-06-29,Cheyenne,10,White,High,35.6,NA,NA,NA,NA
+2022-06-29,Cheyenne,10,White,Low,36.1,NA,NA,NA,NA
+2022-06-29,Cheyenne,2,Black,High,NA,NA,NA,NA,NA
+2022-06-29,Cheyenne,2,Black,Low,45.2,NA,NA,NA,NA
+2022-06-29,Cheyenne,2,White,High,38,NA,NA,NA,NA
+2022-06-29,Cheyenne,2,White,Low,NA,NA,NA,NA,NA
+2022-06-29,Cheyenne,3,Black,High,40.5,NA,NA,NA,NA
+2022-06-29,Cheyenne,3,Black,Low,44.1,NA,NA,NA,NA
+2022-06-29,Cheyenne,3,White,High,36.9,NA,NA,NA,NA
+2022-06-29,Cheyenne,3,White,Low,34.9,NA,NA,NA,NA
+2022-06-29,Cheyenne,4,Black,High,37.200000000000003,NA,NA,NA,NA
+2022-06-29,Cheyenne,4,Black,Low,NA,NA,NA,NA,NA
+2022-06-29,Cheyenne,4,White,High,33,NA,NA,NA,NA
+2022-06-29,Cheyenne,4,White,Low,37.799999999999997,NA,NA,NA,NA
+2022-06-29,Cheyenne,5,Black,High,40,NA,NA,NA,NA
+2022-06-29,Cheyenne,5,Black,Low,41,NA,NA,NA,NA
+2022-06-29,Cheyenne,5,White,High,35.200000000000003,NA,NA,NA,NA
+2022-06-29,Cheyenne,5,White,Low,36.1,NA,NA,NA,NA
+2022-06-29,Cheyenne,6,Black,High,38.5,NA,NA,NA,NA
+2022-06-29,Cheyenne,6,Black,Low,38.6,NA,NA,NA,NA
+2022-06-29,Cheyenne,6,White,High,36.4,NA,NA,NA,NA
+2022-06-29,Cheyenne,6,White,Low,36.700000000000003,NA,NA,NA,NA
+2022-06-29,Cheyenne,7,Black,High,39.200000000000003,NA,NA,NA,NA
+2022-06-29,Cheyenne,7,Black,Low,39.5,NA,NA,NA,NA
+2022-06-29,Cheyenne,7,White,High,33,NA,NA,NA,NA
+2022-06-29,Cheyenne,7,White,Low,36.200000000000003,NA,NA,NA,NA
+2022-06-29,Cheyenne,8,Black,High,38.200000000000003,NA,NA,NA,NA
+2022-06-29,Cheyenne,8,Black,Low,38.700000000000003,NA,NA,NA,NA
+2022-06-29,Cheyenne,8,White,High,36.1,NA,NA,NA,NA
+2022-06-29,Cheyenne,8,White,Low,37.799999999999997,NA,NA,NA,NA
+2022-06-29,Cheyenne,9,Black,High,40.9,NA,NA,NA,NA
+2022-06-29,Cheyenne,9,Black,Low,43,NA,NA,NA,NA
+2022-06-29,Cheyenne,9,White,High,35,NA,NA,NA,NA
+2022-06-29,Cheyenne,9,White,Low,38.9,NA,NA,NA,NA
+2022-06-30,Cheyenne,1,Black,High,49.8,NA,NA,NA,NA
+2022-06-30,Cheyenne,1,Black,Low,52.1,NA,NA,NA,NA
+2022-06-30,Cheyenne,1,White,High,41.6,NA,NA,NA,NA
+2022-06-30,Cheyenne,1,White,Low,38.4,NA,NA,NA,NA
+2022-06-30,Cheyenne,10,Black,High,51.4,NA,NA,NA,NA
+2022-06-30,Cheyenne,10,Black,Low,50.6,NA,NA,NA,NA
+2022-06-30,Cheyenne,10,White,High,44.5,NA,NA,NA,NA
+2022-06-30,Cheyenne,10,White,Low,41.8,NA,NA,NA,NA
+2022-06-30,Cheyenne,2,Black,High,42.9,NA,NA,NA,NA
+2022-06-30,Cheyenne,2,Black,Low,52.6,NA,NA,NA,NA
+2022-06-30,Cheyenne,2,White,High,47.6,NA,NA,NA,NA
+2022-06-30,Cheyenne,2,White,Low,40.799999999999997,NA,NA,NA,NA
+2022-06-30,Cheyenne,3,Black,High,49.3,NA,NA,NA,NA
+2022-06-30,Cheyenne,3,Black,Low,57.8,NA,NA,NA,NA
+2022-06-30,Cheyenne,3,White,High,45.8,NA,NA,NA,NA
+2022-06-30,Cheyenne,3,White,Low,43.4,NA,NA,NA,NA
+2022-06-30,Cheyenne,4,Black,High,45.2,NA,NA,NA,NA
+2022-06-30,Cheyenne,4,Black,Low,49.1,NA,NA,NA,NA
+2022-06-30,Cheyenne,4,White,High,39.700000000000003,NA,NA,NA,NA
+2022-06-30,Cheyenne,4,White,Low,45.7,NA,NA,NA,NA
+2022-06-30,Cheyenne,5,Black,High,47.5,NA,NA,NA,NA
+2022-06-30,Cheyenne,5,Black,Low,51.4,NA,NA,NA,NA
+2022-06-30,Cheyenne,5,White,High,40.700000000000003,NA,NA,NA,NA
+2022-06-30,Cheyenne,5,White,Low,44.8,NA,NA,NA,NA
+2022-06-30,Cheyenne,6,Black,High,51.1,NA,NA,NA,NA
+2022-06-30,Cheyenne,6,Black,Low,52.4,NA,NA,NA,NA
+2022-06-30,Cheyenne,6,White,High,43.3,NA,NA,NA,NA
+2022-06-30,Cheyenne,6,White,Low,45.8,NA,NA,NA,NA
+2022-06-30,Cheyenne,7,Black,High,47.8,NA,NA,NA,NA
+2022-06-30,Cheyenne,7,Black,Low,50.9,NA,NA,NA,NA
+2022-06-30,Cheyenne,7,White,High,45.8,NA,NA,NA,NA
+2022-06-30,Cheyenne,7,White,Low,45.9,NA,NA,NA,NA
+2022-06-30,Cheyenne,8,Black,High,50.6,NA,NA,NA,NA
+2022-06-30,Cheyenne,8,Black,Low,49.6,NA,NA,NA,NA
+2022-06-30,Cheyenne,8,White,High,42.8,NA,NA,NA,NA
+2022-06-30,Cheyenne,8,White,Low,42.1,NA,NA,NA,NA
+2022-06-30,Cheyenne,9,Black,High,50.9,NA,NA,NA,NA
+2022-06-30,Cheyenne,9,Black,Low,52.4,NA,NA,NA,NA
+2022-06-30,Cheyenne,9,White,High,42.6,NA,NA,NA,NA
+2022-06-30,Cheyenne,9,White,Low,46.6,NA,NA,NA,NA
+2022-07-18,Cheyenne,1,Black,High,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,1,Black,Low,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,1,White,High,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,1,White,Low,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,10,Black,High,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,10,Black,Low,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,10,White,High,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,10,White,Low,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,2,Black,High,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,2,Black,Low,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,2,White,High,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,2,White,Low,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,3,Black,High,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,3,Black,Low,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,3,White,High,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,3,White,Low,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,4,Black,High,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,4,Black,Low,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,4,White,High,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,4,White,Low,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,5,Black,High,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,5,Black,Low,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,5,White,High,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,5,White,Low,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,6,Black,High,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,6,Black,Low,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,6,White,High,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,6,White,Low,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,7,Black,High,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,7,Black,Low,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,7,White,High,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,7,White,Low,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,8,Black,High,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,8,Black,Low,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,8,White,High,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,8,White,Low,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,9,Black,High,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,9,Black,Low,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,9,White,High,NA,NA,NA,NA,NA
+2022-07-18,Cheyenne,9,White,Low,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,1,Black,High,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,1,Black,Low,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,1,White,High,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,1,White,Low,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,10,Black,High,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,10,Black,Low,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,10,White,High,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,10,White,Low,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,2,Black,High,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,2,Black,Low,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,2,White,High,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,2,White,Low,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,3,Black,High,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,3,Black,Low,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,3,White,High,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,3,White,Low,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,4,Black,High,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,4,Black,Low,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,4,White,High,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,4,White,Low,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,5,Black,High,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,5,Black,Low,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,5,White,High,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,5,White,Low,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,6,Black,High,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,6,Black,Low,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,6,White,High,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,6,White,Low,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,7,Black,High,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,7,Black,Low,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,7,White,High,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,7,White,Low,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,8,Black,High,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,8,Black,Low,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,8,White,High,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,8,White,Low,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,9,Black,High,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,9,Black,Low,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,9,White,High,NA,NA,NA,NA,NA
+2022-07-21,Cheyenne,9,White,Low,NA,NA,NA,NA,NA
+2022-10-07,Cheyenne,1,Black,High,10.9,13.4,NA,NA,NA
+2022-10-07,Cheyenne,1,Black,Low,11.7,12.9,NA,NA,NA
+2022-10-07,Cheyenne,1,White,High,10.8,11.72,NA,NA,NA
+2022-10-07,Cheyenne,1,White,Low,10.1,10.199999999999999,NA,NA,NA
+2022-10-07,Cheyenne,10,Black,High,12.3,NA,NA,NA,NA
+2022-10-07,Cheyenne,10,Black,Low,9.3000000000000007,NA,NA,NA,NA
+2022-10-07,Cheyenne,10,White,High,10.8,NA,NA,NA,NA
+2022-10-07,Cheyenne,10,White,Low,10.6,NA,NA,NA,NA
+2022-10-07,Cheyenne,2,Black,High,12.2,NA,NA,NA,NA
+2022-10-07,Cheyenne,2,Black,Low,11.6,NA,NA,NA,NA
+2022-10-07,Cheyenne,2,White,High,10.4,NA,NA,NA,NA
+2022-10-07,Cheyenne,2,White,Low,10.8,NA,NA,NA,NA
+2022-10-07,Cheyenne,3,Black,High,11,NA,NA,NA,NA
+2022-10-07,Cheyenne,3,Black,Low,11.5,NA,NA,NA,NA
+2022-10-07,Cheyenne,3,White,High,10.3,NA,NA,NA,NA
+2022-10-07,Cheyenne,3,White,Low,11.4,NA,NA,NA,NA
+2022-10-07,Cheyenne,4,Black,High,1.4,12.6,NA,NA,NA
+2022-10-07,Cheyenne,4,Black,Low,11.7,11.4,NA,NA,NA
+2022-10-07,Cheyenne,4,White,High,11,11,NA,NA,NA
+2022-10-07,Cheyenne,4,White,Low,10.3,10.9,NA,NA,NA
+2022-10-07,Cheyenne,5,Black,High,12.4,NA,NA,NA,NA
+2022-10-07,Cheyenne,5,Black,Low,12.6,NA,NA,NA,NA
+2022-10-07,Cheyenne,5,White,High,10.3,NA,NA,NA,NA
+2022-10-07,Cheyenne,5,White,Low,10.4,NA,NA,NA,NA
+2022-10-07,Cheyenne,6,Black,High,12.4,13.8,NA,NA,NA
+2022-10-07,Cheyenne,6,Black,Low,11.4,12.8,NA,NA,NA
+2022-10-07,Cheyenne,6,White,High,11.8,12,NA,NA,NA
+2022-10-07,Cheyenne,6,White,Low,10.199999999999999,10.9,NA,NA,NA
+2022-10-07,Cheyenne,7,Black,High,12.1,13.5,NA,NA,NA
+2022-10-07,Cheyenne,7,Black,Low,12.7,NA,NA,NA,NA
+2022-10-07,Cheyenne,7,White,High,9.9,10.9,NA,NA,NA
+2022-10-07,Cheyenne,7,White,Low,9.6999999999999993,12,NA,NA,NA
+2022-10-07,Cheyenne,8,Black,High,11.9,NA,NA,NA,NA
+2022-10-07,Cheyenne,8,Black,Low,10.8,NA,NA,NA,NA
+2022-10-07,Cheyenne,8,White,High,10.199999999999999,NA,NA,NA,NA
+2022-10-07,Cheyenne,8,White,Low,12.4,NA,NA,NA,NA
+2022-10-07,Cheyenne,9,Black,High,12,NA,NA,NA,NA
+2022-10-07,Cheyenne,9,Black,Low,12.3,NA,NA,NA,NA
+2022-10-07,Cheyenne,9,White,High,10.6,NA,NA,NA,NA
+2022-10-07,Cheyenne,9,White,Low,9.6,NA,NA,NA,NA
+2023-02-23,Cheyenne,1,Black,High,20.8,8.3000000000000007,NA,NA,NA
+2023-03-22,Wildcat,1,Black,High,9.4,15.6,partly cloudy,light/none,NA
+2023-03-22,Wildcat,1,Black,Low,10.6,15.1,partly cloudy,light/none,NA
+2023-03-22,Wildcat,1,White,High,8.1,12.9,partly cloudy,light/none,NA
+2023-03-22,Wildcat,1,White,Low,8.9,12.1,partly cloudy,light/none,NA
+2023-03-22,Wildcat,10,Black,High,20.6,13.1,partly cloudy,light/none,NA
+2023-03-22,Wildcat,10,Black,Low,20.4,13.4,partly cloudy,light/none,NA
+2023-03-22,Wildcat,10,White,High,16.3,10.4,partly cloudy,light/none,NA
+2023-03-22,Wildcat,10,White,Low,15.4,8.9,partly cloudy,light/none,NA
+2023-03-22,Wildcat,2,Black,High,10.6,NA,partly cloudy,light/none,NA
+2023-03-22,Wildcat,2,Black,Low,9.8,NA,partly cloudy,light/none,NA
+2023-03-22,Wildcat,2,White,High,7.2,NA,partly cloudy,light/none,NA
+2023-03-22,Wildcat,2,White,Low,8,NA,partly cloudy,light/none,NA
+2023-03-22,Wildcat,3,Black,High,11.4,NA,partly cloudy,light/none,NA
+2023-03-22,Wildcat,3,Black,Low,14.2,NA,partly cloudy,light/none,NA
+2023-03-22,Wildcat,3,White,High,10.5,NA,partly cloudy,light/none,NA
+2023-03-22,Wildcat,3,White,Low,8.8,NA,partly cloudy,light/none,NA
+2023-03-22,Wildcat,4,Black,High,14.1,10.1,partly cloudy,light/none,NA
+2023-03-22,Wildcat,4,Black,Low,14.1,13.2,partly cloudy,light/none,NA
+2023-03-22,Wildcat,4,White,High,9.4,11.5,partly cloudy,light/none,NA
+2023-03-22,Wildcat,4,White,Low,10.1,12.4,partly cloudy,light/none,NA
+2023-03-22,Wildcat,5,Black,High,13.5,NA,partly cloudy,light/none,NA
+2023-03-22,Wildcat,5,Black,Low,15.3,NA,partly cloudy,light/none,NA
+2023-03-22,Wildcat,5,White,High,11.3,NA,partly cloudy,light/none,NA
+2023-03-22,Wildcat,5,White,Low,13.1,NA,partly cloudy,light/none,NA
+2023-03-22,Wildcat,6,Black,High,12.1,13.9,partly cloudy,light/none,NA
+2023-03-22,Wildcat,6,Black,Low,14.3,14.4,partly cloudy,light/none,NA
+2023-03-22,Wildcat,6,White,High,12.9,8.1,partly cloudy,light/none,NA
+2023-03-22,Wildcat,6,White,Low,12.6,11.8,partly cloudy,light/none,NA
+2023-03-22,Wildcat,7,Black,High,16.6,NA,partly cloudy,light/none,NA
+2023-03-22,Wildcat,7,Black,Low,18.6,NA,partly cloudy,light/none,NA
+2023-03-22,Wildcat,7,White,High,13.7,NA,partly cloudy,light/none,NA
+2023-03-22,Wildcat,7,White,Low,14.1,NA,partly cloudy,light/none,NA
+2023-03-22,Wildcat,8,Black,High,19.6,NA,partly cloudy,light/none,NA
+2023-03-22,Wildcat,8,Black,Low,16.9,NA,partly cloudy,light/none,NA
+2023-03-22,Wildcat,8,White,High,14.3,NA,partly cloudy,light/none,NA
+2023-03-22,Wildcat,8,White,Low,11.3,NA,partly cloudy,light/none,NA
+2023-03-22,Wildcat,9,Black,High,18.1,NA,partly cloudy,light/none,NA
+2023-03-22,Wildcat,9,Black,Low,20.4,NA,partly cloudy,light/none,NA
+2023-03-22,Wildcat,9,White,High,16.5,NA,partly cloudy,light/none,NA
+2023-03-22,Wildcat,9,White,Low,15.3,NA,partly cloudy,light/none,NA
+2023-03-24,Cheyenne,1,Black,High,6,6.7,NA,NA,NA
+2023-03-24,Cheyenne,1,Black,Low,4.3,4,NA,NA,NA
+2023-03-24,Cheyenne,1,White,High,11.3,4.0999999999999996,NA,NA,NA
+2023-03-24,Cheyenne,1,White,Low,9.8000000000000007,NA,NA,NA,NA
+2023-03-24,Cheyenne,10,Black,High,14.3,NA,NA,NA,NA
+2023-03-24,Cheyenne,10,Black,Low,15.5,NA,NA,NA,NA
+2023-03-24,Cheyenne,10,White,High,14.4,NA,NA,NA,NA
+2023-03-24,Cheyenne,10,White,Low,12.8,NA,NA,NA,NA
+2023-03-24,Cheyenne,2,Black,High,10,NA,NA,NA,NA
+2023-03-24,Cheyenne,2,Black,Low,8.1999999999999993,NA,NA,NA,NA
+2023-03-24,Cheyenne,2,White,High,9.1,NA,NA,NA,NA
+2023-03-24,Cheyenne,2,White,Low,7,NA,NA,NA,NA
+2023-03-24,Cheyenne,3,Black,High,7.4,NA,NA,NA,NA
+2023-03-24,Cheyenne,3,Black,Low,4.5999999999999996,NA,NA,NA,NA
+2023-03-24,Cheyenne,3,White,High,5.5,NA,NA,NA,NA
+2023-03-24,Cheyenne,3,White,Low,8.9,NA,NA,NA,NA
+2023-03-24,Cheyenne,4,Black,High,6.9,5.8,NA,NA,NA
+2023-03-24,Cheyenne,4,Black,Low,11.7,11.3,NA,NA,NA
+2023-03-24,Cheyenne,4,White,High,6.6,5.9,NA,NA,NA
+2023-03-24,Cheyenne,4,White,Low,9.3000000000000007,6.8,NA,NA,NA
+2023-03-24,Cheyenne,5,Black,High,10.7,NA,NA,NA,NA
+2023-03-24,Cheyenne,5,Black,Low,12,NA,NA,NA,NA
+2023-03-24,Cheyenne,5,White,High,7.1,NA,NA,NA,NA
+2023-03-24,Cheyenne,5,White,Low,10.8,NA,NA,NA,NA
+2023-03-24,Cheyenne,6,Black,High,8.9,9.9,NA,NA,NA
+2023-03-24,Cheyenne,6,Black,Low,7.9,10.6,NA,NA,NA
+2023-03-24,Cheyenne,6,White,High,9.8000000000000007,3.8,NA,NA,NA
+2023-03-24,Cheyenne,6,White,Low,0.1,5,NA,NA,NA
+2023-03-24,Cheyenne,7,Black,High,13.5,12.5,NA,NA,NA
+2023-03-24,Cheyenne,7,Black,Low,15.7,NA,NA,NA,NA
+2023-03-24,Cheyenne,7,White,High,8.1999999999999993,6.1,NA,NA,NA
+2023-03-24,Cheyenne,7,White,Low,11.3,5.7,NA,NA,NA
+2023-03-24,Cheyenne,8,Black,High,12.3,NA,NA,NA,NA
+2023-03-24,Cheyenne,8,Black,Low,16.100000000000001,NA,NA,NA,NA
+2023-03-24,Cheyenne,8,White,High,8.5,NA,NA,NA,NA
+2023-03-24,Cheyenne,8,White,Low,8.3000000000000007,NA,NA,NA,NA
+2023-03-24,Cheyenne,9,Black,High,13.7,NA,NA,NA,NA
+2023-03-24,Cheyenne,9,Black,Low,13.6,NA,NA,NA,NA
+2023-03-24,Cheyenne,9,White,High,12.1,NA,NA,NA,NA
+2023-03-24,Cheyenne,9,White,Low,14.8,NA,NA,NA,NA
+2023-04-18,Cheyenne,1,Black,High,20.100000000000001,16.8,NA,NA,NA
+2023-04-18,Cheyenne,1,Black,Low,13.5,17.7,NA,NA,NA
+2023-04-18,Cheyenne,1,White,High,18.899999999999999,16,NA,NA,NA
+2023-04-18,Cheyenne,1,White,Low,23.2,16.2,NA,NA,NA
+2023-04-18,Cheyenne,10,Black,High,21.2,NA,NA,NA,NA
+2023-04-18,Cheyenne,10,Black,Low,20.5,NA,NA,NA,NA
+2023-04-18,Cheyenne,10,White,High,19.7,NA,NA,NA,NA
+2023-04-18,Cheyenne,10,White,Low,18.2,NA,NA,NA,NA
+2023-04-18,Cheyenne,2,Black,High,20.100000000000001,NA,NA,NA,NA
+2023-04-18,Cheyenne,2,Black,Low,17.8,NA,NA,NA,NA
+2023-04-18,Cheyenne,2,White,High,22.1,NA,NA,NA,NA
+2023-04-18,Cheyenne,2,White,Low,19.899999999999999,NA,NA,NA,NA
+2023-04-18,Cheyenne,3,Black,High,17.399999999999999,NA,NA,NA,NA
+2023-04-18,Cheyenne,3,Black,Low,17.3,NA,NA,NA,NA
+2023-04-18,Cheyenne,3,White,High,17,NA,NA,NA,NA
+2023-04-18,Cheyenne,3,White,Low,21.7,NA,NA,NA,NA
+2023-04-18,Cheyenne,4,Black,High,22.9,18.3,NA,NA,NA
+2023-04-18,Cheyenne,4,Black,Low,21.8,22.7,NA,NA,NA
+2023-04-18,Cheyenne,4,White,High,16.3,13.3,NA,NA,NA
+2023-04-18,Cheyenne,4,White,Low,19.899999999999999,15.4,NA,NA,NA
+2023-04-18,Cheyenne,5,Black,High,20.6,NA,NA,NA,NA
+2023-04-18,Cheyenne,5,Black,Low,22.1,NA,NA,NA,NA
+2023-04-18,Cheyenne,5,White,High,18.899999999999999,NA,NA,NA,NA
+2023-04-18,Cheyenne,5,White,Low,20.399999999999999,NA,NA,NA,NA
+2023-04-18,Cheyenne,6,Black,High,16.7,21.4,NA,NA,NA
+2023-04-18,Cheyenne,6,Black,Low,20.2,18.399999999999999,NA,NA,NA
+2023-04-18,Cheyenne,6,White,High,21.3,14.5,NA,NA,NA
+2023-04-18,Cheyenne,6,White,Low,19.899999999999999,14.4,NA,NA,NA
+2023-04-18,Cheyenne,7,Black,High,19,17.100000000000001,NA,NA,NA
+2023-04-18,Cheyenne,7,Black,Low,19.7,26.5,NA,NA,NA
+2023-04-18,Cheyenne,7,White,High,17.8,14.7,NA,NA,NA
+2023-04-18,Cheyenne,7,White,Low,18.8,11.9,NA,NA,NA
+2023-04-18,Cheyenne,8,Black,High,21.2,NA,NA,NA,NA
+2023-04-18,Cheyenne,8,Black,Low,20.7,NA,NA,NA,NA
+2023-04-18,Cheyenne,8,White,High,19.8,NA,NA,NA,NA
+2023-04-18,Cheyenne,8,White,Low,18.3,NA,NA,NA,NA
+2023-04-18,Cheyenne,9,Black,High,20.7,NA,NA,NA,NA
+2023-04-18,Cheyenne,9,Black,Low,21.7,NA,NA,NA,NA
+2023-04-18,Cheyenne,9,White,High,18,NA,NA,NA,NA
+2023-04-18,Cheyenne,9,White,Low,20.100000000000001,NA,NA,NA,NA
+2023-04-25,SheepStation,1,Black,High,18.5,NA,sunny,windy,NA
+2023-04-25,SheepStation,10,White,Low,19.5,NA,sunny,windy,NA
+2023-04-25,SheepStation,11,Black,High,24.45,NA,sunny,windy,NA
+2023-04-25,SheepStation,12,Black,Low,24.85,NA,sunny,windy,NA
+2023-04-25,SheepStation,13,White,Low,17.1,15.85,sunny,windy,NA
+2023-04-25,SheepStation,14,White,High,16.75,14.7,sunny,windy,NA
+2023-04-25,SheepStation,15,Black,High,19.7,18.4,sunny,windy,NA
+2023-04-25,SheepStation,16,Black,Low,20,17.05,sunny,windy,NA
+2023-04-25,SheepStation,17,Black,High,22.7,NA,sunny,windy,NA
+2023-04-25,SheepStation,18,Black,Low,22.95,NA,sunny,windy,NA
+2023-04-25,SheepStation,19,White,High,17.75,NA,sunny,windy,NA
+2023-04-25,SheepStation,2,White,High,17.8,NA,sunny,windy,NA
+2023-04-25,SheepStation,20,White,Low,19.95,NA,sunny,windy,NA
+2023-04-25,SheepStation,21,White,Low,18.15,NA,sunny,windy,NA
+2023-04-25,SheepStation,21,White,Low,NA,19.2,partly sunny,windy,NA
+2023-04-25,SheepStation,22,Black,Low,22.2,NA,sunny,windy,NA
+2023-04-25,SheepStation,22,Black,Low,NA,17.1,partly sunny,windy,NA
+2023-04-25,SheepStation,23,White,High,24.05,NA,sunny,windy,NA
+2023-04-25,SheepStation,23,White,High,NA,17.6,partly sunny,windy,NA
+2023-04-25,SheepStation,24,Black,High,25.15,NA,sunny,windy,NA
+2023-04-25,SheepStation,24,Black,High,NA,17.05,partly sunny,windy,NA
+2023-04-25,SheepStation,25,White,High,18.65,NA,sunny,windy,NA
+2023-04-25,SheepStation,26,White,Low,18,NA,sunny,windy,NA
+2023-04-25,SheepStation,27,Black,High,22.3,NA,sunny,windy,NA
+2023-04-25,SheepStation,28,Black,Low,21.5,NA,sunny,windy,NA
+2023-04-25,SheepStation,29,White,High,20,NA,sunny,windy,NA
+2023-04-25,SheepStation,3,Black,Low,20.5,NA,sunny,windy,NA
+2023-04-25,SheepStation,30,Black,High,21.35,NA,sunny,windy,NA
+2023-04-25,SheepStation,31,Black,Low,22.65,NA,sunny,windy,NA
+2023-04-25,SheepStation,32,White,Low,17.45,NA,sunny,windy,NA
+2023-04-25,SheepStation,33,White,High,19.1,NA,sunny,windy,NA
+2023-04-25,SheepStation,33,White,High,NA,16.65,partly sunny,windy,NA
+2023-04-25,SheepStation,34,Black,High,23.75,NA,sunny,windy,NA
+2023-04-25,SheepStation,34,Black,High,NA,21.45,partly sunny,windy,NA
+2023-04-25,SheepStation,35,White,Low,21.25,NA,sunny,windy,NA
+2023-04-25,SheepStation,35,White,Low,NA,16.05,partly sunny,windy,NA
+2023-04-25,SheepStation,36,Black,Low,23.5,NA,sunny,windy,NA
+2023-04-25,SheepStation,36,Black,Low,NA,23.3,partly sunny,windy,NA
+2023-04-25,SheepStation,37,Black,High,27.7,NA,sunny,windy,NA
+2023-04-25,SheepStation,38,White,Low,18.8,NA,sunny,windy,NA
+2023-04-25,SheepStation,39,Black,Low,25.9,NA,sunny,windy,NA
+2023-04-25,SheepStation,4,White,Low,16.7,NA,sunny,windy,NA
+2023-04-25,SheepStation,40,White,High,19.95,NA,sunny,windy,NA
+2023-04-25,SheepStation,5,White,Low,18.8,13.3,sunny,windy,NA
+2023-04-25,SheepStation,6,Black,Low,23.9,19.55,sunny,windy,NA
+2023-04-25,SheepStation,7,Black,High,21.4,19.85,sunny,windy,NA
+2023-04-25,SheepStation,8,White,High,17.25,13.75,sunny,windy,NA
+2023-04-25,SheepStation,9,White,High,14.8,NA,sunny,windy,NA
+2023-04-26,Wildcat,1,Black,High,32.3,30.9,partly cloudy,light/none,NA
+2023-04-26,Wildcat,1,Black,Low,36.9,32.6,partly cloudy,light/none,NA
+2023-04-26,Wildcat,1,White,High,26.7,30.4,partly cloudy,light/none,NA
+2023-04-26,Wildcat,1,White,Low,31.3,27.8,partly cloudy,light/none,NA
+2023-04-26,Wildcat,10,Black,High,35.6,30.8,partly cloudy,light/none,NA
+2023-04-26,Wildcat,10,Black,Low,38.3,29.9,partly cloudy,light/none,NA
+2023-04-26,Wildcat,10,White,High,28.9,24.8,partly cloudy,light/none,NA
+2023-04-26,Wildcat,10,White,Low,26.9,31.5,partly cloudy,light/none,NA
+2023-04-26,Wildcat,2,Black,High,33.8,NA,partly cloudy,light/none,NA
+2023-04-26,Wildcat,2,Black,Low,37.6,NA,partly cloudy,light/none,NA
+2023-04-26,Wildcat,2,White,High,27.3,NA,partly cloudy,light/none,NA
+2023-04-26,Wildcat,2,White,Low,26.3,NA,partly cloudy,light/none,NA
+2023-04-26,Wildcat,3,Black,High,34.6,NA,partly cloudy,light/none,NA
+2023-04-26,Wildcat,3,Black,Low,34.6,NA,partly cloudy,light/none,NA
+2023-04-26,Wildcat,3,White,High,26.4,NA,partly cloudy,light/none,NA
+2023-04-26,Wildcat,3,White,Low,31.3,NA,partly cloudy,light/none,NA
+2023-04-26,Wildcat,4,Black,High,34.6,30.4,partly cloudy,light/none,NA
+2023-04-26,Wildcat,4,Black,Low,39.6,32.8,partly cloudy,light/none,NA
+2023-04-26,Wildcat,4,White,High,28.6,26.9,partly cloudy,light/none,NA
+2023-04-26,Wildcat,4,White,Low,33.8,28.3,partly cloudy,light/none,NA
+2023-04-26,Wildcat,5,Black,High,32.7,NA,partly cloudy,light/none,NA
+2023-04-26,Wildcat,5,Black,Low,35.9,NA,partly cloudy,light/none,NA
+2023-04-26,Wildcat,5,White,High,27.8,NA,partly cloudy,light/none,NA
+2023-04-26,Wildcat,5,White,Low,28.6,NA,partly cloudy,light/none,NA
+2023-04-26,Wildcat,6,Black,High,25.3,29.6,partly cloudy,light/none,NA
+2023-04-26,Wildcat,6,Black,Low,28.6,31.6,partly cloudy,light/none,NA
+2023-04-26,Wildcat,6,White,High,21.7,25.2,partly cloudy,light/none,NA
+2023-04-26,Wildcat,6,White,Low,20.3,22.8,partly cloudy,light/none,NA
+2023-04-26,Wildcat,7,Black,High,27.1,NA,partly cloudy,light/none,NA
+2023-04-26,Wildcat,7,Black,Low,30.5,NA,partly cloudy,light/none,NA
+2023-04-26,Wildcat,7,White,High,23,NA,partly cloudy,light/none,NA
+2023-04-26,Wildcat,7,White,Low,20.4,NA,partly cloudy,light/none,NA
+2023-04-26,Wildcat,8,Black,High,34.3,NA,partly cloudy,light/none,NA
+2023-04-26,Wildcat,8,Black,Low,36.6,NA,partly cloudy,light/none,NA
+2023-04-26,Wildcat,8,White,High,27.1,NA,partly cloudy,light/none,NA
+2023-04-26,Wildcat,8,White,Low,27.9,NA,partly cloudy,light/none,NA
+2023-04-26,Wildcat,9,Black,High,34.6,NA,partly cloudy,light/none,NA
+2023-04-26,Wildcat,9,Black,Low,36.7,NA,partly cloudy,light/none,NA
+2023-04-26,Wildcat,9,White,High,26.3,NA,partly cloudy,light/none,NA
+2023-04-26,Wildcat,9,White,Low,29.4,NA,partly cloudy,light/none,NA
+2023-05-01,Wildcat,1,Black,High,53.8,NA,NA,NA,NA
+2023-05-01,Wildcat,1,Black,Low,51.8,NA,NA,NA,NA
+2023-05-01,Wildcat,1,White,High,39.1,NA,NA,NA,NA
+2023-05-01,Wildcat,1,White,Low,37.1,NA,NA,NA,NA
+2023-05-01,Wildcat,2,Black,High,47.9,NA,NA,NA,NA
+2023-05-01,Wildcat,2,Black,Low,55.3,NA,NA,NA,NA
+2023-05-01,Wildcat,2,White,High,41.6,NA,NA,NA,NA
+2023-05-01,Wildcat,2,White,Low,41.6,NA,NA,NA,NA
+2023-05-01,Wildcat,3,Black,High,NA,NA,NA,NA,NA
+2023-05-01,Wildcat,3,Black,Low,NA,NA,NA,NA,NA
+2023-05-01,Wildcat,3,White,High,NA,NA,NA,NA,NA
+2023-05-01,Wildcat,3,White,Low,NA,NA,NA,NA,NA
+2023-05-03,Cheyenne,1,Black,High,36,36.700000000000003,NA,NA,NA
+2023-05-03,Cheyenne,1,Black,Low,43.5,34.9,NA,NA,NA
+2023-05-03,Cheyenne,1,White,High,43.3,27.3,NA,NA,NA
+2023-05-03,Cheyenne,1,White,Low,42,30.2,NA,NA,NA
+2023-05-03,Cheyenne,10,Black,High,31.9,NA,NA,NA,NA
+2023-05-03,Cheyenne,10,Black,Low,35,NA,NA,NA,NA
+2023-05-03,Cheyenne,10,White,High,31.8,NA,NA,NA,NA
+2023-05-03,Cheyenne,10,White,Low,31.7,NA,NA,NA,NA
+2023-05-03,Cheyenne,2,Black,High,37.1,NA,NA,NA,NA
+2023-05-03,Cheyenne,2,Black,Low,35.5,NA,NA,NA,NA
+2023-05-03,Cheyenne,2,White,High,34.4,NA,NA,NA,NA
+2023-05-03,Cheyenne,2,White,Low,42.1,NA,NA,NA,NA
+2023-05-03,Cheyenne,3,Black,High,35.4,NA,NA,NA,NA
+2023-05-03,Cheyenne,3,Black,Low,42.6,NA,NA,NA,NA
+2023-05-03,Cheyenne,3,White,High,38.200000000000003,NA,NA,NA,NA
+2023-05-03,Cheyenne,3,White,Low,37.4,NA,NA,NA,NA
+2023-05-03,Cheyenne,4,Black,High,41.4,32.6,NA,NA,NA
+2023-05-03,Cheyenne,4,Black,Low,37.9,41.5,NA,NA,NA
+2023-05-03,Cheyenne,4,White,High,32.700000000000003,27.1,NA,NA,NA
+2023-05-03,Cheyenne,4,White,Low,40.299999999999997,40.799999999999997,NA,NA,NA
+2023-05-03,Cheyenne,5,Black,High,39.799999999999997,NA,NA,NA,NA
+2023-05-03,Cheyenne,5,Black,Low,41.4,NA,NA,NA,NA
+2023-05-03,Cheyenne,5,White,High,35.5,NA,NA,NA,NA
+2023-05-03,Cheyenne,5,White,Low,41.1,NA,NA,NA,NA
+2023-05-03,Cheyenne,6,Black,High,32.200000000000003,40.799999999999997,NA,NA,NA
+2023-05-03,Cheyenne,6,Black,Low,38.299999999999997,27.3,NA,NA,NA
+2023-05-03,Cheyenne,6,White,High,39.200000000000003,26.4,NA,NA,NA
+2023-05-03,Cheyenne,6,White,Low,40,37.9,NA,NA,NA
+2023-05-03,Cheyenne,7,Black,High,33.799999999999997,30.3,NA,NA,NA
+2023-05-03,Cheyenne,7,Black,Low,35.200000000000003,32.9,NA,NA,NA
+2023-05-03,Cheyenne,7,White,High,33.4,28.3,NA,NA,NA
+2023-05-03,Cheyenne,7,White,Low,33.4,24.4,NA,NA,NA
+2023-05-03,Cheyenne,8,Black,High,37.700000000000003,NA,NA,NA,NA
+2023-05-03,Cheyenne,8,Black,Low,35.200000000000003,NA,NA,NA,NA
+2023-05-03,Cheyenne,8,White,High,34.5,NA,NA,NA,NA
+2023-05-03,Cheyenne,8,White,Low,33.799999999999997,NA,NA,NA,NA
+2023-05-03,Cheyenne,9,Black,High,35.700000000000003,NA,NA,NA,NA
+2023-05-03,Cheyenne,9,Black,Low,35.200000000000003,NA,NA,NA,NA
+2023-05-03,Cheyenne,9,White,High,31.5,NA,NA,NA,NA
+2023-05-03,Cheyenne,9,White,Low,33,NA,NA,NA,NA
+2023-05-11,SheepStation,1,Black,High,22,NA,partly sunny,moderately windy,NA
+2023-05-11,SheepStation,10,White,Low,20.55,NA,partly sunny,moderately windy,NA
+2023-05-11,SheepStation,10,White,Low,NA,19.3,cloudy,moderately windy,NA
+2023-05-11,SheepStation,11,Black,High,27.25,NA,partly sunny,moderately windy,NA
+2023-05-11,SheepStation,11,Black,High,NA,27.8,cloudy,moderately windy,NA
+2023-05-11,SheepStation,12,Black,Low,25.6,NA,partly sunny,moderately windy,NA
+2023-05-11,SheepStation,12,Black,Low,NA,27.15,cloudy,moderately windy,NA
+2023-05-11,SheepStation,13,White,Low,19.35,NA,partly sunny,moderately windy,NA
+2023-05-11,SheepStation,14,White,High,22.15,NA,partly sunny,moderately windy,NA
+2023-05-11,SheepStation,15,Black,High,27.15,NA,partly sunny,moderately windy,NA
+2023-05-11,SheepStation,16,Black,Low,26.4,NA,cloudy,very windy,NA
+2023-05-11,SheepStation,17,Black,High,27.4,NA,sunny,very windy,NA
+2023-05-11,SheepStation,17,Black,High,NA,21.7,sunny,moderately windy,NA
+2023-05-11,SheepStation,18,Black,Low,27.05,NA,sunny,very windy,NA
+2023-05-11,SheepStation,18,Black,Low,NA,18.65,sunny,moderately windy,NA
+2023-05-11,SheepStation,19,White,High,20.7,NA,sunny,very windy,NA
+2023-05-11,SheepStation,19,White,High,NA,20.75,sunny,moderately windy,NA
+2023-05-11,SheepStation,2,White,High,21.05,NA,partly sunny,moderately windy,NA
+2023-05-11,SheepStation,20,White,Low,23.55,NA,sunny,very windy,NA
+2023-05-11,SheepStation,20,White,Low,NA,18.25,sunny,moderately windy,NA
+2023-05-11,SheepStation,21,White,Low,24.35,NA,sunny,very windy,NA
+2023-05-11,SheepStation,21,White,Low,NA,18.9,sunny,moderately windy,NA
+2023-05-11,SheepStation,22,Black,Low,26.95,NA,sunny,very windy,NA
+2023-05-11,SheepStation,22,Black,Low,NA,18.95,sunny,moderately windy,NA
+2023-05-11,SheepStation,23,White,High,21.1,NA,sunny,very windy,NA
+2023-05-11,SheepStation,23,White,High,NA,17.55,sunny,moderately windy,NA
+2023-05-11,SheepStation,24,Black,High,28.45,NA,sunny,very windy,NA
+2023-05-11,SheepStation,24,Black,High,NA,17.55,sunny,moderately windy,NA
+2023-05-11,SheepStation,25,White,High,23.85,NA,sunny,very windy,NA
+2023-05-11,SheepStation,25,White,High,NA,13.45,cloudy,moderately windy,NA
+2023-05-11,SheepStation,26,White,Low,26.3,13.95,cloudy,moderately windy,NA
+2023-05-11,SheepStation,27,Black,High,30.05,20.85,cloudy,moderately windy,NA
+2023-05-11,SheepStation,28,Black,Low,27.1,21.45,cloudy,moderately windy,NA
+2023-05-11,SheepStation,29,White,High,21.55,NA,cloudy,moderately windy,NA
+2023-05-11,SheepStation,3,Black,Low,22.8,NA,partly sunny,moderately windy,NA
+2023-05-11,SheepStation,30,Black,High,30,NA,cloudy,moderately windy,NA
+2023-05-11,SheepStation,31,Black,Low,27.5,NA,sunny,moderately windy,NA
+2023-05-11,SheepStation,32,White,Low,22.8,NA,sunny,moderately windy,NA
+2023-05-11,SheepStation,33,White,High,21.3,NA,sunny,moderately windy,NA
+2023-05-11,SheepStation,34,Black,High,28.55,NA,sunny,moderately windy,NA
+2023-05-11,SheepStation,35,White,Low,24.05,NA,sunny,moderately windy,NA
+2023-05-11,SheepStation,36,Black,Low,28.3,NA,cloudy,moderately windy,NA
+2023-05-11,SheepStation,37,Black,High,31.55,NA,cloudy,moderately windy,NA
+2023-05-11,SheepStation,38,White,Low,25,NA,cloudy,moderately windy,NA
+2023-05-11,SheepStation,39,Black,Low,31.6,NA,cloudy,moderately windy,NA
+2023-05-11,SheepStation,4,White,Low,20,NA,partly sunny,moderately windy,NA
+2023-05-11,SheepStation,40,White,High,24,NA,cloudy,moderately windy,NA
+2023-05-11,SheepStation,5,White,Low,20.95,NA,partly sunny,moderately windy,NA
+2023-05-11,SheepStation,6,Black,Low,24,NA,partly sunny,moderately windy,NA
+2023-05-11,SheepStation,7,Black,High,24.75,NA,partly sunny,moderately windy,NA
+2023-05-11,SheepStation,8,White,High,20.15,NA,partly sunny,moderately windy,NA
+2023-05-11,SheepStation,9,White,High,21.65,NA,partly sunny,moderately windy,NA
+2023-05-11,SheepStation,9,White,High,NA,19.75,cloudy,moderately windy,NA
+2023-05-16,Wildcat,1,Black,High,31.3,35.4,None,light/none,NA
+2023-05-16,Wildcat,1,Black,Low,31,34.7,None,light/none,NA
+2023-05-16,Wildcat,1,White,High,27.5,32.4,None,light/none,NA
+2023-05-16,Wildcat,1,White,Low,25.2,30.4,None,light/none,NA
+2023-05-16,Wildcat,10,Black,High,34.9,33,None,light/none,NA
+2023-05-16,Wildcat,10,Black,Low,38.6,37.8,None,light/none,NA
+2023-05-16,Wildcat,10,White,High,31.1,29.3,None,light/none,NA
+2023-05-16,Wildcat,10,White,Low,33.7,36.4,None,light/none,NA
+2023-05-16,Wildcat,2,Black,High,29.1,NA,None,light/none,NA
+2023-05-16,Wildcat,2,Black,Low,30.3,NA,None,light/none,NA
+2023-05-16,Wildcat,2,White,High,25.6,NA,None,light/none,NA
+2023-05-16,Wildcat,2,White,Low,27.3,NA,None,light/none,NA
+2023-05-16,Wildcat,3,Black,High,30.3,NA,None,light/none,NA
+2023-05-16,Wildcat,3,Black,Low,34.6,NA,None,light/none,NA
+2023-05-16,Wildcat,3,White,High,27.8,NA,None,light/none,NA
+2023-05-16,Wildcat,3,White,Low,25.5,NA,None,light/none,NA
+2023-05-16,Wildcat,4,Black,High,30.2,36.3,None,light/none,NA
+2023-05-16,Wildcat,4,Black,Low,33.8,33.3,None,light/none,NA
+2023-05-16,Wildcat,4,White,High,27.1,32.4,None,light/none,NA
+2023-05-16,Wildcat,4,White,Low,26.6,29.1,None,light/none,NA
+2023-05-16,Wildcat,5,Black,High,35.6,NA,None,light/none,NA
+2023-05-16,Wildcat,5,Black,Low,40,NA,None,light/none,NA
+2023-05-16,Wildcat,5,White,High,32,NA,None,light/none,NA
+2023-05-16,Wildcat,5,White,Low,31.5,NA,None,light/none,NA
+2023-05-16,Wildcat,6,Black,High,38.7,39.6,None,light/none,NA
+2023-05-16,Wildcat,6,Black,Low,38.2,36.9,None,light/none,NA
+2023-05-16,Wildcat,6,White,High,29.2,29.4,None,light/none,NA
+2023-05-16,Wildcat,6,White,Low,28.3,30.7,None,light/none,NA
+2023-05-16,Wildcat,7,Black,High,37.4,NA,None,light/none,NA
+2023-05-16,Wildcat,7,Black,Low,38.2,NA,None,light/none,NA
+2023-05-16,Wildcat,7,White,High,33.9,NA,None,light/none,NA
+2023-05-16,Wildcat,7,White,Low,34.4,NA,None,light/none,NA
+2023-05-16,Wildcat,8,Black,High,40.1,NA,None,light/none,NA
+2023-05-16,Wildcat,8,Black,Low,35.9,NA,None,light/none,NA
+2023-05-16,Wildcat,8,White,High,31.1,NA,None,light/none,NA
+2023-05-16,Wildcat,8,White,Low,30,NA,None,light/none,NA
+2023-05-16,Wildcat,9,Black,High,36.4,NA,None,light/none,NA
+2023-05-16,Wildcat,9,Black,Low,39.2,NA,None,light/none,NA
+2023-05-16,Wildcat,9,White,High,32.4,NA,None,light/none,NA
+2023-05-16,Wildcat,9,White,Low,35.3,NA,None,light/none,NA
+2023-05-23,Cheyenne,1,Black,Low,24.7,22.7,NA,NA,NA
+2023-05-23,Cheyenne,1,White,High,29.9,20.5,NA,NA,NA
+2023-05-23,Cheyenne,1,White,Low,27.1,16.100000000000001,NA,NA,NA
+2023-05-23,Cheyenne,10,Black,High,36.6,NA,NA,NA,NA
+2023-05-23,Cheyenne,10,Black,Low,35.4,NA,NA,NA,NA
+2023-05-23,Cheyenne,10,White,High,30.6,NA,NA,NA,NA
+2023-05-23,Cheyenne,10,White,Low,33.5,NA,NA,NA,NA
+2023-05-23,Cheyenne,2,Black,High,23,20.100000000000001,NA,NA,NA
+2023-05-23,Cheyenne,2,Black,Low,20.100000000000001,NA,NA,NA,NA
+2023-05-23,Cheyenne,2,White,High,24.8,NA,NA,NA,NA
+2023-05-23,Cheyenne,2,White,Low,26.4,NA,NA,NA,NA
+2023-05-23,Cheyenne,3,Black,High,20.100000000000001,NA,NA,NA,NA
+2023-05-23,Cheyenne,3,Black,Low,29.5,NA,NA,NA,NA
+2023-05-23,Cheyenne,3,White,High,27.5,NA,NA,NA,NA
+2023-05-23,Cheyenne,3,White,Low,29.3,NA,NA,NA,NA
+2023-05-23,Cheyenne,4,Black,High,25,25.4,NA,NA,NA
+2023-05-23,Cheyenne,4,Black,Low,30.36,31.8,NA,NA,NA
+2023-05-23,Cheyenne,4,White,High,28.1,23.5,NA,NA,NA
+2023-05-23,Cheyenne,4,White,Low,29.8,23.1,NA,NA,NA
+2023-05-23,Cheyenne,5,Black,High,32.799999999999997,NA,NA,NA,NA
+2023-05-23,Cheyenne,5,Black,Low,30.8,NA,NA,NA,NA
+2023-05-23,Cheyenne,5,White,High,28.7,NA,NA,NA,NA
+2023-05-23,Cheyenne,5,White,Low,30,NA,NA,NA,NA
+2023-05-23,Cheyenne,6,Black,High,28.5,33.5,NA,NA,NA
+2023-05-23,Cheyenne,6,Black,Low,27.3,21.9,NA,NA,NA
+2023-05-23,Cheyenne,6,White,High,33.5,22.5,NA,NA,NA
+2023-05-23,Cheyenne,7,Black,High,34.4,29.7,NA,NA,NA
+2023-05-23,Cheyenne,7,Black,Low,38.9,24.2,NA,NA,NA
+2023-05-23,Cheyenne,7,White,High,32.4,23.6,NA,NA,NA
+2023-05-23,Cheyenne,7,White,Low,NA,20.7,NA,NA,NA
+2023-05-23,Cheyenne,8,Black,High,37.4,NA,NA,NA,NA
+2023-05-23,Cheyenne,8,Black,Low,39,NA,NA,NA,NA
+2023-05-23,Cheyenne,8,White,High,34.5,NA,NA,NA,NA
+2023-05-23,Cheyenne,8,White,Low,31.5,NA,NA,NA,NA
+2023-05-23,Cheyenne,9,Black,High,33.5,NA,NA,NA,NA
+2023-05-23,Cheyenne,9,Black,Low,41,NA,NA,NA,NA
+2023-05-23,Cheyenne,9,White,High,33.200000000000003,NA,NA,NA,NA
+2023-05-23,Cheyenne,9,White,Low,35.700000000000003,NA,NA,NA,NA
+2023-05-26,SheepStation,1,Black,High,34.55,NA,sunny,light/none,NA
+2023-05-26,SheepStation,10,White,Low,35.5,NA,sunny,light/none,NA
+2023-05-26,SheepStation,11,Black,High,40.2,NA,sunny,light/none,NA
+2023-05-26,SheepStation,12,Black,Low,41.2,NA,sunny,light/none,NA
+2023-05-26,SheepStation,13,White,Low,33.45,NA,sunny,light/none,NA
+2023-05-26,SheepStation,14,White,High,35.15,NA,sunny,light/none,NA
+2023-05-26,SheepStation,15,Black,High,42,NA,sunny,light/none,NA
+2023-05-26,SheepStation,16,Black,Low,44.4,NA,partly sunny,light/none,NA
+2023-05-26,SheepStation,17,Black,High,44.5,NA,partly sunny,light/none,NA
+2023-05-26,SheepStation,17,Black,High,NA,27.15,cloudy,light/none,NA
+2023-05-26,SheepStation,18,Black,Low,23.3,NA,partly sunny,light/none,NA
+2023-05-26,SheepStation,18,Black,Low,NA,24,cloudy,light/none,NA
+2023-05-26,SheepStation,19,White,High,38.8,NA,partly sunny,light/none,NA
+2023-05-26,SheepStation,19,White,High,NA,22.4,cloudy,light/none,NA
+2023-05-26,SheepStation,2,White,High,30.4,NA,sunny,light/none,NA
+2023-05-26,SheepStation,20,White,Low,37.55,NA,partly sunny,light/none,NA
+2023-05-26,SheepStation,20,White,Low,NA,23.85,cloudy,light/none,NA
+2023-05-26,SheepStation,21,White,Low,34.8,NA,cloudy,light/none,NA
+2023-05-26,SheepStation,22,Black,Low,42.5,NA,partly sunny,light/none,NA
+2023-05-26,SheepStation,23,White,High,36.2,NA,partly sunny,light/none,NA
+2023-05-26,SheepStation,24,Black,High,41.8,NA,partly sunny,light/none,NA
+2023-05-26,SheepStation,25,White,High,37.85,NA,cloudy,light/none,NA
+2023-05-26,SheepStation,26,White,Low,32.8,NA,partly sunny,light/none,NA
+2023-05-26,SheepStation,27,Black,High,42.1,NA,partly sunny,light/none,NA
+2023-05-26,SheepStation,28,Black,Low,40.75,NA,partly sunny,light/none,NA
+2023-05-26,SheepStation,29,White,High,35.6,NA,partly sunny,light/none,NA
+2023-05-26,SheepStation,3,Black,Low,34.35,NA,sunny,light/none,NA
+2023-05-26,SheepStation,30,Black,High,39.25,NA,partly sunny,light/none,NA
+2023-05-26,SheepStation,31,Black,Low,37.95,NA,cloudy,light/none,NA
+2023-05-26,SheepStation,32,White,Low,32.4,NA,cloudy,light/none,NA
+2023-05-26,SheepStation,33,White,High,33.9,NA,cloudy,light/none,NA
+2023-05-26,SheepStation,33,White,High,NA,23.35,cloudy,light/none,NA
+2023-05-26,SheepStation,34,Black,High,39.4,NA,cloudy,light/none,NA
+2023-05-26,SheepStation,34,Black,High,NA,27.6,cloudy,light/none,NA
+2023-05-26,SheepStation,35,White,Low,33.4,NA,cloudy,light/none,NA
+2023-05-26,SheepStation,35,White,Low,NA,24.5,cloudy,light/none,NA
+2023-05-26,SheepStation,36,Black,Low,35.85,NA,cloudy,light/none,NA
+2023-05-26,SheepStation,36,Black,Low,NA,28.7,cloudy,light/none,NA
+2023-05-26,SheepStation,37,Black,High,37.35,NA,cloudy,light/none,NA
+2023-05-26,SheepStation,37,Black,High,NA,27,cloudy,light/none,NA
+2023-05-26,SheepStation,38,White,Low,31.5,NA,cloudy,light/none,NA
+2023-05-26,SheepStation,38,White,Low,NA,25.4,cloudy,light/none,NA
+2023-05-26,SheepStation,39,Black,Low,35.55,NA,cloudy,light/none,NA
+2023-05-26,SheepStation,39,Black,Low,NA,31.7,cloudy,light/none,NA
+2023-05-26,SheepStation,4,White,Low,26.25,NA,sunny,light/none,NA
+2023-05-26,SheepStation,40,White,High,31.65,NA,cloudy,light/none,NA
+2023-05-26,SheepStation,40,White,High,NA,26.7,cloudy,light/none,NA
+2023-05-26,SheepStation,5,White,Low,31.9,NA,sunny,light/none,NA
+2023-05-26,SheepStation,5,White,Low,NA,23.2,cloudy,light/none,NA
+2023-05-26,SheepStation,6,Black,Low,41.5,NA,sunny,light/none,NA
+2023-05-26,SheepStation,6,Black,Low,NA,27.05,cloudy,light/none,NA
+2023-05-26,SheepStation,7,Black,High,37.95,NA,sunny,light/none,NA
+2023-05-26,SheepStation,7,Black,High,NA,26.75,cloudy,light/none,NA
+2023-05-26,SheepStation,8,White,High,32.75,NA,sunny,light/none,NA
+2023-05-26,SheepStation,8,White,High,NA,22.6,cloudy,light/none,NA
+2023-05-26,SheepStation,9,White,High,35.15,NA,sunny,light/none,NA
+2023-06-05,Cheyenne,1,Black,High,29.6,25.1,NA,NA,NA
+2023-06-05,Cheyenne,1,Black,Low,24.8,23.4,NA,NA,NA
+2023-06-05,Cheyenne,1,White,High,23.4,18.7,NA,NA,NA
+2023-06-05,Cheyenne,1,White,Low,25.9,22,NA,NA,NA
+2023-06-05,Cheyenne,10,Black,High,34.799999999999997,NA,NA,NA,NA
+2023-06-05,Cheyenne,10,Black,Low,34.799999999999997,NA,NA,NA,NA
+2023-06-05,Cheyenne,10,White,High,NA,NA,NA,NA,NA
+2023-06-05,Cheyenne,10,White,Low,33.200000000000003,NA,NA,NA,NA
+2023-06-05,Cheyenne,2,Black,High,29.8,NA,NA,NA,NA
+2023-06-05,Cheyenne,2,Black,Low,28.5,NA,NA,NA,NA
+2023-06-05,Cheyenne,2,White,High,21.8,NA,NA,NA,NA
+2023-06-05,Cheyenne,2,White,Low,26.7,NA,NA,NA,NA
+2023-06-05,Cheyenne,3,Black,High,30.6,NA,NA,NA,NA
+2023-06-05,Cheyenne,3,Black,Low,29.4,NA,NA,NA,NA
+2023-06-05,Cheyenne,3,White,High,23.3,NA,NA,NA,NA
+2023-06-05,Cheyenne,3,White,Low,25.8,NA,NA,NA,NA
+2023-06-05,Cheyenne,4,Black,High,29.2,21.4,NA,NA,NA
+2023-06-05,Cheyenne,4,Black,Low,25.6,31,NA,NA,NA
+2023-06-05,Cheyenne,4,White,High,30.3,24,NA,NA,NA
+2023-06-05,Cheyenne,4,White,Low,27.1,23.8,NA,NA,NA
+2023-06-05,Cheyenne,5,Black,High,32.200000000000003,NA,NA,NA,NA
+2023-06-05,Cheyenne,5,Black,Low,29,NA,NA,NA,NA
+2023-06-05,Cheyenne,5,White,High,32.200000000000003,NA,NA,NA,NA
+2023-06-05,Cheyenne,5,White,Low,26.7,NA,NA,NA,NA
+2023-06-05,Cheyenne,6,Black,High,32.299999999999997,29.1,NA,NA,NA
+2023-06-05,Cheyenne,6,Black,Low,27.6,31,NA,NA,NA
+2023-06-05,Cheyenne,6,White,High,30.7,22.4,NA,NA,NA
+2023-06-05,Cheyenne,6,White,Low,25.5,22.4,NA,NA,NA
+2023-06-05,Cheyenne,7,Black,High,32.5,29.5,NA,NA,NA
+2023-06-05,Cheyenne,7,Black,Low,2.7,19.2,NA,NA,NA
+2023-06-05,Cheyenne,7,White,High,28,25.8,NA,NA,NA
+2023-06-05,Cheyenne,7,White,Low,33.6,23.1,NA,NA,NA
+2023-06-05,Cheyenne,8,Black,High,28.5,NA,NA,NA,NA
+2023-06-05,Cheyenne,8,Black,Low,33.5,NA,NA,NA,NA
+2023-06-05,Cheyenne,8,White,High,30.1,NA,NA,NA,NA
+2023-06-05,Cheyenne,8,White,Low,30.7,NA,NA,NA,NA
+2023-06-05,Cheyenne,9,Black,High,36.5,NA,NA,NA,NA
+2023-06-05,Cheyenne,9,Black,Low,32.700000000000003,NA,NA,NA,NA
+2023-06-05,Cheyenne,9,White,High,33.200000000000003,NA,NA,NA,NA
+2023-06-05,Cheyenne,9,White,Low,28.1,NA,NA,NA,NA
+2023-06-14,SheepStation,1,Black,High,26.35,NA,cloudy,moderately windy,NA
+2023-06-14,SheepStation,1,Black,High,NA,21.45,sunny,light/none,NA
+2023-06-14,SheepStation,10,White,Low,26.7,NA,cloudy,moderately windy,NA
+2023-06-14,SheepStation,11,Black,High,28.6,NA,cloudy,moderately windy,NA
+2023-06-14,SheepStation,12,Black,Low,28.75,NA,cloudy,moderately windy,NA
+2023-06-14,SheepStation,13,White,Low,24.1,NA,sunny,light/none,NA
+2023-06-14,SheepStation,13,White,Low,NA,20.65,sunny,light/none,NA
+2023-06-14,SheepStation,14,White,High,26.2,NA,sunny,light/none,NA
+2023-06-14,SheepStation,14,White,High,NA,20.3,sunny,light/none,NA
+2023-06-14,SheepStation,15,Black,High,27.85,NA,sunny,light/none,NA
+2023-06-14,SheepStation,15,Black,High,NA,25.35,sunny,light/none,NA
+2023-06-14,SheepStation,16,Black,Low,32,NA,cloudy,light/none,NA
+2023-06-14,SheepStation,16,Black,Low,NA,29.4,sunny,light/none,NA
+2023-06-14,SheepStation,17,Black,High,31.4,NA,cloudy,light/none,NA
+2023-06-14,SheepStation,17,Black,High,NA,26.15,partly sunny,moderately windy,NA
+2023-06-14,SheepStation,18,Black,Low,30.7,NA,cloudy,light/none,NA
+2023-06-14,SheepStation,18,Black,Low,NA,27.8,partly sunny,moderately windy,NA
+2023-06-14,SheepStation,19,White,High,26.25,NA,cloudy,light/none,NA
+2023-06-14,SheepStation,19,White,High,NA,26.1,partly sunny,moderately windy,NA
+2023-06-14,SheepStation,2,White,High,23.65,NA,cloudy,moderately windy,NA
+2023-06-14,SheepStation,2,White,High,NA,17.45,sunny,light/none,NA
+2023-06-14,SheepStation,20,White,Low,26.95,NA,cloudy,light/none,NA
+2023-06-14,SheepStation,20,White,Low,NA,26.55,partly sunny,moderately windy,NA
+2023-06-14,SheepStation,21,White,Low,23.85,NA,partly sunny,light/none,NA
+2023-06-14,SheepStation,22,Black,Low,28.85,NA,sunny,light/none,NA
+2023-06-14,SheepStation,23,White,High,23.05,NA,sunny,light/none,NA
+2023-06-14,SheepStation,24,Black,High,28.2,NA,sunny,light/none,NA
+2023-06-14,SheepStation,25,White,High,20.65,NA,partly sunny,light/none,NA
+2023-06-14,SheepStation,26,White,Low,25.1,NA,cloudy,light/none,NA
+2023-06-14,SheepStation,27,Black,High,31.3,NA,cloudy,light/none,NA
+2023-06-14,SheepStation,28,Black,Low,30.85,NA,cloudy,light/none,NA
+2023-06-14,SheepStation,29,White,High,26.65,NA,cloudy,light/none,NA
+2023-06-14,SheepStation,3,Black,Low,30.45,NA,cloudy,moderately windy,NA
+2023-06-14,SheepStation,3,Black,Low,NA,28.45,sunny,light/none,NA
+2023-06-14,SheepStation,30,Black,High,31,NA,cloudy,light/none,NA
+2023-06-14,SheepStation,31,Black,Low,31,NA,partly sunny,light/none,NA
+2023-06-14,SheepStation,32,White,Low,24.2,NA,partly sunny,moderately windy,NA
+2023-06-14,SheepStation,33,White,High,25.25,NA,sunny,moderately windy,NA
+2023-06-14,SheepStation,34,Black,High,28.65,NA,sunny,moderately windy,NA
+2023-06-14,SheepStation,35,White,Low,23.2,NA,sunny,moderately windy,NA
+2023-06-14,SheepStation,36,Black,Low,33,NA,partly sunny,moderately windy,NA
+2023-06-14,SheepStation,37,Black,High,32.8,28.55,partly sunny,moderately windy,NA
+2023-06-14,SheepStation,38,White,Low,26.75,21.75,partly sunny,moderately windy,NA
+2023-06-14,SheepStation,39,Black,Low,32.95,25.55,partly sunny,moderately windy,NA
+2023-06-14,SheepStation,4,White,Low,24.95,NA,cloudy,moderately windy,NA
+2023-06-14,SheepStation,4,White,Low,NA,23.85,sunny,light/none,NA
+2023-06-14,SheepStation,40,White,High,28.35,NA,sunny,light/none,NA
+2023-06-14,SheepStation,40,White,High,NA,25.6,partly sunny,moderately windy,NA
+2023-06-14,SheepStation,5,White,Low,26.55,NA,cloudy,moderately windy,NA
+2023-06-14,SheepStation,6,Black,Low,28.25,NA,cloudy,moderately windy,NA
+2023-06-14,SheepStation,7,Black,High,29.3,NA,cloudy,moderately windy,NA
+2023-06-14,SheepStation,8,White,High,26.1,NA,cloudy,moderately windy,NA
+2023-06-14,SheepStation,9,White,High,26.05,NA,cloudy,moderately windy,NA
+2023-06-23,Cheyenne,1,Black,High,28.4,29,NA,NA,NA
+2023-06-23,Cheyenne,1,Black,Low,28.4,27.4,NA,NA,NA
+2023-06-23,Cheyenne,1,White,High,32.1,25.2,NA,NA,NA
+2023-06-23,Cheyenne,1,White,Low,30,26.4,NA,NA,NA
+2023-06-23,Cheyenne,10,Black,High,37.299999999999997,NA,NA,NA,NA
+2023-06-23,Cheyenne,10,Black,Low,35.6,NA,NA,NA,NA
+2023-06-23,Cheyenne,10,White,High,32.1,NA,NA,NA,NA
+2023-06-23,Cheyenne,10,White,Low,34.9,NA,NA,NA,NA
+2023-06-23,Cheyenne,2,Black,High,28.6,NA,NA,NA,NA
+2023-06-23,Cheyenne,2,Black,Low,25.5,NA,NA,NA,NA
+2023-06-23,Cheyenne,2,White,High,29.6,NA,NA,NA,NA
+2023-06-23,Cheyenne,2,White,Low,28.8,NA,NA,NA,NA
+2023-06-23,Cheyenne,3,Black,High,26.2,NA,NA,NA,NA
+2023-06-23,Cheyenne,3,Black,Low,28.3,NA,NA,NA,NA
+2023-06-23,Cheyenne,3,White,High,31.4,NA,NA,NA,NA
+2023-06-23,Cheyenne,3,White,Low,32.799999999999997,NA,NA,NA,NA
+2023-06-23,Cheyenne,4,Black,High,30.4,28,NA,NA,NA
+2023-06-23,Cheyenne,4,Black,Low,32,33.9,NA,NA,NA
+2023-06-23,Cheyenne,4,White,High,34,28.1,NA,NA,NA
+2023-06-23,Cheyenne,4,White,Low,30.1,28.4,NA,NA,NA
+2023-06-23,Cheyenne,5,Black,High,37,NA,NA,NA,NA
+2023-06-23,Cheyenne,5,Black,Low,33.700000000000003,NA,NA,NA,NA
+2023-06-23,Cheyenne,5,White,High,33,NA,NA,NA,NA
+2023-06-23,Cheyenne,5,White,Low,29.8,NA,NA,NA,NA
+2023-06-23,Cheyenne,6,Black,High,33.9,32.1,NA,NA,NA
+2023-06-23,Cheyenne,6,Black,Low,29.3,30.1,NA,NA,NA
+2023-06-23,Cheyenne,6,White,High,34,28.8,NA,NA,NA
+2023-06-23,Cheyenne,6,White,Low,30.9,26,NA,NA,NA
+2023-06-23,Cheyenne,7,Black,High,33,30.6,NA,NA,NA
+2023-06-23,Cheyenne,7,Black,Low,35,24.6,NA,NA,NA
+2023-06-23,Cheyenne,7,White,High,32,30.7,NA,NA,NA
+2023-06-23,Cheyenne,7,White,Low,NA,28,NA,NA,NA
+2023-06-23,Cheyenne,8,Black,High,36.200000000000003,NA,NA,NA,NA
+2023-06-23,Cheyenne,8,Black,Low,32.700000000000003,NA,NA,NA,NA
+2023-06-23,Cheyenne,8,White,High,30.1,NA,NA,NA,NA
+2023-06-23,Cheyenne,8,White,Low,34.200000000000003,NA,NA,NA,NA
+2023-06-23,Cheyenne,9,Black,High,35.200000000000003,NA,NA,NA,NA
+2023-06-23,Cheyenne,9,Black,Low,36.6,NA,NA,NA,NA
+2023-06-23,Cheyenne,9,White,High,32.4,NA,NA,NA,NA
+2023-06-23,Cheyenne,9,White,Low,35.299999999999997,NA,NA,NA,NA
+2023-07-13,Cheyenne,1,Black,High,48.5,30.7,NA,NA,NA
+2023-07-13,Cheyenne,1,Black,Low,29.6,32.799999999999997,NA,NA,NA
+2023-07-13,Cheyenne,1,White,High,41.4,29.9,NA,NA,NA
+2023-07-13,Cheyenne,1,White,Low,36,22.4,NA,NA,NA
+2023-07-13,Cheyenne,10,Black,High,50.7,NA,NA,NA,NA
+2023-07-13,Cheyenne,10,Black,Low,46.2,NA,NA,NA,NA
+2023-07-13,Cheyenne,10,White,High,NA,NA,NA,NA,NA
+2023-07-13,Cheyenne,10,White,Low,51.8,NA,NA,NA,NA
+2023-07-13,Cheyenne,2,Black,High,28.6,NA,NA,NA,NA
+2023-07-13,Cheyenne,2,Black,Low,31.6,NA,NA,NA,NA
+2023-07-13,Cheyenne,2,White,High,36.1,NA,NA,NA,NA
+2023-07-13,Cheyenne,2,White,Low,31.3,NA,NA,NA,NA
+2023-07-13,Cheyenne,3,Black,High,24.3,NA,NA,NA,NA
+2023-07-13,Cheyenne,3,Black,Low,28.9,NA,NA,NA,NA
+2023-07-13,Cheyenne,3,White,High,29.9,NA,NA,NA,NA
+2023-07-13,Cheyenne,3,White,Low,42.2,NA,NA,NA,NA
+2023-07-13,Cheyenne,4,Black,High,49.4,35.299999999999997,NA,NA,NA
+2023-07-13,Cheyenne,4,Black,Low,34.5,33.4,NA,NA,NA
+2023-07-13,Cheyenne,4,White,High,37.6,30.7,NA,NA,NA
+2023-07-13,Cheyenne,4,White,Low,35.799999999999997,31.7,NA,NA,NA
+2023-07-13,Cheyenne,5,Black,High,46.8,NA,NA,NA,NA
+2023-07-13,Cheyenne,5,Black,Low,51,NA,NA,NA,NA
+2023-07-13,Cheyenne,5,White,High,37.799999999999997,NA,NA,NA,NA
+2023-07-13,Cheyenne,5,White,Low,32.4,NA,NA,NA,NA
+2023-07-13,Cheyenne,6,Black,High,37,32.9,NA,NA,NA
+2023-07-13,Cheyenne,6,Black,Low,42.2,38.799999999999997,NA,NA,NA
+2023-07-13,Cheyenne,6,White,High,38.4,29.2,NA,NA,NA
+2023-07-13,Cheyenne,6,White,Low,40.4,30.3,NA,NA,NA
+2023-07-13,Cheyenne,7,Black,High,47.4,40.6,NA,NA,NA
+2023-07-13,Cheyenne,7,Black,Low,53.6,53.7,NA,NA,NA
+2023-07-13,Cheyenne,7,White,High,37.5,29.1,NA,NA,NA
+2023-07-13,Cheyenne,7,White,Low,43.4,25.5,NA,NA,NA
+2023-07-13,Cheyenne,8,Black,High,41,NA,NA,NA,NA
+2023-07-13,Cheyenne,8,Black,Low,43.8,NA,NA,NA,NA
+2023-07-13,Cheyenne,8,White,High,35.5,NA,NA,NA,NA
+2023-07-13,Cheyenne,8,White,Low,37.1,NA,NA,NA,NA
+2023-07-13,Cheyenne,9,Black,High,53,NA,NA,NA,NA
+2023-07-13,Cheyenne,9,Black,Low,52.5,NA,NA,NA,NA
+2023-07-13,Cheyenne,9,White,High,45.7,NA,NA,NA,NA
+2023-07-13,Cheyenne,9,White,Low,50.2,NA,NA,NA,NA
