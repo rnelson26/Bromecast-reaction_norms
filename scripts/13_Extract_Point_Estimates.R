@@ -1,6 +1,6 @@
 ################# Bromecast: 13.extract_point_estimates.R ##########################
 ############# created 3-9-26 ######################
-############# Last modified: 3-11-26 ##########################
+############# Last modified: 3-17-26 ##########################
 ######## Extract Point Estimates for Peter ################################
 ###########################
 
@@ -268,7 +268,7 @@ summary(fit_temp_pc1_rep)
 slope <- coef(fit_temp_pc1_rep)[2] #slope of relationship
 sd_temp <- attr(X_rep_SOS, "scaled:scale")["MAT"]
 delta_temp_scaled <- 2 / sd_temp
-delta_PC1_emg <- slope * delta_temp_scaled
+delta_PC1_rep <- slope * delta_temp_scaled
 
 #A 2 °C increase in MAT corresponds to about a -1.644498   change in PC1 units in the climate space used by the reproduced model.
 
@@ -290,3 +290,51 @@ delta_temp_scaled <- 2 / sd_temp
 delta_PC1_fec <- slope * delta_temp_scaled
 
 #A 2 °C increase in MAT corresponds to about a -1.487172  change in PC1 units in the climate space used by the fecundity model.
+
+##### Get where sites fall on PC1 axis:
+
+pc1_siteyear_emg <- data.frame(
+  site_year = site_year_labels_emg_SOS,
+  PC1 = W_mat_emg[,1]
+)
+
+pc1_siteyear_rep <- data.frame(
+  site_year = site_year_labels_rep_SOS,
+  PC1 = W_mat_rep[,1]
+)
+
+pc1_siteyear_fec <- data.frame(
+  site_year = site_year_labels_SOS,
+  PC1 = W_mat_fec[,1]
+)
+
+## starting and future PC1 positions 
+write.csv(pc1_siteyear_emg, "output/PC1_emerged.csv", row.names = TRUE)
+write.csv(pc1_siteyear_rep, "output/PC1_reproduced.csv", row.names = TRUE)
+write.csv(pc1_siteyear_fec, "output/PC1_fecundity.csv", row.names = TRUE)
+## PC 1 = starting positions
+## PC_future = PC position that corresponds to 2 °C increase in MAT 
+## future temperature shifts
+pc1_siteyear_emg <- pc1_siteyear_emg %>%
+  mutate(PC1_future = PC1 + delta_PC1_emg)
+
+pc1_siteyear_rep <- pc1_siteyear_rep %>%
+  mutate(PC1_future = PC1 + delta_PC1_rep)
+
+pc1_siteyear_fec <- pc1_siteyear_fec %>%
+  mutate(PC1_future = PC1 + delta_PC1_fec)
+
+
+## visualize them
+ggplot(pc1_siteyear_emg,
+       aes(x = reorder(site_year, PC1), y = PC1)) +
+  geom_point(size = 2) +
+  geom_segment(aes(xend = site_year,
+                   yend = PC1_future),
+               arrow = arrow(length = unit(0.15, "cm")),
+               alpha = 0.6) +
+  coord_flip() +
+  theme_classic() +
+  labs(y = "PC1 (climate space)",
+       x = "Site-year",
+       title = "Climate shift (+2°C) in PC1 space")

@@ -1,6 +1,6 @@
 ################# Bromecast: 00.Setup ##########################
 ############# created 3-25-25 ######################
-############# Last modified: 7-29-25 ##########################
+############# Last modified: 3-17-26 ##########################
 ######## Loads packages & data files ################################
 
 #rm(list = ls())
@@ -31,7 +31,7 @@ library(readr)
 
 ##### Load Data #########
 
-data <- read.csv("combined_clean_climate_SOS_updated.csv", header = TRUE)
+data <- read.csv("data/combined_clean_climate_SOS_updated.csv", header = TRUE)
 
 kinshipIDs <- read.csv("data/common_gardens/93cg_genotypes.csv")
 
