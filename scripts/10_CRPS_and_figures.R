@@ -946,8 +946,8 @@ base_names <- sub("\\[.*\\]", "", cn)
 unique(base_names)
 
 train_cols <- grep("^mu_train_full\\[", colnames(fit_fec_full))
-pred_train <- colMeans(fit_fec_full[, train_cols])
-training_df_emg$Posterior_Fecundity_Train <- pred_train
+pred_train <- colMeans(log(fit_fec_full[, train_cols]))
+training_df_emg$Posterior_Fecundity_Train <- pred_train #then change 
 
 train_cols_fixed <- grep("^mu_train_full_fixed\\[", colnames(fit_fec_full))
 pred_train_fixed <- colMeans(fit_fec_full[, train_cols_fixed])
