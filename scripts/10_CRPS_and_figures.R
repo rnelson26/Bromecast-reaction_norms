@@ -16,20 +16,8 @@ library(dplyr)
 library(readr)
 library(tidyverse)
 library(purrr)
+library(loo)
 
-######## look for missing info
-## two files are not having the fixed only values pulled from in our CRPS function
-#rep_clim <- "/Users/Becca/Desktop/Adler Lab/from megan/Outputs_Dec_2025/fit_reproduced_climate_draws.rds"
-
-#rep_gene <- "/Users/Becca/Desktop/Adler Lab/from megan/Outputs_Dec_2025/fit_reproduced_nogene_draws.rds"
-
-#obj_clim <- readRDS(rep_clim)
-#obj_gene <- readRDS(rep_gene)
-## both have columns called #r_train_pred_fixed_only
-
-#rep_full <- "/Users/Becca/Desktop/Adler Lab/from megan/Outputs_Dec_2025/fit_reproduced_full_draws.rds"
-#obj_full <- readRDS(rep_full)
-## r_trained_fixed
 
 ##### CRPS updated version #######
 
@@ -553,6 +541,98 @@ skills_fig <- ggplot(crps_skill_long,
 skills_fig
 ## save graph
 ggsave("figures/skill_fig_updated.pdf", plot = skills_fig, width = 6, height = 5, units = "in")
+
+########## CRPS and sCRPS with 'loo' package ##############
+format_draws_for_loo <- function(pred, obs) {
+  mat <- as.matrix(pred)
+  
+  # want: draws x observations
+  if (ncol(mat) != length(obs)) {
+    mat <- t(mat)
+  }
+  
+  return(mat)
+}
+
+## compare for null model
+null_scores <- list()
+
+for (stg in unique(file_info$stage)) {
+  
+  null_candidates <- list.files(
+    base_dir,
+    pattern = paste0("^fit_", stg, "_null.*\\.rds$"),
+    full.names = TRUE
+  )
+  
+  if (length(null_candidates) == 0) {
+    message("⚠ No null file found for stage: ", stg)
+    next
+  }
+  
+  null_file  <- null_candidates[1]
+  null_draws <- readRDS(null_file)
+  
+  var_map <- switch(stg,
+                    emerged    = list(train = "e_train_pred",
+                                      test  = "e_test_pred"),
+                    reproduced = list(train = "r_train_pred",
+                                      test  = "r_test_pred"),
+                    fecundity  = list(train = "y_train_pred",
+                                      test  = "y_test_pred"))
+  
+  obs_map <- switch(stg,
+                    emerged    = c(train = "e_train", test = "e_test"),
+                    reproduced = c(train = "r_train", test = "r_test"),
+                    fecundity  = c(train = "y_train", test = "y_test"))
+  
+  null_scores[[stg]] <- list()
+  
+  for (nm in names(var_map)) {
+    
+    pred <- extract_draws(null_draws, var_map[[nm]])
+    obs  <- obs_list[[obs_map[nm]]]
+    
+    #  scoringRules CRPS 
+    pred_sr <- pred
+    if (nrow(pred_sr) != length(obs)) pred_sr <- t(pred_sr)
+    
+    crps_sr <- mean(crps_sample(y = obs, dat = pred_sr))
+    
+    #  loo::crps 
+    pred_loo <- format_draws_for_loo(pred, obs)
+    crps_loo <- mean(loo::crps(pred_loo, obs))
+    
+    #  loo::scrps 
+    scrps_loo <- mean(loo::scrps(pred_loo, obs))
+    
+    null_scores[[stg]][[nm]] <- list(
+      crps_scoringRules = crps_sr,
+      crps_loo = crps_loo,
+      scrps_loo = scrps_loo
+    )
+    
+    message(
+      "NULL ", stg, " (", nm, "): ",
+      "CRPS_SR = ", round(crps_sr, 3),
+      " | CRPS_LOO = ", round(crps_loo, 3),
+      " | SCRPS = ", round(scrps_loo, 3)
+    )
+  }
+}
+
+null_summary <- map_dfr(names(null_scores), function(stg) {
+  map_dfr(names(null_scores[[stg]]), function(nm) {
+    tibble(
+      stage = stg,
+      dataset = nm,
+      crps_scoringRules = null_scores[[stg]][[nm]]$crps_scoringRules,
+      crps_loo          = null_scores[[stg]][[nm]]$crps_loo,
+      scrps_loo         = null_scores[[stg]][[nm]]$scrps_loo
+    )
+  })
+})
+
 ######## confusion matrix for Reproduced & Emerged models #################
 
 library(caret)
