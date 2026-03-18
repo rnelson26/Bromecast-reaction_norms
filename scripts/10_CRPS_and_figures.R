@@ -1,6 +1,6 @@
 ################# Bromecast: 10.CRPS_and_figures.R ##########################
 ############# created 3-25-25 ######################
-############# Last modified: 3-17-26 ##########################
+############# Last modified: 3-18-26 ##########################
 ######## CRPS & Skill Scores for all model variants ################################
 
 
@@ -947,20 +947,25 @@ unique(base_names)
 
 train_cols <- grep("^mu_train_full\\[", colnames(fit_fec_full))
 pred_train <- colMeans(log(fit_fec_full[, train_cols]))
-training_df_emg$Posterior_Fecundity_Train <- pred_train #then change 
+training_df_emg$Posterior_Fecundity_Train <- pred_train 
+pred_train_raw <- colMeans(fit_fec_full[, train_cols])
+training_df_emg$Posterior_Fecundity_Train_raw <- pred_train_raw 
 
 train_cols_fixed <- grep("^mu_train_full_fixed\\[", colnames(fit_fec_full))
-pred_train_fixed <- colMeans(fit_fec_full[, train_cols_fixed])
+pred_train_fixed <- colMeans(log(fit_fec_full[, train_cols_fixed]))
 training_df_emg$Posterior_Fecundity_Train_Fixed <- pred_train_fixed
+pred_train_fixed_raw <- colMeans(fit_fec_full[, train_cols_fixed])
+training_df_emg$Posterior_Fecundity_Train_Fixed_raw <- pred_train_fixed_raw
 
 
 test_cols <- grep("^mu_test_full\\[", colnames(fit_fec_full))
-pred_test <- colMeans(fit_fec_full[, test_cols])
+pred_test <- colMeans(log(fit_fec_full[, test_cols]))
 testing_df_emg$Posterior_Fecundity_Test <- pred_test
-
+pred_test_raw <- colMeans(fit_fec_full[, test_cols])
+testing_df_emg$Posterior_Fecundity_Test_raw <- pred_test_raw
 
 ####### Posterior for Observed Fecundity > 0 ###########
-pa <- training_df_emg %>% filter(Fecundity > 0) %>% ggplot(aes(x = log(Posterior_Fecundity_Train),y = log(Fecundity))) +
+pa <- training_df_emg %>% filter(Fecundity > 0) %>% ggplot(aes(x = Posterior_Fecundity_Train,y = log(Fecundity))) +
   geom_pointdensity(adjust = 0.5) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
   scale_color_viridis_c(option = "C", name = "Point Density") +
@@ -969,7 +974,7 @@ pa <- training_df_emg %>% filter(Fecundity > 0) %>% ggplot(aes(x = log(Posterior
        x = "Predicted  Fecundity",
        y = "Observed  Fecundity")
 
-pa_type <- training_df_emg %>% filter(Fecundity > 0) %>% ggplot(aes(x = log(Posterior_Fecundity_Train),y = log(Fecundity))) +
+pa_type <- training_df_emg %>% filter(Fecundity > 0) %>% ggplot(aes(x = Posterior_Fecundity_Train, y = log(Fecundity))) +
   geom_pointdensity(adjust = 0.5) + facet_wrap(~Type) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
   scale_color_viridis_c(option = "C", name = "Point Density") +
@@ -978,7 +983,7 @@ pa_type <- training_df_emg %>% filter(Fecundity > 0) %>% ggplot(aes(x = log(Post
        x = "Predicted  Fecundity",
        y = "Observed  Fecundity") 
 
-pa_site <- training_df_emg %>% filter(Fecundity > 0) %>% ggplot(aes(x = log(Posterior_Fecundity_Train),y = log(Fecundity))) +
+pa_site <- training_df_emg %>% filter(Fecundity > 0) %>% ggplot(aes(x = Posterior_Fecundity_Train,y = log(Fecundity))) +
   geom_pointdensity(adjust = 0.5) + facet_wrap(~site) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
   scale_color_viridis_c(option = "C", name = "Point Density") +
@@ -987,7 +992,7 @@ pa_site <- training_df_emg %>% filter(Fecundity > 0) %>% ggplot(aes(x = log(Post
        x = "Predicted  Fecundity",
        y = "Observed  Fecundity") 
 
-pb <- training_df_emg %>% filter(Fecundity > 0) %>% ggplot(aes(x = log(Posterior_Fecundity_Train_Fixed),y = log(Fecundity))) +
+pb <- training_df_emg %>% filter(Fecundity > 0) %>% ggplot(aes(x = Posterior_Fecundity_Train_Fixed, y = log(Fecundity))) +
   geom_pointdensity(adjust = 0.5) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
   scale_color_viridis_c(option = "C", name = "Point Density") +
@@ -996,7 +1001,7 @@ pb <- training_df_emg %>% filter(Fecundity > 0) %>% ggplot(aes(x = log(Posterior
        x = "Predicted  Fecundity",
        y = "Observed  Fecundity")
 
-pb_type <- training_df_emg %>% filter(Fecundity > 0) %>% ggplot(aes(x = log(Posterior_Fecundity_Train_Fixed),y = log(Fecundity))) +
+pb_type <- training_df_emg %>% filter(Fecundity > 0) %>% ggplot(aes(x = Posterior_Fecundity_Train_Fixed,y = log(Fecundity))) +
   geom_pointdensity(adjust = 0.5) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
   scale_color_viridis_c(option = "C", name = "Point Density") +
@@ -1005,7 +1010,7 @@ pb_type <- training_df_emg %>% filter(Fecundity > 0) %>% ggplot(aes(x = log(Post
        x = "Predicted  Fecundity",
        y = "Observed  Fecundity") + facet_wrap(~Type)
 
-pb_site <- training_df_emg %>% filter(Fecundity > 0) %>% ggplot(aes(x = log(Posterior_Fecundity_Train_Fixed),y = log(Fecundity))) +
+pb_site <- training_df_emg %>% filter(Fecundity > 0) %>% ggplot(aes(x = Posterior_Fecundity_Train_Fixed,y = log(Fecundity))) +
   geom_pointdensity(adjust = 0.5) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
   scale_color_viridis_c(option = "C", name = "Point Density") +
@@ -1015,7 +1020,7 @@ pb_site <- training_df_emg %>% filter(Fecundity > 0) %>% ggplot(aes(x = log(Post
        y = "Observed  Fecundity") + facet_wrap(~site)
 
 
-pc <- testing_df_emg %>% filter(Fecundity > 0) %>% ggplot(aes(x = log(Posterior_Fecundity_Test), y = log(Fecundity))) +
+pc <- testing_df_emg %>% filter(Fecundity > 0) %>% ggplot(aes(x = Posterior_Fecundity_Test, y = log(Fecundity))) +
   geom_pointdensity(adjust = 0.5) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
   scale_color_viridis_c(option = "C", name = "Point Density") +
@@ -1024,7 +1029,7 @@ pc <- testing_df_emg %>% filter(Fecundity > 0) %>% ggplot(aes(x = log(Posterior_
        x = "Predicted  Fecundity",
        y = "Observed  Fecundity")
 
-pc_site <- testing_df_emg %>% filter(Fecundity > 0) %>% ggplot(aes(x = log(Posterior_Fecundity_Test), y = log(Fecundity))) +
+pc_site <- testing_df_emg %>% filter(Fecundity > 0) %>% ggplot(aes(x = Posterior_Fecundity_Test, y = log(Fecundity))) +
   geom_pointdensity(adjust = 0.5) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
   scale_color_viridis_c(option = "C", name = "Point Density") +
@@ -1036,7 +1041,7 @@ pc_site <- testing_df_emg %>% filter(Fecundity > 0) %>% ggplot(aes(x = log(Poste
 ##### Posterior for Observed Fecundity Equal to Zero ###########
 pd <- training_df_emg %>%
   filter(Fecundity == 0) %>%
-  ggplot(aes(x = Posterior_Fecundity_Train)) +
+  ggplot(aes(x = Posterior_Fecundity_Train_raw)) +
   geom_histogram(bins = 40) +
   theme_minimal() +
   labs(title = "D  Training Posterior",
@@ -1045,7 +1050,7 @@ pd <- training_df_emg %>%
 
 pd_type <- training_df_emg %>%
   filter(Fecundity == 0) %>%
-  ggplot(aes(x = Posterior_Fecundity_Train)) +
+  ggplot(aes(x = Posterior_Fecundity_Train_raw)) +
   geom_histogram(bins = 40) +
   theme_minimal() +
   labs(title = "D  Training Posterior",
@@ -1054,7 +1059,7 @@ pd_type <- training_df_emg %>%
 
 pd_site <- training_df_emg %>%
   filter(Fecundity == 0) %>%
-  ggplot(aes(x = Posterior_Fecundity_Train)) +
+  ggplot(aes(x = Posterior_Fecundity_Train_raw)) +
   geom_histogram(bins = 40) +
   theme_minimal() +
   labs(title = "D  Training Posterior",
@@ -1063,7 +1068,7 @@ pd_site <- training_df_emg %>%
 
 pe <- training_df_emg %>%
   filter(Fecundity == 0) %>%
-  ggplot(aes(x = Posterior_Fecundity_Train_Fixed)) +
+  ggplot(aes(x = Posterior_Fecundity_Train_Fixed_raw)) +
   geom_histogram(bins = 40) +
   theme_minimal() +
   labs(title = "E  Training Posterior (Fixed Only)",
@@ -1072,7 +1077,7 @@ pe <- training_df_emg %>%
 
 pe_type <- training_df_emg %>%
   filter(Fecundity == 0) %>%
-  ggplot(aes(x = Posterior_Fecundity_Train_Fixed)) +
+  ggplot(aes(x = Posterior_Fecundity_Train_Fixed_raw)) +
   geom_histogram(bins = 40) +
   theme_minimal() +
   labs(title = "E  Training Posterior (Fixed Only)",
@@ -1081,7 +1086,7 @@ pe_type <- training_df_emg %>%
 
 pe_site <- training_df_emg %>%
   filter(Fecundity == 0) %>%
-  ggplot(aes(x = Posterior_Fecundity_Train_Fixed)) +
+  ggplot(aes(x = Posterior_Fecundity_Train_Fixed_raw)) +
   geom_histogram(bins = 40) +
   theme_minimal() +
   labs(title = "E  Training Posterior (Fixed Only)",
@@ -1090,7 +1095,7 @@ pe_site <- training_df_emg %>%
 
 pf <- testing_df_emg %>%
   filter(Fecundity == 0) %>%
-  ggplot(aes(x = Posterior_Fecundity_Test)) +
+  ggplot(aes(x = Posterior_Fecundity_Test_raw)) +
   geom_histogram(bins = 40) +
   theme_minimal() +
   labs(title = "F  Testing Posterior",
@@ -1099,7 +1104,7 @@ pf <- testing_df_emg %>%
 
 pf_site <- testing_df_emg %>%
   filter(Fecundity == 0) %>%
-  ggplot(aes(x = Posterior_Fecundity_Test)) +
+  ggplot(aes(x = Posterior_Fecundity_Test_raw)) +
   geom_histogram(bins = 40) +
   theme_minimal() +
   labs(title = "F  Testing Posterior",
