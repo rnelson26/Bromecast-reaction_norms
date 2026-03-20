@@ -465,6 +465,12 @@ library(sf)
 library(ggplot2)
 library(viridis)
 
+clim_with_geno_filtered <- clim_with_geno %>%
+  filter(NewSiteCode %in% genotype_codes$NewSiteCode)
+
+write.csv(clim_with_geno_filtered,
+         "data/climate_genotype_info_shortlist.csv",
+        row.names = FALSE)
 
 #write.csv(clim_with_geno,
  #         "data/climate_genotype_info.csv",
