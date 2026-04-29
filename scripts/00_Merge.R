@@ -3,7 +3,7 @@
 ######## for bromecast reaction norm paper ########
 ######## R. Nelson, M. Vahsen, & P. Adler ######
 ########### code created on 1/28/25 #######
-############ last modified: 6/26/25 ########################
+############ last modified: 3/31/26 ########################
 
 ### outstanding questions ##########
 ## whether approach to zero neighbors makes sense 

@@ -1,6 +1,6 @@
 ################# Bromecast: 06.Prepare Stan Data Emergence ##########################
 ############# created 3-25-25 ######################
-############# Last modified: 10-22-25 ##########################
+############# Last modified: 3-31-26 ##########################
 ######## Prepares stan_data objects for emergence ################################
 
 # Full emerged Stan data
@@ -16,8 +16,9 @@ stan_data_emg_full <- list(
   Lambda = Lambda_emg_SOS,
   Lambda_soil = Lambda_soil_emg,
   n_g = 121,
-  K = K_all_filtered,
+  K = K_Michael_PD,
   n_plot = max(training_df_emg$plot_index),
+  n_transect = max(training_df_emg$transect_index),
   n_site_year = length(unique(c(training_df_emg$site_year, testing_df_emg$site_year))),
   
   # Training data
@@ -31,6 +32,7 @@ stan_data_emg_full <- list(
   perennial_train = training_df_emg$perennial.s,
   shrub_train = training_df_emg$shrub.s,
   plot_index_train = training_df_emg$plot_index,
+  transect_index_train = training_df_emg$transect_index,
   n_site_year_train = length(unique(as.integer(as.factor(training_df_emg$site_year)))),
   site_year_id_train = training_df_emg$idx,
   
@@ -44,7 +46,10 @@ stan_data_emg_full <- list(
   perennial_test = testing_df_emg$perennial.s,
   shrub_test = testing_df_emg$shrub.s,
   site_year_id_test = testing_df_emg$idx,
+  n_plot_test = 0,
+  n_transect_test = max(testing_df_emg$transect_index),
   plot_index_test = rep(0, nrow(testing_df_emg)),
+  transect_index_test = testing_df_emg$transect_index,
   n_site_year_test = length(unique(as.integer(as.factor(testing_df_emg$site_year))))
 )
 

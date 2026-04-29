@@ -1,6 +1,6 @@
 ################# Bromecast: 10.CRPS_and_figures.R ##########################
 ############# created 3-25-25 ######################
-############# Last modified: 3-18-26 ##########################
+############# Last modified: 3-23-26 ##########################
 ######## CRPS & Skill Scores for all model variants ################################
 
 
@@ -543,10 +543,47 @@ skills_fig
 ggsave("figures/skill_fig_updated.pdf", plot = skills_fig, width = 6, height = 5, units = "in")
 
 ########## CRPS and sCRPS with 'loo' package ##############
+
+library(cmdstanr)
+library(posterior)
+library(scoringRules)
+library(loo)
+
+
+null_file <- list.files(
+  "/Users/Becca/Desktop/Adler Lab/Bromecast-reaction_norms/output",
+  pattern = "^fit_emerged_null.*\\.rds$",
+  full.names = TRUE
+)[1]
+
+fit <- readRDS(null_file)
+
+
+draws_df <- fit$draws(format = "df")
+
+
+extract_draws <- function(draws_df, var_name) {
+  
+  pattern <- paste0("^", var_name, "\\[")
+  cols <- grep(pattern, names(draws_df))
+  
+  if (length(cols) == 0) {
+    stop(paste0(
+      "Variable not found: ", var_name,
+      "\nCheck with: grep('", var_name, "', names(draws_df), value = TRUE)"
+    ))
+  }
+  
+  mat <- as.matrix(draws_df[, cols])
+  mat <- apply(mat, 2, as.numeric)
+  
+  return(mat)
+}
+
+
 format_draws_for_loo <- function(pred, obs) {
   mat <- as.matrix(pred)
   
-  # want: draws x observations
   if (ncol(mat) != length(obs)) {
     mat <- t(mat)
   }
@@ -554,8 +591,157 @@ format_draws_for_loo <- function(pred, obs) {
   return(mat)
 }
 
-## compare for null model
-null_scores <- list()
+
+pred1 <- extract_draws(draws_df, "e_train_pred")   
+pred2 <- extract_draws(draws_df, "e_train_pred2")  
+
+#observed 
+obs <- training_df_emg$e_train
+
+
+x  <- format_draws_for_loo(pred1, obs)
+x2 <- format_draws_for_loo(pred2, obs)
+
+
+cat("Dimensions check:\n")
+print(dim(x))
+print(dim(x2))
+print(length(obs))
+
+## crps with scoring rules 
+pred_sr <- pred1
+if (nrow(pred_sr) != length(obs)) pred_sr <- t(pred_sr)
+
+crps_sr <- mean(scoringRules::crps_sample(y = obs, dat = pred_sr))
+
+#crps and scrps with loo
+crps_loo_obj  <- loo::crps(x, x2, y = obs)
+scrps_loo_obj <- loo::scrps(x, x2, y = obs)
+
+crps_loo  <- crps_loo_obj$estimates["Estimate"]
+scrps_loo <- scrps_loo_obj$estimates["Estimate"]
+
+
+cat(
+  "\nEmergence NULL (train):\n",
+  "CRPS (scoringRules) =", round(crps_sr, 5), "\n",
+  "CRPS (loo)          =", round(crps_loo, 5), "\n",
+  "SCRPS (loo)         =", round(scrps_loo, 5), "\n"
+)
+
+#Emergence NULL (train):
+ # CRPS (scoringRules) = 0.18192 
+#CRPS (loo)          = -0.18187 
+#SCRPS (loo)         = -0.49474 
+
+########## New loo CRPS and sCRPS function ##############
+# ============================================================
+# Load libraries
+# ============================================================
+library(cmdstanr)
+library(posterior)
+library(scoringRules)
+library(loo)
+library(tibble)
+library(dplyr)
+library(purrr)
+
+# ============================================================
+# Setup: Observed values per stage
+# ============================================================
+obs_list <- list(
+  e_train  = training_df_emg$e_train,
+  e_train_fixed = training_df_emg$e_train,
+  e_test   = testing_df_emg$e_test,
+  
+  r_train = training_df_rep$r_train,
+  r_train_fixed = training_df_rep$r_train,
+  r_test  = testing_df_rep$r_test,
+  
+  y_train = training_df$Fecundity,
+  y_train_fixed = training_df$Fecundity,
+  y_test  = testing_df$Fecundity
+)
+
+# ============================================================
+# Helper functions
+# ============================================================
+
+# Extract predictive draws from a df
+extract_draws_matrix <- function(draws_df, var_bases) {
+  for (vb in var_bases) {
+    pattern <- paste0("^", vb, "\\[")
+    cols <- grep(pattern, names(draws_df))
+    if (length(cols) > 0) {
+      mat <- as.matrix(draws_df[, cols])
+      mat <- apply(mat, 2, as.numeric)
+      return(mat)
+    }
+  }
+  stop(paste("None of these variables found:", paste(var_bases, collapse = ", ")))
+}
+
+# Format matrix for loo (samples x observations)
+format_for_loo <- function(pred, obs) {
+  mat <- as.matrix(pred)
+  if (ncol(mat) != length(obs)) mat <- t(mat)
+  return(mat)
+}
+
+# Compute loo CRPS + sCRPS
+get_loo_scores <- function(pred1, pred2, obs) {
+  x1 <- format_for_loo(pred1, obs)
+  x2 <- format_for_loo(pred2, obs)
+  
+  crps_obj  <- loo::crps(x1, x2, y = obs)
+  scrps_obj <- loo::scrps(x1, x2, y = obs)
+  
+  list(
+    crps  = crps_obj$estimates["Estimate"],
+    scrps = scrps_obj$estimates["Estimate"]
+  )
+}
+
+# Compute skill score (using loo CRPS)
+compute_skill <- function(model_crps, null_crps) {
+  (model_crps - null_crps) / abs(null_crps)
+}
+
+# ============================================================
+# File setup
+# ============================================================
+
+base_dir <- "/Users/Becca/Desktop/Adler Lab/from megan/Outputs_Feb_2026"
+
+all_files <- list.files(base_dir, pattern = "^fit_.*\\.rds$", full.names = TRUE)
+
+file_info <- tibble(file_path = all_files) %>%
+  mutate(
+    file_name   = basename(file_path),
+    stage       = sub("^fit_(.*?)_.*\\.rds$", "\\1", file_name),
+    variant     = sub("^fit_.*?_(.*?)\\.rds$", "\\1", file_name),
+    
+    crps_train = NA_real_,
+    crps_train_fixed = NA_real_,
+    crps_test = NA_real_,
+    
+    scrps_train = NA_real_,
+    scrps_train_fixed = NA_real_,
+    scrps_test = NA_real_,
+    
+    null_crps_train = NA_real_,
+    null_crps_test  = NA_real_,
+    
+    skill_train = NA_real_,
+    skill_train_fixed = NA_real_,
+    skill_test = NA_real_
+  )
+
+# ============================================================
+# Null model CRPS
+# ============================================================
+
+null_crps <- list()
 
 for (stg in unique(file_info$stage)) {
   
@@ -570,69 +756,137 @@ for (stg in unique(file_info$stage)) {
     next
   }
   
-  null_file  <- null_candidates[1]
+  null_file <- null_candidates[1]
   null_draws <- readRDS(null_file)
   
   var_map <- switch(stg,
-                    emerged    = list(train = "e_train_pred",
-                                      test  = "e_test_pred"),
-                    reproduced = list(train = "r_train_pred",
-                                      test  = "r_test_pred"),
-                    fecundity  = list(train = "y_train_pred",
-                                      test  = "y_test_pred"))
+                    emerged    = list(train = c("e_train_pred"),
+                                      test  = c("e_test_pred")),
+                    reproduced = list(train = c("r_train_pred"),
+                                      test  = c("r_test_pred")),
+                    fecundity  = list(train = c("y_train_pred"),
+                                      test  = c("y_test_pred"))
+  )
   
   obs_map <- switch(stg,
                     emerged    = c(train = "e_train", test = "e_test"),
                     reproduced = c(train = "r_train", test = "r_test"),
-                    fecundity  = c(train = "y_train", test = "y_test"))
+                    fecundity  = c(train = "y_train", test = "y_test")
+  )
   
-  null_scores[[stg]] <- list()
+  null_crps[[stg]] <- list()
   
   for (nm in names(var_map)) {
+    pred1 <- extract_draws_matrix(null_draws, var_map[[nm]])
+    pred2 <- extract_draws_matrix(null_draws, var_map[[nm]]) # duplicate if only 1 matrix
+    obs   <- obs_list[[obs_map[nm]]]
     
-    pred <- extract_draws(null_draws, var_map[[nm]])
-    obs  <- obs_list[[obs_map[nm]]]
+    scores <- get_loo_scores(pred1, pred2, obs)
     
-    #  scoringRules CRPS 
-    pred_sr <- pred
-    if (nrow(pred_sr) != length(obs)) pred_sr <- t(pred_sr)
-    
-    crps_sr <- mean(crps_sample(y = obs, dat = pred_sr))
-    
-    #  loo::crps 
-    pred_loo <- format_draws_for_loo(pred, obs)
-    crps_loo <- mean(loo::crps(pred_loo, obs))
-    
-    #  loo::scrps 
-    scrps_loo <- mean(loo::scrps(pred_loo, obs))
-    
-    null_scores[[stg]][[nm]] <- list(
-      crps_scoringRules = crps_sr,
-      crps_loo = crps_loo,
-      scrps_loo = scrps_loo
-    )
-    
-    message(
-      "NULL ", stg, " (", nm, "): ",
-      "CRPS_SR = ", round(crps_sr, 3),
-      " | CRPS_LOO = ", round(crps_loo, 3),
-      " | SCRPS = ", round(scrps_loo, 3)
-    )
+    null_crps[[stg]][[nm]] <- scores$crps
   }
 }
 
-null_summary <- map_dfr(names(null_scores), function(stg) {
-  map_dfr(names(null_scores[[stg]]), function(nm) {
-    tibble(
-      stage = stg,
-      dataset = nm,
-      crps_scoringRules = null_scores[[stg]][[nm]]$crps_scoringRules,
-      crps_loo          = null_scores[[stg]][[nm]]$crps_loo,
-      scrps_loo         = null_scores[[stg]][[nm]]$scrps_loo
-    )
-  })
-})
+# ============================================================
+# Main loop: compute CRPS, sCRPS, skill
+# ============================================================
 
+for (i in seq_len(nrow(file_info))) {
+  
+  draws <- readRDS(file_info$file_path[i])
+  stage <- file_info$stage[i]
+  variant <- file_info$variant[i]
+  
+  # map variable names
+  var_map <- switch(stage,
+                    emerged = list(train = c("e_train_pred"),
+                                   train_fixed = c("e_train_pred_fixed"),
+                                   test  = c("e_test_pred")),
+                    
+                    reproduced = list(train = c("r_train_pred"),
+                                      train_fixed = c("r_train_pred_fixed", "r_train_pred_fixed_only"),
+                                      test  = c("r_test_pred")),
+                    
+                    fecundity = list(train = c("y_train_pred"),
+                                     train_fixed = c("y_train_pred_fixed"),
+                                     test  = c("y_test_pred"))
+  )
+  
+  obs_map <- switch(stage,
+                    emerged = c(train = "e_train",
+                                train_fixed = "e_train_fixed",
+                                test = "e_test"),
+                    reproduced = c(train = "r_train",
+                                   train_fixed = "r_train_fixed",
+                                   test = "r_test"),
+                    fecundity = c(train = "y_train",
+                                  train_fixed = "y_train_fixed",
+                                  test = "y_test")
+  )
+  
+  # -------------------------
+  # Compute CRPS & sCRPS
+  # -------------------------
+  for (nm in names(var_map)) {
+    
+    pred1 <- tryCatch(extract_draws_matrix(draws, var_map[[nm]]), error = function(e) NULL)
+    if (is.null(pred1)) next
+    pred2 <- tryCatch(extract_draws_matrix(draws, var_map[[nm]]), error = function(e) pred1)
+    
+    obs <- obs_list[[obs_map[nm]]]
+    
+    scores <- get_loo_scores(pred1, pred2, obs)
+    
+    file_info[[paste0("crps_", nm)]][i]  <- scores$crps
+    file_info[[paste0("scrps_", nm)]][i] <- scores$scrps
+  }
+  
+  # -------------------------
+  # Attach null CRPS
+  # -------------------------
+  if (!is.null(null_crps[[stage]])) {
+    file_info$null_crps_train[i] <- null_crps[[stage]]$train %||% NA_real_
+    file_info$null_crps_test[i]  <- null_crps[[stage]]$test  %||% NA_real_
+  } else {
+    file_info$null_crps_train[i] <- NA_real_
+    file_info$null_crps_test[i]  <- NA_real_
+  }
+  
+  # -------------------------
+  # Skill scores
+  # -------------------------
+  if (variant == "null") {
+    file_info$skill_train[i]        <- 0
+    file_info$skill_train_fixed[i]  <- 0
+    file_info$skill_test[i]         <- 0
+  } else {
+    if (!is.na(file_info$null_crps_train[i])) {
+      file_info$skill_train[i] <-
+        compute_skill(file_info$crps_train[i], file_info$null_crps_train[i])
+      
+      file_info$skill_train_fixed[i] <-
+        compute_skill(file_info$crps_train_fixed[i], file_info$null_crps_train[i])
+    }
+    
+    if (!is.na(file_info$null_crps_test[i])) {
+      file_info$skill_test[i] <-
+        compute_skill(file_info$crps_test[i], file_info$null_crps_test[i])
+    }
+  }
+  
+  message(
+    "Processed: ", file_info$file_name[i],
+    " | Skill train = ", round(file_info$skill_train[i], 3),
+    " | Skill test = ", round(file_info$skill_test[i], 3)
+  )
+}
+
+# ============================================================
+# Final output
+# ============================================================
+
+output <- as.data.frame(file_info)
+output
 ######## confusion matrix for Reproduced & Emerged models #################
 
 library(caret)
@@ -869,6 +1123,8 @@ fit_fec_full <- readRDS(file_info$file_path[file_info$file_name == "fit_fecundit
 
 #fit_rep <- readRDS("output/fit_reproduced_full.rds") #from my computer run
 
+
+
 ## Posterior probabilities 
 
 
@@ -878,6 +1134,7 @@ fit_fec_full <- readRDS(file_info$file_path[file_info$file_name == "fit_fecundit
 
 #fit_rep_full <- fit_rep$draws(format = "df") #if from my computer
 
+#fit_fec_full <- fit_fec$draws(format = "df")
 
 cn <- colnames(fit_rep_full)
 base_names <- sub("\\[.*\\]", "", cn)
@@ -909,40 +1166,109 @@ e_emg_train_fixed <- fit_emg_full %>%
   select(starts_with("e_train_pred_fixed")) %>%
   as.matrix()
 
-## Emerged Fecundity Posterior
+
+## check posterior predictive means 
+mean(e_emg_train)
+#0.7659191
+
+mean(e_emg_test)
+#0.7420267
+
+mean(training_df_emg$e_train)
+#0.7609852
+
+mean(testing_df_emg$e_test)
+#0.451812
+
+training_df_emg %>%
+  group_by(Type) %>%
+  summarise(mean_e_train = mean(e_train, na.rm = TRUE))
+#Type          mean_e_train
+#<chr>                <dbl>
+#1 Common_Garden        0.794
+#2 Satellite            0.578
+
+means_sat <- training_df_emg %>% filter(Type == "Satellite") %>% 
+  group_by(site_year) %>%
+  summarise(mean_e_train = mean(e_train, na.rm = TRUE))
+
+means_sat_test <- testing_df_emg %>% filter(Type == "Satellite") %>% 
+  group_by(site_year) %>%
+  summarise(mean_e_test = mean(e_test, na.rm = TRUE))
+
+## Fecundity Posterior
 fec_train <- fit_fec_full %>%
-  select(starts_with("mu_train")) %>%
+  dplyr::select(starts_with("mu_train")) %>%
   as.matrix()
-fec_test <- fit_emg_full %>%
-  select(starts_with("mu_test")) %>%
+fec_test <- fit_fec_full %>%
+  dplyr::select(starts_with("mu_test")) %>%
   as.matrix()
-fec_train_fixed <- fit_emg_full %>%
-  select(starts_with("mu_train_fixed")) %>%
+fec_train_fixed <- fit_fec_full %>%
+  dplyr::select(starts_with("mu_train_fixed")) %>%
   as.matrix()
 
 #Reproduced Posterior Predictive 
 r_rep_train <- fit_rep_full %>%
-  select(starts_with("r_train_full")) %>%
+  select(starts_with("r_train_pred")) %>%
   as.matrix()
 r_rep_test <- fit_rep_full %>%
-  select(starts_with("r_test_full")) %>%
+  select(starts_with("r_test_pred")) %>%
   as.matrix()
 r_rep_train_fixed <- fit_rep_full %>%
   select(starts_with("r_train_full_fixed")) %>%
   as.matrix()
 rm(fit_rep_full)
 
+## check posterior predictive means 
+mean(r_rep_train)
+#0.5554042
+
+mean(r_rep_test)
+#0.5337709
+
+mean(training_df_rep$r_train)
+# 0.5091367
+
+mean(testing_df_rep$r_test)
+#0.4363156
+
 #Fecundity Posterior Predictive 
 y_fec_train <- fit_fec_full %>%
-  select(starts_with("y_train_pred_full")) %>%
+  dplyr::select(starts_with("y_train_pred_full")) %>%
   as.matrix()
 y_fec_test <- fit_fec_full %>%
-  select(starts_with("y_test_pred_full")) %>%
+  dplyr::select(starts_with("y_test_pred_full")) %>%
   as.matrix()
 y_fec_train_fixed <- fit_fec_full %>%
-  select(starts_with("y_train_pred_full_fixed")) %>%
+  dplyr::select(starts_with("y_train_pred_full_fixed")) %>%
   as.matrix()
 
+## check posterior predictive means 
+y_fec_train <- fit_fec_full %>%
+  dplyr::select(starts_with("y_train_pred")) %>%
+  as.matrix()
+y_fec_test <- fit_fec_full %>%
+  dplyr::select(starts_with("y_test_pred")) %>%
+  as.matrix()
+
+mean(y_fec_train)
+#155.6367
+#3.571489 
+
+idx_bad <- unique(Tmp[,2])
+
+Tmp2 <- which(is.na(fec_test), arr.ind=TRUE)
+
+mean(y_fec_test)
+#-297196335 ## some are still getting integer overflow 
+mean_positive <- mean(y_fec_test[y_fec_test > 0], na.rm = TRUE)
+mean_positive #65.16856
+
+mean(training_df$Fecundity)
+# 217.3657
+
+mean(testing_df$Fecundity)
+#277.2071
 
 ##### Compute fitness #####
 

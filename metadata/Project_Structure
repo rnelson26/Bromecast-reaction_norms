@@ -35,9 +35,6 @@ project_root/
 │   ├── 09.1_run_single_model.R ##wrapper script for High Performance Computer 
 │   ├── 10_CRPS_and_figures.R ##analysis, data tables and figures
 │   ├── 11_Run_Everything.R ##run whole workflow
-├── job_scripts/
-│   ├── run_fit_models.sh
-│   ├── run_crps.sh
 ├── data/
 │   ├── combined_clean_climate_SOS_updated.csv ##merged data with climate information
 │   ├── assigned_genotypes.csv ## assigned genotypes to satellite sites

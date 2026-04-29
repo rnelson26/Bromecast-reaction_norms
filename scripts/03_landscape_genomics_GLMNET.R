@@ -4,7 +4,7 @@
 ######## Create K and assign genotypes ##########
 ######## code by Justin Van Ee and Becca Nelson ###############
 ############ created 8-19-25 #############
-############ last modified 10-27-25 ##########################
+############ last modified 3-23-26 ##########################
 
 ### use row and column names that correspond to actual genotypes in kinship matrix
 
@@ -484,7 +484,82 @@ GPS_sites <- read.csv("data/gps_sites.csv")  # columns: site, Latitude, Longitud
 # Satellite site coordinates
 sat_sites <- read.csv("data/site_list.csv")  # columns: site, Latitude, Longitude
 
+##### Outputs for LG #########
+#library(stringr)
 
+#order <- read.csv("data/LG_order.csv")
+#source_clim_short <- read.csv("data/climate_genotype_info_shortlist.csv")
+#sat_clim <- read.csv("data/sat_climate_info.csv")
+#lookup_filtered <- read.csv("data/genotype_site_row_lookup.csv")
+
+#clean_site <- function(x) {
+ # x %>%
+  #  str_remove(" [0-9]{4}$") %>%
+  #  str_replace_all(" ", "") %>%
+  #  str_replace_all("_", "") %>%
+   # str_replace("([A-Za-z]+)0+([0-9]+)", "\\1\\2")
+#}
+
+# clean
+#order$site_clean <- clean_site(order$data_column)
+#source_clim_short$site_clean <- clean_site(source_clim_short$NewSiteCode)
+#sat_clim$site_clean <- clean_site(sat_clim$site_code)
+#lookup_filtered$site <- clean_site(lookup_filtered$site)
+
+#geno_df <- source_clim_short %>%
+ # select(site_clean,
+  #       starts_with("bioclim"),
+   #      genotype, Latitude, Longitude, SNPmatrix_column) %>%
+  #distinct(site_clean, .keep_all = TRUE)
+
+#sat_df <- sat_clim %>%
+ # group_by(site_clean) %>%
+  #summarise(
+   # across(starts_with("bioclim"), mean, na.rm = TRUE),
+    #Latitude = mean(lat, na.rm = TRUE),
+    #Longitude = mean(lon, na.rm = TRUE),
+    #.groups = "drop"
+  #)
+
+#full_lookup <- bind_rows(
+ # geno_df %>% mutate(source = "genotype"),
+#  sat_df  %>% mutate(source = "satellite")
+#) %>%
+ # group_by(site_clean) %>%
+#  slice(1) %>%   
+ # ungroup()
+
+#idx_matching <- match(order$site_clean, full_lookup$site_clean)
+
+#LG_final <- cbind(
+ # order,
+#  full_lookup[idx_matching, setdiff(names(full_lookup), "site_clean")]
+#)
+
+
+
+#lg_order_df <- LG_final %>%
+ # mutate(lg_row = row_number()) %>%
+  #select(site_clean, lg_row)
+
+#lookup_filtered$site <- clean_site(lookup_filtered$site)
+
+
+#idx_model <- match(lg_order_df$site_clean, lookup_filtered$site)
+
+
+#final_lookup <- lg_order_df %>%
+ # mutate(
+  #  row_index = lookup_filtered$row_index[idx_model],
+   # genotype  = lookup_filtered$genotype[idx_model],
+    #site      = lookup_filtered$site[idx_model]
+  #) 
+
+#write.csv(final_lookup, "data/LG_RN_lookup.csv", row.names = FALSE) 
+#write.csv(LG_final, "data/LG_ordered_climate.csv", row.names = FALSE) 
+
+### add 
+## map 
 
 #sat_sites <- sat_sites %>%
  # rename(site = ID,
@@ -522,6 +597,8 @@ sat_sites <- read.csv("data/site_list.csv")  # columns: site, Latitude, Longitud
  # left_join(all_sites %>% rename(lat1 = Latitude, lon1 = Longitude), by = c("site1" = "site")) %>%
   #left_join(all_sites %>% rename(lat2 = Latitude, lon2 = Longitude), by = c("site2" = "site"))
 
+
+ 
 
 #write.csv(site_pairs, "data/site_pairs.csv", row.names = FALSE)
 

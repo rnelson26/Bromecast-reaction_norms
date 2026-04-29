@@ -9,11 +9,15 @@ data {
 
   array[n_train] int<lower=1> idx_plant_train;
   array[n_train] int<lower=1> idx_plant_train_site;
+  
   array[n_test] int<lower=1> idx_plant_test;
   array[n_test] int<lower=1> idx_plant_test_site;
 
   array[n_train] int<lower=0> plot_index_train;
   array[n_test] int<lower=0> plot_index_test;
+  
+  array[n_train] int<lower=0> transect_index_train;
+  array[n_test] int<lower=0> transect_index_test;
 
   array[n_train] int<lower=1, upper=n_site_year_train> site_year_id_train;
   array[n_test] int<lower=n_site_year_train + 1, upper=n_site_year> site_year_id_test;
@@ -23,8 +27,12 @@ data {
   int<lower=1> q_X;
   int<lower=1> q_X_soil;
   int<lower=1> n_plot;
+  int<lower=1> n_transect;
   int<lower=1> n_X_soil;
   int<lower=1> s_X;
+  
+  int<lower=0> n_plot_test;
+  int<lower=1> n_transect_test;
 
   matrix[n_X, p_X] X;
   matrix[p_X, q_X] Lambda;
@@ -35,44 +43,58 @@ data {
 parameters {
   vector<lower=0, upper=pi()/2>[p_X] u_sigma;
   vector<lower=0, upper=pi()/2>[s_X] u_sigma_soil;
-  vector<lower=0, upper=pi()/2>[q_X] u_zeta;
-  vector<lower=0, upper=pi()/2>[q_X_soil] u_zeta_soil;
 
   matrix[n_X, q_X] W;
-  matrix[n_X_soil, q_X] W_soil;
+  matrix[n_X_soil, q_X_soil] W_soil;
 
   vector[q_X] beta;       // climate latent coefficients
-  vector[q_X] beta_soil;  // soil latent coefficients
+  vector[q_X_soil] beta_soil;  // soil latent coefficients
 
   vector[n_site_year_train] site_year_effect_train_raw;
   real<lower=0> sigma_site_year;
+  
   vector[n_plot] eta_plot_raw;
   real<lower=0> sigma_plot;
+  
+  vector[n_transect] eta_transect_raw;
+  real<lower=0> sigma_transect;
+  
   real alpha;
 }
 
 transformed parameters {
   vector<lower=0>[p_X] sigma;
   vector<lower=0>[s_X] sigma_soil;
-  vector<lower=0>[q_X] zeta;
-  vector<lower=0>[q_X_soil] zeta_soil;
+  
+  vector[n_plot] eta_plot;
+  vector[n_plot] eta_plot_centered;
+  
+  vector[n_transect] eta_transect;
+  vector[n_transect] eta_transect_centered;
+  
+  vector[n_site_year_train] site_year_effect_train_scaled; 
+  vector[n_site_year_train] site_year_effect_train_scaled_centered; 
 
-  matrix[n_X, q_X] W_scaled;
-  matrix[n_X_soil, q_X_soil] W_soil_scaled;
 
-  vector[n_site_year_train] site_year_effect_train_scaled = sigma_site_year * site_year_effect_train_raw;
-  vector[n_site_year_train] site_year_effect_train_scaled_centered = site_year_effect_train_scaled - mean(site_year_effect_train_scaled);
+// apply transformations 
+  for (j in 1:p_X)
+    sigma[j] = tan(u_sigma[j]);
 
-  vector[n_plot] eta_plot = sigma_plot * eta_plot_raw;
-  vector[n_plot] eta_plot_centered = eta_plot - mean(eta_plot);
+  for (j in 1:s_X)
+    sigma_soil[j] = tan(u_sigma_soil[j]);
 
-  for (j in 1:p_X) sigma[j] = tan(u_sigma[j]);
-  for (j in 1:s_X) sigma_soil[j] = tan(u_sigma_soil[j]);
-  for (l in 1:q_X) zeta[l] = tan(u_zeta[l]);
-  for (l in 1:q_X_soil) zeta_soil[l] = tan(u_zeta_soil[l]);
+  eta_plot = sigma_plot * eta_plot_raw;
+  eta_plot_centered = eta_plot - mean(eta_plot);
+  
+  eta_transect = sigma_transect * eta_transect_raw;
+  eta_transect_centered = eta_transect - mean(eta_transect);
 
-  for (i in 1:n_X) W_scaled[i] = X[i] * Lambda;
-  for (i in 1:n_X_soil) W_soil_scaled[i] = X_soil[i] * Lambda_soil;
+  site_year_effect_train_scaled =
+    sigma_site_year * site_year_effect_train_raw;
+
+  site_year_effect_train_scaled_centered =
+   site_year_effect_train_scaled -
+    mean(site_year_effect_train_scaled);
 }
 
 model {
@@ -80,41 +102,65 @@ model {
   to_vector(W) ~ normal(0, 1);
   to_vector(W_soil) ~ normal(0, 1);
 
-  site_year_effect_train_raw ~ normal(0, 100);
-  sigma_site_year ~ normal(0, 100);
-  eta_plot_raw ~ normal(0, 100);
-  sigma_plot ~ normal(0, 100);
-  alpha ~ normal(0, 100);
-
-  beta ~ normal(0, 1);
-  beta_soil ~ normal(0, 1);
-
   // Training likelihood
   for (i in 1:n_train) {
     int idx = idx_plant_train[i];
     int site = idx_plant_train_site[i];
     int s = site_year_id_train[i];
 
-    real logit_p = alpha
-                  + dot_product(W_scaled[idx], beta)
-                  + dot_product(W_soil_scaled[site], beta_soil)
+    real logit_p = 
+                  alpha
+                  + dot_product(W[idx, ], beta)
+                  + dot_product(W_soil[site, ], beta_soil)
                   + site_year_effect_train_scaled_centered[s];
 
     if (plot_index_train[i] != 0)
       logit_p += eta_plot_centered[plot_index_train[i]];
+      
+    if (transect_index_train[i] != 0)
+      logit_p += eta_transect_centered[transect_index_train[i]];
 
     e_train[i] ~ bernoulli_logit(logit_p);
+  }
+  //Priors 
+  site_year_effect_train_raw ~ normal(0, 1);
+  sigma_site_year ~ normal(0, 1.5);
+  eta_plot_raw ~ normal(0, 1);
+  sigma_plot ~ normal(0, 1.5);
+  eta_transect_raw ~ normal(0, 1);
+  sigma_transect ~ normal(0, 1.5);
+  alpha ~ normal(0, 1.5);
+
+  beta ~ normal(0, 1);
+  beta_soil ~ normal(0, 1);
+  
+  // likelihood for climate and W
+for (i in 1:n_X) {
+  for (j in 1:p_X) {
+    target += normal_lpdf(X[i, j] | dot_product(Lambda[j, ], W[i, ]), sigma[j]);
+  }
+}
+
+// likelihood for soil and W
+for (i in 1:n_X_soil) {
+  for (j in 1:s_X) {
+    target += normal_lpdf(X_soil[i, j] | dot_product(Lambda_soil[j, ], W_soil[i, ]), sigma_soil[j]);
+  }
   }
 }
 
 generated quantities {
   vector[n_train] p_train;
-  array[n_train] int e_train_pred;
   vector[n_test] p_test;
+  vector[n_train] p_train_fixed;
+  
+  array[n_train] int e_train_pred;
+  array[n_train] int e_train_pred2;
   array[n_test] int e_test_pred;
+  array[n_test] int e_test_pred2;
     // Fixed-effects-only predictions
-vector[n_train] p_train_fixed;
-array[n_train] int e_train_pred_fixed;
+  array[n_train] int e_train_pred_fixed;
+  array[n_train] int e_train_pred_fixed2;
 
   // Training predictions
   for (i in 1:n_train) {
@@ -123,54 +169,111 @@ array[n_train] int e_train_pred_fixed;
     int s = site_year_id_train[i];
 
     real logit_p = alpha
-                  + dot_product(W_scaled[idx], beta)
-                  + dot_product(W_soil_scaled[site], beta_soil)
+                  + dot_product(W[idx, ], beta)
+                  + dot_product(W_soil[site, ], beta_soil)
                   + site_year_effect_train_scaled_centered[s];
 
     if (plot_index_train[i] != 0)
       logit_p += eta_plot_centered[plot_index_train[i]];
+      
+    if (transect_index_train[i] != 0)
+      logit_p += eta_transect_centered[transect_index_train[i]];
 
     p_train[i] = inv_logit(logit_p);
     e_train_pred[i] = bernoulli_logit_rng(logit_p);
+    e_train_pred2[i] = bernoulli_logit_rng(logit_p);
   }
-  
+
+  // simulate spatial random effects for training data
+  vector[n_site_year_train] site_year_noise_train;
+  vector[n_plot] plot_noise_train;
+  vector[n_transect] transect_noise_train;
+
+  for (j in 1:n_site_year_train)
+    site_year_noise_train[j] = normal_rng(0, sigma_site_year);
+
+  for (j in 1:n_plot)
+    plot_noise_train[j] = normal_rng(0, sigma_plot);
+
+  for (j in 1:n_transect)
+    transect_noise_train[j] = normal_rng(0, sigma_transect);
+
+  // center simulated random effects consistent with model structure
+  site_year_noise_train -= mean(site_year_noise_train);
+  plot_noise_train -= mean(plot_noise_train);
+  transect_noise_train -= mean(transect_noise_train);
+//what syntax means: x -= y is equivalent to x = x - y;
+
   // Fixed effects only 
     for (i in 1:n_train) {
     int idx = idx_plant_train[i];
     int site = idx_plant_train_site[i];
 
-    
-    real site_year_noise = normal_rng(0, sigma_site_year);
+    real site_year_noise =
+      site_year_noise_train[site_year_id_train[i]];
 
     real plot_noise =
-   (plot_index_train[i] == 0)
-       ? 0
-     : normal_rng(0, sigma_plot);
+      (plot_index_train[i] == 0)
+      ? 0
+      : plot_noise_train[plot_index_train[i]];
+
+    real transect_noise =
+      (transect_index_train[i] == 0)
+      ? 0
+      : transect_noise_train[transect_index_train[i]];
     
     real mu_fixed_base = alpha
-                       + dot_product(W_scaled[idx], beta)
-                       + dot_product(W_soil_scaled[site], beta_soil) + site_year_noise +
-    plot_noise;
+                       + dot_product(W[idx, ], beta)
+                       + dot_product(W_soil[site, ], beta_soil) 
+                       + site_year_noise 
+                       + plot_noise 
+                       + transect_noise;
 
     p_train_fixed[i] = inv_logit(mu_fixed_base);
     e_train_pred_fixed[i] = bernoulli_logit_rng(mu_fixed_base);
+    e_train_pred_fixed2[i] = bernoulli_logit_rng(mu_fixed_base);
   }
+  
+  // simulate spatial random effects for test data
+ 
+  vector[n_site_year_test] site_year_noise_test;
+  vector[n_transect_test] transect_noise_test;
+
+  for (j in 1:n_site_year_test)
+    site_year_noise_test[j] = normal_rng(0, sigma_site_year);
+
+  for (j in 1:n_transect_test)
+    transect_noise_test[j] = normal_rng(0, sigma_transect);
+
+  // center random effects to be consistent with model 
+  site_year_noise_test -= mean(site_year_noise_test);
+  transect_noise_test -= mean(transect_noise_test);
+
 
   // Test predictions
   for (i in 1:n_test) {
     int idx = idx_plant_test[i];
     int site = idx_plant_test_site[i];
-    real site_year_noise = normal_rng(0, sigma_site_year);
+    
+   int site_id = site_year_id_test[i] - n_site_year_train;
+
+  real site_year_noise = site_year_noise_test[site_id];
+
+  real plot_noise = 0;
+
+  real transect_noise =
+    transect_noise_test[transect_index_test[i]];
+
 
     real logit_p = alpha
-                  + dot_product(W_scaled[idx], beta)
-                  + dot_product(W_soil_scaled[site], beta_soil)
-                  + site_year_noise;
-
-    if (plot_index_test[i] != 0)
-      logit_p += eta_plot_centered[plot_index_test[i]];
+                  + dot_product(W[idx, ], beta)
+                  + dot_product(W_soil[site, ], beta_soil)
+                  + site_year_noise
+                  + plot_noise
+                  + transect_noise;
 
     p_test[i] = inv_logit(logit_p);
     e_test_pred[i] = bernoulli_logit_rng(logit_p);
+    e_test_pred2[i] = bernoulli_logit_rng(logit_p);
   }
 }

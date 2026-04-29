@@ -1,11 +1,14 @@
 ################# Bromecast: 01.Prepare Data ##########################
 ############# created 3-25-25 ######################
-############# Last modified: 2-26-26 ##########################
+############# Last modified: 4-23-26 ##########################
 ######## Prepares all data for model fitting ################################
+
+## updated approach that uses single full dataset 
 
 ## check alignment of n_X
 
-source("scripts/03_landscape_genomics_GLMNET.R")
+source("scripts/03_landscape_genomics_GLMNET.R") #spatial interpolation method for kinship 
+source("scripts/03_Michael_LG.R") #Michael landscape genomics model method for kinship 
 source("scripts/04_setup.R")
 
 
@@ -90,7 +93,8 @@ data <- data %>%
 
 
 ####### Prepare data for model ########
-K_all_filtered ## updated kinship matrix
+#K_all_filtered ## updated kinship matrix, spatil interpolation
+K_Michael_PD ## updated PD kinship matrix from Michael's model 
 genotype_index_new ## list of synthetic genotype names for satellite sites
 genotype_index_all ## all the genotypes in K_all
 
@@ -203,36 +207,9 @@ data$Fecundity <- as.integer(data$Fecundity)
 
 
 
-df <- data %>%
-  dplyr::filter(Emerged == "Y", Reproduced == "Y") %>%
-  mutate(
-    site_numeric = as.numeric(as.factor(site)),
-    site_year_numeric = as.numeric(as.factor(site_year)),
-    year_numeric = as.numeric(as.factor(year)) - 1
-  ) %>%
-  dplyr::filter(!is.na(Fecundity)) %>%
-  dplyr::filter(!is.na(genotype)) %>%
-  dplyr::filter(!is.na(neighbors)) %>%
-  dplyr::filter(!is.na(annual)) %>%
-  dplyr::filter(!is.na(perennial)) %>%
-  dplyr::filter(!is.na(shrub)) %>%
-  dplyr::filter(Fecundity > 0) ## compare to flagged column, hopefully any zeros should be flagged 
+
 
 ## need to make sure genotypes are somehow linked to kinship id
-
-df_rep <- data %>%
-  dplyr::filter(Emerged %in% c("Y")) %>%  ## comment out if you don't reproduced to be conditional on Emerged 
-  dplyr::filter(Reproduced %in% c("Y", "N")) %>% 
-  mutate(
-    site_numeric = as.numeric(as.factor(site)),
-    site_year_numeric = as.numeric(as.factor(site_year)),
-    year_numeric = as.numeric(as.factor(year)) - 1
-  ) %>%
-  dplyr::filter(!is.na(genotype)) %>%
-  dplyr::filter(!is.na(neighbors)) %>%
-  dplyr::filter(!is.na(annual)) %>%
-  dplyr::filter(!is.na(perennial)) %>%
-  dplyr::filter(!is.na(shrub)) 
 
 df_emg <- data %>%
   dplyr::filter(Emerged %in% c("Y", "N")) %>% 
@@ -248,22 +225,6 @@ df_emg <- data %>%
   dplyr::filter(!is.na(shrub)) 
 
 ## scale competition variables
-df <- df %>%
-  mutate(
-    neighbors.s = scale(neighbors)[,1],
-    perennial.s = scale(perennial)[,1],
-    shrub.s = scale(shrub)[,1],
-    annual.s = scale(annual)[,1],
-  )
-
-df_rep <- df_rep %>%
-  mutate(
-    neighbors.s = scale(neighbors)[,1],
-    perennial.s = scale(perennial)[,1],
-    shrub.s = scale(shrub)[,1],
-    annual.s = scale(annual)[,1],
-  )
-
 df_emg <- df_emg %>%
   mutate(
     neighbors.s = scale(neighbors)[,1],
@@ -273,14 +234,6 @@ df_emg <- df_emg %>%
   )
 
 
-#df <- df %>%
- # filter(!is.na(genotype)) 
-
-#df_rep <- df_rep %>%
- # filter(!is.na(genotype))
-
-#df_emg <- df_emg %>%
- # filter(!is.na(genotype))
 
 
 #valid_genotypes <- rownames(K_common_garden)
@@ -328,23 +281,6 @@ SOS_vars <- c(
 soil_vars <- c(
   "pH", "EC", "OMpercent", "Protein_g.kg", "X..Silt", "X..Sand")
 ## note shouldn't use all three
-
-pca_data <- df %>% 
-  dplyr::select(site_year, all_of(climate_vars))  %>% distinct() %>% 
-  na.omit()  
-
-pca_data_SOS <- df %>% 
-  dplyr::select(site_year, all_of(SOS_vars))  %>% distinct() %>% 
-  na.omit()  
-
-pca_data_rep <- df_rep %>% 
-  dplyr::select(site_year, all_of(climate_vars))  %>% distinct() %>% 
-  na.omit()  
-
-pca_data_rep_SOS <- df_rep %>% 
-  dplyr::select(site_year, all_of(SOS_vars))  %>% distinct() %>% 
-  na.omit()  
-
 pca_data_emg <- df_emg %>% 
   dplyr::select(site_year, all_of(climate_vars))  %>% distinct() %>% 
   na.omit()  
@@ -353,79 +289,38 @@ pca_data_emg_SOS <- df_emg %>%
   dplyr::select(site_year, all_of(SOS_vars))  %>% distinct() %>% 
   na.omit()  
 
-soil_data <- df %>% 
-  dplyr::select(site, all_of(soil_vars))  %>% distinct() %>% 
-  na.omit() 
-
-soil_data_rep <- df_rep %>% 
-  dplyr::select(site, all_of(soil_vars))  %>% distinct() %>% 
-  na.omit() 
-
 soil_data_emg <- df_emg %>% 
   dplyr::select(site, all_of(soil_vars))  %>% distinct() %>% 
   na.omit() 
-
-
-site_year_labels <- pca_data$site_year  
-site_labels_soil <- soil_data$site
-site_year_labels_SOS <- pca_data_SOS$site_year 
-
-site_year_labels_rep <- pca_data_rep$site_year  
-site_year_labels_rep_SOS <- pca_data_rep_SOS$site_year  
-site_year_labels_soil_rep <- soil_data_rep$site_year  
-site_labels_soil_rep <- soil_data_rep$site
 
 site_year_labels_emg <- pca_data_emg$site_year  
 site_year_labels_emg_SOS <- pca_data_emg_SOS$site_year  
 site_year_labels_soil_emg <- soil_data_emg$site_year  
 site_labels_soil_emg <- soil_data_emg$site
 
-X <- scale(pca_data %>% dplyr::select(-site_year))
-X_SOS <- scale(pca_data_SOS %>% dplyr::select(-site_year))
-X_soil <- scale(soil_data %>% dplyr::select(-site))
-
-
-X_rep <- scale(pca_data_rep %>% dplyr::select(-site_year))
-X_rep_SOS <- scale(pca_data_rep_SOS %>% dplyr::select(-site_year))
-X_soil_rep <- scale(soil_data_rep %>% dplyr::select(-site))
 
 X_emg <- scale(pca_data_emg %>% dplyr::select(-site_year))
 X_emg_SOS <- scale(pca_data_emg_SOS %>% dplyr::select(-site_year))
 X_soil_emg <- scale(soil_data_emg %>% dplyr::select(-site))
 
-pca_out <- prcomp(X)
-pca_out_SOS <- prcomp(X_SOS)
-pca_out_soil <- prcomp(X_soil)
-
-
-pca_out_rep <- prcomp(X_rep)
-pca_out_rep_SOS <- prcomp(X_rep_SOS)
-pca_out_soil_rep <- prcomp(X_soil_rep)
-
 pca_out_emg <- prcomp(X_emg)
 pca_out_emg_SOS <- prcomp(X_emg_SOS)
 pca_out_soil_emg <- prcomp(X_soil_emg)
 
-n_X <- nrow(pca_data)
+n_X <- nrow(pca_data_emg)
 q_X <- 2
-Lambda <- as.matrix(pca_out$rotation[, 1:q_X])
-Lambda_SOS <- as.matrix(pca_out_SOS$rotation[, 1:q_X])
 
-Lambda_rep <- as.matrix(pca_out_rep$rotation[, 1:q_X])
-Lambda_rep_SOS <- as.matrix(pca_out_rep_SOS$rotation[, 1:q_X])
 
 Lambda_emg <- as.matrix(pca_out_emg$rotation[, 1:q_X])
 Lambda_emg_SOS <- as.matrix(pca_out_emg_SOS$rotation[, 1:q_X])
 
 
-n_X_soil <- nrow(soil_data)
-Lambda_soil <- as.matrix(pca_out_soil$rotation[, 1:q_X])
-Lambda_soil_rep <- as.matrix(pca_out_soil_rep$rotation[, 1:q_X])
+n_X_soil <- nrow(soil_data_emg)
 Lambda_soil_emg <- as.matrix(pca_out_soil_emg$rotation[, 1:q_X])
 
 
 
-fviz_pca_biplot(pca_out_soil,
+fviz_pca_biplot(pca_out_soil_emg,
                 geom.ind = "point",               
                 fill.ind = "grey80",              
                 col.var = "contrib",              
@@ -434,11 +329,11 @@ fviz_pca_biplot(pca_out_soil,
   theme_minimal()
 
 
-fviz_cos2(pca_out_soil, choice = "var", axes = 1:2)
-fviz_contrib(pca_out_soil, choice = "var", axes = 2, top = 10)
+fviz_cos2(pca_out_soil_emg, choice = "var", axes = 1:2)
+fviz_contrib(pca_out_soil_emg, choice = "var", axes = 2, top = 10)
 
 ## elbow plot
-explained_var <- pca_out$sdev^2
+explained_var <- pca_out_emg$sdev^2
 prop_var <- explained_var / sum(explained_var)
 plot(prop_var, type = "b", 
      xlab = "Principal Component", 
@@ -450,7 +345,7 @@ plot(prop_var, type = "b",
 
 ### split training and test data 
 
-data_sat <- df %>% filter(Type == "Satellite")
+data_sat <- df_emg %>% filter(Type == "Satellite")
 
 set.seed(123)  # For reproducibility
 
@@ -458,18 +353,6 @@ selected_categories <- data_sat %>%
   distinct(site_year) %>%  
   slice_sample(n = 28) %>% 
   pull(site_year)          
-
-training_df <-df %>%
-  filter(site_year %in% selected_categories | Type == "Common_Garden")
-
-testing_df <- df %>%
-  filter(!(site_year %in% selected_categories) & Type == "Satellite")
-
-training_df_rep <-df_rep %>%
-  filter(site_year %in% selected_categories | Type == "Common_Garden")
-
-testing_df_rep <- df_rep %>%
-  filter(!(site_year %in% selected_categories) & Type == "Satellite")
 
 training_df_emg <-df_emg %>%
   filter(site_year %in% selected_categories | Type == "Common_Garden")
@@ -479,30 +362,12 @@ testing_df_emg <- df_emg %>%
 
 ### compare data to make sure we have decent coverage of climate 
 
-training_df$Dataset <- "Training"
-testing_df$Dataset <- "Testing"
-
-training_df_rep$Dataset <- "Training"
-testing_df_rep$Dataset <- "Testing"
-
 training_df_emg$Dataset <- "Training"
 testing_df_emg$Dataset <- "Testing"
 
 # Combine the datasets
-combined_data <- rbind(training_df, testing_df)
-combined_data_rep <- rbind(training_df_rep, testing_df_rep)
 combined_data_emg <- rbind(training_df_emg, testing_df_emg)
 # Check overlap
-ggplot(combined_data, aes(x = tmean.Sum, fill = Dataset)) +
-  geom_histogram(alpha = 0.5, bins = 30, position = "identity") +
-  theme_minimal() +
-  scale_fill_manual(values = c("Training" = "blue", "Testing" = "red"))
-
-ggplot(combined_data_rep, aes(x = tmean.Sum, fill = Dataset)) +
-  geom_histogram(alpha = 0.5, bins = 30, position = "identity") +
-  theme_minimal() +
-  scale_fill_manual(values = c("Training" = "blue", "Testing" = "red"))
-
 ggplot(combined_data_emg, aes(x = tmean.Sum, fill = Dataset)) +
   geom_histogram(alpha = 0.5, bins = 30, position = "identity") +
   theme_minimal() +
@@ -517,42 +382,42 @@ testing_df_emg$r_test <- ifelse(testing_df_emg$Reproduced == "Y", 1L, 0L)
 training_df_emg$e_train <- ifelse(training_df_emg$Emerged == "Y", 1L, 0L)
 testing_df_emg$e_test <- ifelse(testing_df_emg$Emerged == "Y", 1L, 0L)
 
-training_df_rep$r_train <- ifelse(training_df_rep$Reproduced == "Y", 1L, 0L)
-testing_df_rep$r_test <- ifelse(testing_df_rep$Reproduced == "Y", 1L, 0L)
 
 
 ##### Indices ########
-training_df$plot_index <- ifelse(training_df$Type == "Common_Garden", training_df$plot[training_df$Type == "Common_Garden"], 0)
-plot_levels <- levels(factor(training_df$plot[training_df$Type == "Common_Garden"]))
 
-training_df_rep$plot_index <- ifelse(training_df_rep$Type == "Common_Garden", training_df_rep$plot[training_df_rep$Type == "Common_Garden"], 0)
-plot_levels <- levels(factor(training_df_rep$plot[training_df_rep$Type == "Common_Garden"]))
+## satellite site transect index
+training_df_emg$transect_index <- ifelse(
+  training_df_emg$Type == "Satellite",
+  as.numeric(factor(training_df_emg$Transect_Site_Year[training_df_emg$Type == "Satellite"]))[
+    match(training_df_emg$Transect_Site_Year, training_df_emg$Transect_Site_Year[training_df_emg$Type == "Satellite"])
+  ],
+  0
+)
 
-training_df_emg$plot_index <- ifelse(training_df_emg$Type == "Common_Garden", training_df_emg$plot[training_df_emg$Type == "Common_Garden"], 0)
-plot_levels <- levels(factor(training_df_emg$plot[training_df_emg$Type == "Common_Garden"]))
 
-training_df$site_year <- factor(training_df$site_year)
-testing_df$site_year <- factor(testing_df$site_year)
+testing_df_emg$transect_index <- ifelse(
+  testing_df_emg$Type == "Satellite",
+  as.numeric(factor(testing_df_emg$Transect_Site_Year[testing_df_emg$Type == "Satellite"]))[
+    match(testing_df_emg$Transect_Site_Year, testing_df_emg$Transect_Site_Year[testing_df_emg$Type == "Satellite"])
+  ],
+  0
+)
 
-training_df_rep$site_year <- factor(training_df_rep$site_year)
-testing_df_rep$site_year <- factor(testing_df_rep$site_year)
+## common garden plot index
+training_df_emg$plot_index <- ifelse(
+  training_df_emg$Type == "Common_Garden",
+  as.numeric(factor(training_df_emg$Transect_Site_Year[training_df_emg$Type == "Common_Garden"]))[
+    match(training_df_emg$Transect_Site_Year, training_df_emg$Transect_Site_Year[training_df_emg$Type == "Common_Garden"])
+  ],
+  0
+)
 
+## site year indices
 training_df_emg$site_year <- factor(training_df_emg$site_year)
 testing_df_emg$site_year <- factor(testing_df_emg$site_year)
 
 # Create index for training site-years 
-training_site_years <- sort(unique(training_df$site_year))
-site_year_index_train <- data.frame(
-  site_year = training_site_years,
-  idx = seq_along(training_site_years)  
-)
-
-training_site_years_rep <- sort(unique(training_df_rep$site_year))
-site_year_index_train_rep <- data.frame(
-  site_year = training_site_years_rep,
-  idx = seq_along(training_site_years_rep)  
-)
-
 training_site_years_emg <- sort(unique(training_df_emg$site_year))
 site_year_index_train_emg <- data.frame(
   site_year = training_site_years_emg,
@@ -560,18 +425,6 @@ site_year_index_train_emg <- data.frame(
 )
 
 # Create index for testing site-years 
-testing_site_years <- sort(unique(testing_df$site_year))
-site_year_index_test <- data.frame(
-  site_year = testing_site_years,
-  idx = seq_along(testing_site_years) + length(training_site_years)  # Start from 40
-)
-
-testing_site_years_rep <- sort(unique(testing_df_rep$site_year))
-site_year_index_test_rep <- data.frame(
-  site_year = testing_site_years_rep,
-  idx = seq_along(testing_site_years_rep) + length(training_site_years_rep)  # Start from 40
-)
-
 testing_site_years_emg <- sort(unique(testing_df_emg$site_year))
 site_year_index_test_emg <- data.frame(
   site_year = testing_site_years_emg,
@@ -579,46 +432,12 @@ site_year_index_test_emg <- data.frame(
 )
 
 # Merge site-year indices into the original dataframes
-training_df <- left_join(training_df, site_year_index_train, by = "site_year")
-testing_df <- left_join(testing_df, site_year_index_test, by = "site_year")
-
-training_df_rep <- left_join(training_df_rep, site_year_index_train_rep, by = "site_year")
-testing_df_rep <- left_join(testing_df_rep, site_year_index_test_rep, by = "site_year")
-
 training_df_emg <- left_join(training_df_emg, site_year_index_train_emg, by = "site_year")
 testing_df_emg <- left_join(testing_df_emg, site_year_index_test_emg, by = "site_year")
 
 #### site level index for soil PCA
-training_df$site <- factor(training_df$site)
-testing_df$site <- factor(testing_df$site)
-
-training_df_rep$site <- factor(training_df_rep$site)
-testing_df_rep$site <- factor(testing_df_rep$site)
-
 training_df_emg$site <- factor(training_df_emg$site)
 testing_df_emg$site <- factor(testing_df_emg$site)
-
-## fecundity 
-all_sites <- sort(unique(c(training_df$site, testing_df$site)))
-
-site_index <- data.frame(
-  site = all_sites,
-  idx_site = seq_along(all_sites)
-)
-
-training_df <- training_df %>% left_join(site_index, by = "site")
-testing_df  <- testing_df %>% left_join(site_index, by = "site")
-
-### reproduced
-all_sites_rep <- sort(unique(c(training_df_rep$site, testing_df_rep$site)))
-
-site_index_rep <- data.frame(
-  site = all_sites_rep,
-  idx_site = seq_along(all_sites_rep)
-)
-
-training_df_rep <- training_df_rep %>% left_join(site_index_rep, by = "site")
-testing_df_rep  <- testing_df_rep %>% left_join(site_index_rep, by = "site")
 
 ### Emerged
 all_sites_emg <- sort(unique(c(training_df_emg$site, testing_df_emg$site)))
@@ -649,24 +468,9 @@ valid_genotypes <- rownames(K_all_filtered)
 genotype_lookup <- setNames(seq_along(valid_genotypes), valid_genotypes)
 
 # Filter df to only rows with genotypes in K
-training_df <- training_df %>% filter(genotype %in% valid_genotypes)
-
-training_df_rep <- training_df_rep %>% filter(genotype %in% valid_genotypes)
-
 training_df_emg <- training_df_emg %>% filter(genotype %in% valid_genotypes)
 
-testing_df <- testing_df %>% filter(genotype %in% valid_genotypes)
-testing_df_rep <- testing_df_rep %>% filter(genotype %in% valid_genotypes)
-
 testing_df_emg <- testing_df_emg %>% filter(genotype %in% valid_genotypes)
-
-genotype_plant_train <- as.integer(genotype_lookup[as.character(training_df$genotype)])
-
-genotype_plant_test <- as.integer(genotype_lookup[as.character(testing_df$genotype)])
-
-genotype_plant_train_rep <- as.integer(genotype_lookup[as.character(training_df_rep$genotype)])
-
-genotype_plant_test_rep <- as.integer(genotype_lookup[as.character(testing_df_rep$genotype)])
 
 genotype_plant_train_emg <- as.integer(genotype_lookup[as.character(training_df_emg$genotype)])
 
@@ -674,41 +478,17 @@ genotype_plant_test_emg <- as.integer(genotype_lookup[as.character(testing_df_em
 
 
 # Check again
-range(genotype_plant_train)  
-length(genotype_plant_train)  
-
-range(genotype_plant_train_rep)  
-length(genotype_plant_train_rep) 
-
 range(genotype_plant_train_emg) 
 length(genotype_plant_train_emg) 
-
-range(genotype_plant_test) 
-length(genotype_plant_test) 
-
-range(genotype_plant_test_rep) 
-length(genotype_plant_test_rep) 
 
 range(genotype_plant_test_emg) 
 length(genotype_plant_test_emg) 
 
 #### plant index
-idx_plant_train <- as.numeric(training_df$site_year)
-idx_plant_test  <- as.numeric(testing_df$site_year)
-
-idx_plant_train_rep <- as.numeric(training_df_rep$site_year)
-idx_plant_test_rep  <- as.numeric(testing_df_rep$site_year)
-
 idx_plant_train_emg <- as.numeric(training_df_emg$site_year)
 idx_plant_test_emg  <- as.numeric(testing_df_emg$site_year)
 
 ## for W soil
-idx_plant_train_site <- as.numeric(training_df$site)
-idx_plant_test_site  <- as.numeric(testing_df$site)
-
-idx_plant_train_site_rep <- as.numeric(training_df_rep$site)
-idx_plant_test_site_rep  <- as.numeric(testing_df_rep$site)
-
 idx_plant_train_site_emg <- as.numeric(training_df_emg$site)
 idx_plant_test_site_emg  <- as.numeric(testing_df_emg$site)
 
