@@ -1,6 +1,6 @@
 ################# Bromecast: 10.CRPS_and_figures.R ##########################
 ############# created 3-25-25 ######################
-############# Last modified: 3-23-26 ##########################
+############# Last modified: 5-4-26 ##########################
 ######## CRPS & Skill Scores for all model variants ################################
 
 
@@ -19,528 +19,10 @@ library(purrr)
 library(loo)
 
 
-##### CRPS updated version #######
-
-# extract draws function
-extract_draws <- function(draws, var_bases) {
-  
-  for (vb in var_bases) {                  # vb is length-1 character
-    pattern <- paste0("^", vb, "\\[")
-    cols <- grep(pattern, names(draws))
-    
-    if (length(cols) > 0) {
-      mat <- as.matrix(draws[, cols])
-      mat <- apply(mat, 2, as.numeric)
-      return(mat)
-    }
-  }
-  
-  stop(
-    paste(
-      "None of these variables found:",
-      paste(var_bases, collapse = ", ")
-    )
-  )
-}
-
-# get crps function
-get_crps <- function(obs, pred_df) {
-  pred_mat <- as.matrix(pred_df)
-  if (nrow(pred_mat) != length(obs)) pred_mat <- t(pred_mat)
-  crps_sample(y = as.numeric(obs), dat = pred_mat)
-}
-
-# list data
-obs_list <- list(
-  e_train  = training_df_emg$e_train,
-  e_train_fixed = training_df_emg$e_train,
-  e_test   = testing_df_emg$e_test,
-  
-  r_train = training_df_rep$r_train,
-  r_train_fixed = training_df_rep$r_train,
-  r_test  = testing_df_rep$r_test,
-  
-  y_train = training_df$Fecundity,
-  y_train_fixed = training_df$Fecundity,
-  y_test  = testing_df$Fecundity
-)
-
-# set up draws files
-base_dir <- "/Users/Becca/Desktop/Adler Lab/from megan/Outputs_Feb_2026"
-
-all_files <- list.files(base_dir, pattern = "^fit_.*\\.rds$", full.names = TRUE)
-
-file_info <- tibble(file_path = all_files) %>%
-  mutate(
-    file_name   = basename(file_path),
-    stage       = sub("^fit_(.*?)_.*\\.rds$", "\\1", file_name),
-    variant     = sub("^fit_.*?_(.*?)\\.rds$", "\\1", file_name),
-    crps_train  = NA_real_,
-    crps_train_fixed = NA_real_,
-    crps_test   = NA_real_,
-    null_crps_train = NA_real_,
-    null_crps_test  = NA_real_,
-    skill_train = NA_real_,
-    skill_train_fixed = NA_real_,
-    skill_test  = NA_real_
-  )
-
-# get null model values
-
-null_crps <- list()
-
-for (stg in unique(file_info$stage)) {
-  
-
-  null_candidates <- list.files(
-    base_dir,
-    pattern = paste0("^fit_", stg, "_null.*\\.rds$"),
-    full.names = TRUE
-  )
-
-  if (length(null_candidates) == 0) {
-    message("⚠ No null file found for stage: ", stg)
-    next
-  }
-  
-  null_file <- null_candidates[1]
-  
-  
-  null_draws <- readRDS(null_file)
-  
-  var_map <- switch(stg,
-                    emerged    = list(train = c("e_train_pred"),
-                                      test  = c("e_test_pred")),
-                    reproduced = list(train = c("r_train_pred"),
-                                      test  = c("r_test_pred")),
-                    fecundity  = list(train = c("y_train_pred"),
-                                      test  = c("y_test_pred"))
-  )
-  
-  obs_map <- switch(stg,
-                    emerged    = c(train = "e_train", test = "e_test"),
-                    reproduced = c(train = "r_train", test = "r_test"),
-                    fecundity  = c(train = "y_train", test = "y_test")
-  )
-  
-  null_crps[[stg]] <- list()
-  
-  for (nm in names(var_map)) {
-    pred <- extract_draws(null_draws, var_map[[nm]])   
-    obs  <- obs_list[[obs_map[nm]]]
-    if (nrow(pred) != length(obs)) pred <- t(pred)
-    null_crps[[stg]][[nm]] <- mean(get_crps(obs, pred))
-  }
-}
-
-# main loop
-for (i in seq_len(nrow(file_info))) {
-  
-  draws   <- readRDS(file_info$file_path[i])
-  stage   <- file_info$stage[i]
-  variant <- file_info$variant[i]
-  
-  var_map <- switch(stage,
-                    
-                    emerged = list(
-                      train       = c("e_train_pred"),
-                      train_fixed = c("e_train_pred_fixed"),
-                      test        = c("e_test_pred")
-                    ),
-                    
-                    reproduced = list(
-                      train       = c("r_train_pred"),
-                      train_fixed = c("r_train_pred_fixed",
-                                      "r_train_pred_fixed_only"),  #for multiple naming schemes in files
-                      test        = c("r_test_pred")
-                    ),
-                    
-                    fecundity = list(
-                      train       = c("y_train_pred"),
-                      train_fixed = c("y_train_pred_fixed"),
-                      test        = c("y_test_pred")
-                    )
-  )
-  
-  obs_map <- switch(stage,
-                    emerged    = c(train = "e_train",
-                                   train_fixed = "e_train_fixed",
-                                   test = "e_test"),
-                    reproduced = c(train = "r_train",
-                                   train_fixed = "r_train_fixed",
-                                   test = "r_test"),
-                    fecundity  = c(train = "y_train",
-                                   train_fixed = "y_train_fixed",
-                                   test = "y_test")
-  )
-  
-  # -------------------------
-  # CRPS
-
-  for (nm in names(var_map)) {
-    
-    pred <- tryCatch(
-      extract_draws(draws, var_map[[nm]]),   
-      error = function(e) NULL
-    )
-    if (is.null(pred)) next
-    
-    obs <- obs_list[[obs_map[nm]]]
-    if (nrow(pred) != length(obs)) pred <- t(pred)
-    
-    file_info[[paste0("crps_", nm)]][i] <-
-      mean(get_crps(obs, pred))
-  }
- # message(
-  #  "Processed (CRPS only): ", file_info$file_name[i],
-   # " | CRPS train = ", round(file_info$crps_train[i], 3),
-  #  " | CRPS test = ", round(file_info$crps_test[i], 3)
-  #)
-  
-  # -------------------------
-  # Attach null CRPS
-  # -------------------------
-  #file_info$null_crps_train[i] <- null_crps[[stage]]$train
-  #file_info$null_crps_test[i]  <- null_crps[[stage]]$test
-  
-  if (!is.null(null_crps[[stage]])) {
-    
-    file_info$null_crps_train[i] <-
-      if (!is.null(null_crps[[stage]]$train))
-        null_crps[[stage]]$train
-    else NA_real_
-    
-    file_info$null_crps_test[i]  <-
-      if (!is.null(null_crps[[stage]]$test))
-        null_crps[[stage]]$test
-    else NA_real_
-    
-  } else {
-    
-    message("⚠ No null CRPS found for stage: ", stage,
-            " | File: ", file_info$file_name[i])
-    
-    file_info$null_crps_train[i] <- NA_real_
-    file_info$null_crps_test[i]  <- NA_real_
-  }
-  
-  
-  # -------------------------
-  # Skill scores 
-  # -------------------------
-  if (variant == "null") {
-    file_info$skill_train[i]        <- 0
-    file_info$skill_train_fixed[i]  <- 0
-    file_info$skill_test[i]         <- 0
-  } else {
-    if (!is.na(file_info$null_crps_train[i])) {
-      file_info$skill_train[i] <-
-        1 - file_info$crps_train[i] / file_info$null_crps_train[i]
-      
-      file_info$skill_train_fixed[i] <-
-        1 - file_info$crps_train_fixed[i] / file_info$null_crps_train[i]
-    }
-    
-    if (!is.na(file_info$null_crps_test[i])) {
-      file_info$skill_test[i] <-
-        1 - file_info$crps_test[i] / file_info$null_crps_test[i]
-    }
-  }
-  
-  message(
-    "Processed: ", file_info$file_name[i],
-    " | Skill train = ", round(file_info$skill_train[i], 3),
-    " | Skill test = ", round(file_info$skill_test[i], 3)
-  )
-}
-
-# ================================================================
-# Final output
-# ================================================================
-output <- as.data.frame(file_info)
-output
-
-
-########### results table #######
-library(flextable)
-library(officer)
-library(dplyr)
-
-
-table_df <- output %>%
-  select(
-    stage,
-    file_name,
-    crps_train,
-    crps_train_fixed,
-    crps_test,
-    null_crps_train,
-    null_crps_test,
-    skill_train,
-    skill_train_fixed,
-    skill_test
-  ) %>%
-  arrange(stage, desc(skill_test)) %>%
-  mutate(
-    across(
-      where(is.numeric),
-      ~ round(.x, 3)
-    )
-  )
-
-
-library(stringr)
-
-stage_order <- c("emerged", "reproduced", "fecundity")
-
-submodel_order <- c(
-  "full",
-  "nointer",
-  "nocomp",
-  "nogene",
-  "climate",
-  "null"
-)
-
-table_df_ordered <- table_df %>%
-  mutate(
-    stage = str_extract(file_name, "(?<=fit_)[^_]+"),
-    submodel = str_extract(file_name, "(?<=_)[^_]+(?=_draws)")
-  )
-
-## put models in a logic order for interpretation 
-table_df_ordered <- table_df_ordered %>%
-  mutate(
-    stage = factor(stage, levels = stage_order),
-    submodel = factor(submodel, levels = submodel_order)
-  ) %>%
-  arrange(stage, submodel)
-
-
-ft <- flextable(table_df_ordered) %>%
-  set_header_labels(
-    stage              = "Stage",
-    file_name            = "Model variant",
-    crps_train         = "CRPS (train)",
-    crps_train_fixed   = "CRPS (train, fixed)",
-    crps_test          = "CRPS (test)",
-    null_crps_train    = "Null CRPS (train)",
-    null_crps_test     = "Null CRPS (test)",
-    skill_train        = "Skill (train)",
-    skill_train_fixed  = "Skill (train, fixed)",
-    skill_test         = "Skill (test)"
-  ) %>%
-  theme_booktabs() %>%
-  autofit()
-
-
-#ft <- ft %>%
- # bold(j = "skill_test", bold = TRUE) %>%
-  #color(
-   # i = ~ grepl("null", variant),
-    #color = "gray40"
- # )
-
-ft <- ft %>%
-  merge_v(j = "stage") %>%
-  valign(j = "stage", valign = "top")
-
-doc <- read_docx() %>%
-  body_add_par("Model performance summary", style = "heading 1") %>%
-  body_add_flextable(ft)
-
-print(doc, target = "CRPS_skill_summary_Feb_2026.docx")
-
-
-########### Visualize CRPS #############
-table_df_ordered <- table_df_ordered %>%
-  mutate(
-    file_clean = str_remove(file_name, "^fit_") %>%
-      str_remove("\\.rds$"),
-    stage = str_split(file_clean, "_", simplify = TRUE)[,1],
-    submodel = str_split(file_clean, "_", simplify = TRUE)[,2]
-  )
-
-
-
-crps_long <- table_df_ordered %>%
- select(stage, submodel,
-       crps_train,
-       crps_train_fixed,
-      crps_test) %>%
-  pivot_longer(
-    cols = starts_with("crps_"),
-    names_to = "dataset",
-    values_to = "crps"
-  ) %>%
-  mutate(
-    dataset = recode(
-      dataset,
-      crps_train = "Training",
-      crps_train_fixed = "Training (fixed only)",
-      crps_test = "Testing"
-    )
-  )
-
-crps_long <- crps_long %>%
-  mutate(
-    stage = factor(stage,
-                   levels = c("emerged", "reproduced", "fecundity"))
-  )
-
-#crps_fig <- ggplot(crps_long,
- #      aes(x = submodel,
-  #         y = crps,
-   #        color = dataset,
-    #       group = dataset)) +
-  #geom_point(size = 2.5) +
-  #geom_line(linewidth = 0.8) +
-  #facet_wrap(~ stage, nrow = 1, scales = "free_y") +
-  #theme_classic() +
-  #labs(
-   # x = "Submodel",
-  #  y = "CRPS",
-   # color = "Dataset"
-  #) +
-  #theme(
-   # axis.text.x = element_text(angle = 45, hjust = 1),
-  #  strip.background = element_blank(),
-   # strip.text = element_text(face = "bold")
-  #)
-
-crps_long <- crps_long %>%
-  mutate(
-    dataset = factor(dataset,
-                     levels = c("Training",
-                                "Training (fixed only)",
-                                "Testing"))
-  )
-
-
-
-my_cols <- c(
-  "Training" = "lightslateblue",              
-  "Training (fixed only)" = "deeppink1", 
-  "Testing" = "darkturquoise"               
-)
-
-
-
-crps_fig <- ggplot(crps_long,
-                   aes(x = submodel,
-                       y = crps,
-                       color = dataset,
-                       shape = dataset)) +
-  geom_point(size = 5,
-             position = position_dodge(width = 0.4)) +
-  facet_wrap(~ stage, nrow = 1, scales = "free_y") +
-  scale_color_manual(values = my_cols,
-                     name = "Dataset") +
-  scale_shape_manual(values = c(
-    "Training" = 16,
-    "Training (fixed only)" = 17,
-    "Testing" = 15
-  ),
-  name = "Dataset") +
-  theme_classic() +
-  labs(
-    x = "Submodel",
-    y = "CRPS"
-  ) +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    strip.background = element_blank(),
-    strip.text = element_text(face = "bold"),
-    legend.position = "top"
-  )
-
-crps_fig
-## save graph
-ggsave("crps_fig.pdf", plot = crps_fig, width = 6, height = 5, units = "in")
-
-
-
-crps_skill_long <- table_df_ordered %>%
-  select(stage, submodel,
-         starts_with("crps_"),
-         starts_with("skill_")) %>%
-  pivot_longer(
-    cols = -c(stage, submodel),
-    names_to = c(".value", "dataset"),
-    names_pattern = "(crps|skill)_(.*)"
-  ) %>%
-  mutate(
-    dataset = recode(
-      dataset,
-      train = "Training",
-      train_fixed = "Training (fixed only)",
-      test = "Testing"
-    )
-  )
-
-crps_skill_long <- crps_skill_long %>%
-  mutate(
-    stage = factor(stage,
-                   levels = c("emerged", "reproduced", "fecundity"))
-  ) 
-
-
-crps_skill_long <- crps_skill_long %>% filter(submodel != "null") %>% 
-  mutate(
-    dataset = factor(dataset,
-                     levels = c("Training",
-                                "Training (fixed only)",
-                                "Testing"))
-  ) %>%  mutate(
-    submodel = factor(submodel,
-                     levels = c("full",
-                                "nointer",
-                                "nocomp", "nogene", "climate"))
-  )
 
 
 
 
-my_cols <- c(
-  "Training" = "lightslateblue",              
-  "Training (fixed only)" = "deeppink1", 
-  "Testing" = "darkturquoise"               
-)
-
-
-
-skills_fig <- ggplot(crps_skill_long,
-                   aes(x = submodel,
-                       y = skill,
-                       color = dataset,
-                       shape = dataset)) +
-  geom_point(size = 5,
-             position = position_dodge(width = 0.4)) +
-  facet_wrap(~ stage, nrow = 1, scales = "free_y") +
-  scale_color_manual(values = my_cols,
-                     name = "Dataset") +
-  scale_shape_manual(values = c(
-    "Training" = 16,
-    "Training (fixed only)" = 17,
-    "Testing" = 15
-  ),
-  name = "Dataset") +
-  theme_classic() +
-  labs(
-    x = "Submodel",
-    y = "Skill Score"
-  ) +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    strip.background = element_blank(),
-    strip.text = element_text(face = "bold"),
-    legend.position = "top"
-  )
-
-
-skills_fig
-## save graph
-ggsave("figures/skill_fig_updated.pdf", plot = skills_fig, width = 6, height = 5, units = "in")
 
 ########## CRPS and sCRPS with 'loo' package ##############
 
@@ -887,6 +369,288 @@ for (i in seq_len(nrow(file_info))) {
 
 output <- as.data.frame(file_info)
 output
+
+########### results table #######
+library(flextable)
+library(officer)
+library(dplyr)
+
+
+table_df <- output %>%
+  select(
+    stage,
+    file_name,
+    crps_train,
+    crps_train_fixed,
+    crps_test,
+    null_crps_train,
+    null_crps_test,
+    skill_train,
+    skill_train_fixed,
+    skill_test
+  ) %>%
+  arrange(stage, desc(skill_test)) %>%
+  mutate(
+    across(
+      where(is.numeric),
+      ~ round(.x, 3)
+    )
+  )
+
+
+library(stringr)
+
+stage_order <- c("emerged", "reproduced", "fecundity")
+
+submodel_order <- c(
+  "full",
+  "nointer",
+  "nocomp",
+  "nogene",
+  "climate",
+  "null"
+)
+
+table_df_ordered <- table_df %>%
+  mutate(
+    stage = str_extract(file_name, "(?<=fit_)[^_]+"),
+    submodel = str_extract(file_name, "(?<=_)[^_]+(?=_draws)")
+  )
+
+## put models in a logic order for interpretation 
+table_df_ordered <- table_df_ordered %>%
+  mutate(
+    stage = factor(stage, levels = stage_order),
+    submodel = factor(submodel, levels = submodel_order)
+  ) %>%
+  arrange(stage, submodel)
+
+
+ft <- flextable(table_df_ordered) %>%
+  set_header_labels(
+    stage              = "Stage",
+    file_name            = "Model variant",
+    crps_train         = "CRPS (train)",
+    crps_train_fixed   = "CRPS (train, fixed)",
+    crps_test          = "CRPS (test)",
+    null_crps_train    = "Null CRPS (train)",
+    null_crps_test     = "Null CRPS (test)",
+    skill_train        = "Skill (train)",
+    skill_train_fixed  = "Skill (train, fixed)",
+    skill_test         = "Skill (test)"
+  ) %>%
+  theme_booktabs() %>%
+  autofit()
+
+
+#ft <- ft %>%
+# bold(j = "skill_test", bold = TRUE) %>%
+#color(
+# i = ~ grepl("null", variant),
+#color = "gray40"
+# )
+
+ft <- ft %>%
+  merge_v(j = "stage") %>%
+  valign(j = "stage", valign = "top")
+
+doc <- read_docx() %>%
+  body_add_par("Model performance summary", style = "heading 1") %>%
+  body_add_flextable(ft)
+
+print(doc, target = "CRPS_skill_summary_Feb_2026.docx")
+
+
+########### Visualize CRPS #############
+table_df_ordered <- table_df_ordered %>%
+  mutate(
+    file_clean = str_remove(file_name, "^fit_") %>%
+      str_remove("\\.rds$"),
+    stage = str_split(file_clean, "_", simplify = TRUE)[,1],
+    submodel = str_split(file_clean, "_", simplify = TRUE)[,2]
+  )
+
+
+
+crps_long <- table_df_ordered %>%
+  select(stage, submodel,
+         crps_train,
+         crps_train_fixed,
+         crps_test) %>%
+  pivot_longer(
+    cols = starts_with("crps_"),
+    names_to = "dataset",
+    values_to = "crps"
+  ) %>%
+  mutate(
+    dataset = recode(
+      dataset,
+      crps_train = "Training",
+      crps_train_fixed = "Training (fixed only)",
+      crps_test = "Testing"
+    )
+  )
+
+crps_long <- crps_long %>%
+  mutate(
+    stage = factor(stage,
+                   levels = c("emerged", "reproduced", "fecundity"))
+  )
+
+#crps_fig <- ggplot(crps_long,
+#      aes(x = submodel,
+#         y = crps,
+#        color = dataset,
+#       group = dataset)) +
+#geom_point(size = 2.5) +
+#geom_line(linewidth = 0.8) +
+#facet_wrap(~ stage, nrow = 1, scales = "free_y") +
+#theme_classic() +
+#labs(
+# x = "Submodel",
+#  y = "CRPS",
+# color = "Dataset"
+#) +
+#theme(
+# axis.text.x = element_text(angle = 45, hjust = 1),
+#  strip.background = element_blank(),
+# strip.text = element_text(face = "bold")
+#)
+
+crps_long <- crps_long %>%
+  mutate(
+    dataset = factor(dataset,
+                     levels = c("Training",
+                                "Training (fixed only)",
+                                "Testing"))
+  )
+
+
+
+my_cols <- c(
+  "Training" = "lightslateblue",              
+  "Training (fixed only)" = "deeppink1", 
+  "Testing" = "darkturquoise"               
+)
+
+
+
+crps_fig <- ggplot(crps_long,
+                   aes(x = submodel,
+                       y = crps,
+                       color = dataset,
+                       shape = dataset)) +
+  geom_point(size = 5,
+             position = position_dodge(width = 0.4)) +
+  facet_wrap(~ stage, nrow = 1, scales = "free_y") +
+  scale_color_manual(values = my_cols,
+                     name = "Dataset") +
+  scale_shape_manual(values = c(
+    "Training" = 16,
+    "Training (fixed only)" = 17,
+    "Testing" = 15
+  ),
+  name = "Dataset") +
+  theme_classic() +
+  labs(
+    x = "Submodel",
+    y = "CRPS"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold"),
+    legend.position = "top"
+  )
+
+crps_fig
+## save graph
+ggsave("crps_fig.pdf", plot = crps_fig, width = 6, height = 5, units = "in")
+
+
+
+crps_skill_long <- table_df_ordered %>%
+  select(stage, submodel,
+         starts_with("crps_"),
+         starts_with("skill_")) %>%
+  pivot_longer(
+    cols = -c(stage, submodel),
+    names_to = c(".value", "dataset"),
+    names_pattern = "(crps|skill)_(.*)"
+  ) %>%
+  mutate(
+    dataset = recode(
+      dataset,
+      train = "Training",
+      train_fixed = "Training (fixed only)",
+      test = "Testing"
+    )
+  )
+
+crps_skill_long <- crps_skill_long %>%
+  mutate(
+    stage = factor(stage,
+                   levels = c("emerged", "reproduced", "fecundity"))
+  ) 
+
+
+crps_skill_long <- crps_skill_long %>% filter(submodel != "null") %>% 
+  mutate(
+    dataset = factor(dataset,
+                     levels = c("Training",
+                                "Training (fixed only)",
+                                "Testing"))
+  ) %>%  mutate(
+    submodel = factor(submodel,
+                      levels = c("full",
+                                 "nointer",
+                                 "nocomp", "nogene", "climate"))
+  )
+
+
+
+
+my_cols <- c(
+  "Training" = "lightslateblue",              
+  "Training (fixed only)" = "deeppink1", 
+  "Testing" = "darkturquoise"               
+)
+
+
+
+skills_fig <- ggplot(crps_skill_long,
+                     aes(x = submodel,
+                         y = skill,
+                         color = dataset,
+                         shape = dataset)) +
+  geom_point(size = 5,
+             position = position_dodge(width = 0.4)) +
+  facet_wrap(~ stage, nrow = 1, scales = "free_y") +
+  scale_color_manual(values = my_cols,
+                     name = "Dataset") +
+  scale_shape_manual(values = c(
+    "Training" = 16,
+    "Training (fixed only)" = 17,
+    "Testing" = 15
+  ),
+  name = "Dataset") +
+  theme_classic() +
+  labs(
+    x = "Submodel",
+    y = "Skill Score"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold"),
+    legend.position = "top"
+  )
+
+
+skills_fig
+## save graph
+ggsave("figures/skill_fig_updated.pdf", plot = skills_fig, width = 6, height = 5, units = "in")
+
 ######## confusion matrix for Reproduced & Emerged models #################
 
 library(caret)
